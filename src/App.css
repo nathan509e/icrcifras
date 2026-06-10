@@ -919,12 +919,16 @@
 /* LOGIN MODAL */
 .modal-login {
   text-align: center;
+  max-width: 400px;
+}
+.modal-login-icon {
+  margin-bottom: 16px;
 }
 .modal-login-desc {
   font: 14px var(--font-roboto);
   color: var(--gray);
-  margin: 0 0 20px;
-  line-height: 1.5;
+  margin: 0 0 24px;
+  line-height: 1.6;
 }
 .btn-google {
   display: inline-flex;
