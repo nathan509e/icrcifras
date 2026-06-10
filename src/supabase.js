@@ -14,6 +14,8 @@ export const supabase = supabaseUrl && supabaseAnonKey
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null
 
+// ---- SONGS ----
+
 export async function fetchSongs() {
   if (!supabase) return []
   const { data, error } = await supabase
@@ -54,6 +56,8 @@ export async function deleteSong(id) {
   return true
 }
 
+// ---- AUTH ----
+
 export async function signInWithGoogle() {
   if (!supabase) return
   const { error } = await supabase.auth.signInWithOAuth({
@@ -83,4 +87,58 @@ export async function getCurrentUser() {
   if (!supabase) return null
   const { data } = await supabase.auth.getSession()
   return data?.session?.user || null
+}
+
+// ---- ADMINS ----
+
+export async function isAdmin(email) {
+  if (!supabase || !email) return false
+  const { data } = await supabase
+    .from('admins')
+    .select('email')
+    .eq('email', email)
+    .maybeSingle()
+  return !!data
+}
+
+// ---- SUGGESTIONS ----
+
+export async function fetchSuggestions() {
+  if (!supabase) return []
+  const { data, error } = await supabase
+    .from('suggestions')
+    .select('*')
+    .order('created_at', { ascending: false })
+  if (error) {
+    console.error('Error fetching suggestions:', error)
+    return []
+  }
+  return data || []
+}
+
+export async function saveSuggestion(userName, songName, youtubeUrl) {
+  if (!supabase) return null
+  const { data, error } = await supabase
+    .from('suggestions')
+    .insert([{ user_name: userName, song_name: songName, youtube_url: youtubeUrl }])
+    .select()
+    .single()
+  if (error) {
+    console.error('Error saving suggestion:', error)
+    return null
+  }
+  return data
+}
+
+export async function deleteSuggestion(id) {
+  if (!supabase) return false
+  const { error } = await supabase
+    .from('suggestions')
+    .delete()
+    .eq('id', id)
+  if (error) {
+    console.error('Error deleting suggestion:', error)
+    return false
+  }
+  return true
 }

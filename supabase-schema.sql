@@ -1,5 +1,6 @@
--- Run this SQL in your Supabase SQL editor to create the songs table
+-- Run this SQL in your Supabase SQL editor
 
+-- SONGS TABLE
 CREATE TABLE IF NOT EXISTS songs (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
@@ -8,17 +9,29 @@ CREATE TABLE IF NOT EXISTS songs (
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
--- Enable Row Level Security (optional, recommended)
 ALTER TABLE songs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow anonymous read" ON songs FOR SELECT USING (true);
+CREATE POLICY "Allow anonymous insert" ON songs FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow anonymous delete" ON songs FOR DELETE USING (true);
 
--- Allow anonymous users to read all songs
-CREATE POLICY "Allow anonymous read" ON songs
-  FOR SELECT USING (true);
+-- ADMINS TABLE
+CREATE TABLE IF NOT EXISTS admins (
+  email TEXT PRIMARY KEY
+);
 
--- Allow anonymous users to insert songs
-CREATE POLICY "Allow anonymous insert" ON songs
-  FOR INSERT WITH CHECK (true);
+ALTER TABLE admins ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow anonymous read" ON admins FOR SELECT USING (true);
 
--- Allow anonymous users to delete songs
-CREATE POLICY "Allow anonymous delete" ON songs
-  FOR DELETE USING (true);
+-- SUGGESTIONS TABLE
+CREATE TABLE IF NOT EXISTS suggestions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_name TEXT NOT NULL,
+  song_name TEXT NOT NULL,
+  youtube_url TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+ALTER TABLE suggestions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow anonymous read" ON suggestions FOR SELECT USING (true);
+CREATE POLICY "Allow anonymous insert" ON suggestions FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow anonymous delete" ON suggestions FOR DELETE USING (true);

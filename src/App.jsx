@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { fetchSongs, saveSong, deleteSong, signInWithGoogle, signOut, onAuthChange, getCurrentUser } from './supabase'
+import { fetchSongs, saveSong, deleteSong, signInWithGoogle, signOut, onAuthChange, getCurrentUser, isAdmin, fetchSuggestions, saveSuggestion, deleteSuggestion } from './supabase'
 import './App.css'
 
 const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
@@ -101,6 +101,13 @@ function App() {
   const [user, setUser] = useState(null)
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [userIsAdmin, setUserIsAdmin] = useState(false)
+  const [showSuggestionModal, setShowSuggestionModal] = useState(false)
+  const [suggName, setSuggName] = useState('')
+  const [suggSong, setSuggSong] = useState('')
+  const [suggUrl, setSuggUrl] = useState('')
+  const [suggestions, setSuggestions] = useState([])
+  const [showSuggestionsList, setShowSuggestionsList] = useState(false)
 
   const scrollRef = useRef(null)
   const metronomeRef = useRef(null)
@@ -120,6 +127,14 @@ function App() {
     const unsubscribe = onAuthChange(setUser)
     return unsubscribe
   }, [])
+
+  useEffect(() => {
+    if (user?.email) {
+      isAdmin(user.email).then(setUserIsAdmin)
+    } else {
+      setUserIsAdmin(false)
+    }
+  }, [user])
 
   const searchResults = searchQuery.trim()
     ? songs.filter(s =>
@@ -281,26 +296,33 @@ function App() {
             )}
           </div>
           <nav className="nav-links">
-            <button className="nav-assine" onClick={() => setShowAddModal(true)}>Adicionar</button>
+            {user && userIsAdmin ? (
+              <button className="nav-assine" onClick={() => setShowAddModal(true)}>Adicionar</button>
+            ) : user ? (
+              <button className="nav-assine" onClick={() => setShowSuggestionModal(true)}>Sugestao de louvor</button>
+            ) : null}
             <button className="nav-link" onClick={() => setShowMySongs(true)}>Minhas musicas</button>
             <a href="#" className="nav-link">Listas</a>
-            <a href="#" className="nav-link">Aprenda</a>
-            <a href="#" className="nav-link">Mais</a>
+            {user && userIsAdmin && (
+              <button className="nav-link" onClick={() => { fetchSuggestions().then(setSuggestions); setShowSuggestionsList(true) }}>Sugestoes</button>
+            )}
             {user ? (
               <div className="nav-user" ref={userMenuRef}>
                 <button className="nav-user-trigger" onClick={() => setShowUserMenu(v => !v)}>
-                  {user.user_metadata?.avatar_url && (
-                    <img src={user.user_metadata.avatar_url} alt="" className="nav-avatar" />
-                  )}
+                  <span className="nav-avatar-wrap">
+                    <img src={user.user_metadata?.avatar_url} alt="" className="nav-avatar" onError={e => { e.target.style.display = 'none' }} />
+                    <span className="nav-avatar-fallback">{(user.user_metadata?.full_name || user.email || '?')[0].toUpperCase()}</span>
+                  </span>
                   <span className="nav-username">{user.user_metadata?.full_name || user.email}</span>
                   <span className="nav-user-arrow">&#9662;</span>
                 </button>
                 {showUserMenu && (
                   <div className="nav-user-card">
                     <div className="nav-user-card-header">
-                      {user.user_metadata?.avatar_url && (
-                        <img src={user.user_metadata.avatar_url} alt="" className="nav-user-card-avatar" />
-                      )}
+                      <span className="nav-avatar-wrap">
+                        <img src={user.user_metadata?.avatar_url} alt="" className="nav-user-card-avatar" onError={e => { e.target.style.display = 'none' }} />
+                        <span className="nav-avatar-fallback nav-avatar-fallback--lg">{(user.user_metadata?.full_name || user.email || '?')[0].toUpperCase()}</span>
+                      </span>
                       <div className="nav-user-card-info">
                         <span className="nav-user-card-name">{user.user_metadata?.full_name || 'Usuario'}</span>
                         <span className="nav-user-card-email">{user.email}</span>
@@ -620,13 +642,15 @@ function App() {
                       >
                         {song.name}
                       </button>
-                      <button
-                        className="my-song-delete"
-                        onClick={() => handleDeleteSong(song.id)}
-                        title="Remover musica"
-                      >
-                        Remover
-                      </button>
+                      {userIsAdmin && (
+                        <button
+                          className="my-song-delete"
+                          onClick={() => handleDeleteSong(song.id)}
+                          title="Remover musica"
+                        >
+                          Remover
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -634,6 +658,107 @@ function App() {
             </div>
             <div className="modal-actions">
               <button className="modal-btn modal-btn-cancel" onClick={() => setShowMySongs(false)}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSuggestionModal && (
+        <div className="modal-overlay" onClick={() => setShowSuggestionModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h2 className="modal-title">Sugestao de louvor</h2>
+            <div className="modal-body">
+              <label className="modal-label">Seu nome</label>
+              <input
+                className="modal-input"
+                type="text"
+                placeholder="Digite seu nome"
+                value={suggName}
+                onChange={e => setSuggName(e.target.value)}
+                autoFocus
+              />
+              <label className="modal-label">Nome da musica</label>
+              <input
+                className="modal-input"
+                type="text"
+                placeholder="Digite o nome da musica"
+                value={suggSong}
+                onChange={e => setSuggSong(e.target.value)}
+              />
+              <label className="modal-label">Link do YouTube</label>
+              <input
+                className="modal-input"
+                type="url"
+                placeholder="https://youtube.com/watch?v=..."
+                value={suggUrl}
+                onChange={e => setSuggUrl(e.target.value)}
+              />
+            </div>
+            <div className="modal-actions">
+              <button className="modal-btn modal-btn-cancel" onClick={() => setShowSuggestionModal(false)}>Cancelar</button>
+              <button
+                className="modal-btn modal-btn-confirm"
+                onClick={async () => {
+                  if (!suggName.trim() || !suggSong.trim() || !suggUrl.trim()) return
+                  await saveSuggestion(suggName.trim(), suggSong.trim(), suggUrl.trim())
+                  setShowSuggestionModal(false)
+                  setSuggName('')
+                  setSuggSong('')
+                  setSuggUrl('')
+                }}
+                disabled={!suggName.trim() || !suggSong.trim() || !suggUrl.trim()}
+              >
+                Enviar sugestao
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSuggestionsList && (
+        <div className="modal-overlay" onClick={() => setShowSuggestionsList(false)}>
+          <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
+            <h2 className="modal-title">Sugestoes de louvores</h2>
+            <div className="modal-body">
+              {suggestions.length === 0 ? (
+                <p className="modal-empty">Nenhuma sugestao ainda.</p>
+              ) : (
+                <div className="suggestions-list">
+                  {suggestions.map(s => (
+                    <div key={s.id} className="suggestion-item">
+                      <div className="suggestion-info">
+                        <span className="suggestion-song">{s.song_name}</span>
+                        <span className="suggestion-user">por {s.user_name}</span>
+                      </div>
+                      <div className="suggestion-actions">
+                        <button
+                          className="suggestion-play"
+                          onClick={() => {
+                            const id = getYoutubeId(s.youtube_url)
+                            if (id) window.open(`https://www.youtube.com/watch?v=${id}`, '_blank')
+                          }}
+                          title="Abrir no YouTube"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                        </button>
+                        <button
+                          className="my-song-delete"
+                          onClick={async () => {
+                            await deleteSuggestion(s.id)
+                            setSuggestions(prev => prev.filter(x => x.id !== s.id))
+                          }}
+                          title="Remover sugestao"
+                        >
+                          Remover
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="modal-actions">
+              <button className="modal-btn modal-btn-cancel" onClick={() => setShowSuggestionsList(false)}>Fechar</button>
             </div>
           </div>
         </div>
