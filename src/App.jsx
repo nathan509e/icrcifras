@@ -147,6 +147,7 @@ function App() {
   const [showCreateListModal, setShowCreateListModal] = useState(false)
   const [showEditListModal, setShowEditListModal] = useState(false)
   const [showPlaylistModal, setShowPlaylistModal] = useState(false)
+  const [showDomingoModal, setShowDomingoModal] = useState(false)
   const [userLists, setUserLists] = useState([])
   const [newListName, setNewListName] = useState('')
   const [selectedSongs, setSelectedSongs] = useState([])
@@ -167,6 +168,13 @@ function App() {
         setSongs(data)
       }
     })
+
+    const storedPlaylist = sessionStorage.getItem('currentPlaylist')
+    const storedIndex = sessionStorage.getItem('currentPlaylistIndex')
+    if (storedPlaylist) {
+      setCurrentPlaylist(JSON.parse(storedPlaylist))
+      setCurrentPlaylistIndex(parseInt(storedIndex) || 0)
+    }
   }, [])
 
   useEffect(() => {
@@ -389,9 +397,15 @@ function App() {
           </div>
           <nav className="nav-links">
             {user && userIsAdmin ? (
-              <button className="nav-assine" onClick={() => setShowAddModal(true)}>Adicionar</button>
+              <>
+                <button className="nav-assine" onClick={() => setShowAddModal(true)}>Adicionar</button>
+                <button className="nav-assine" onClick={() => { setSelectedSongs([]); setShowDomingoModal(true) }}>Esse Domingo</button>
+              </>
             ) : user ? (
-              <button className="nav-assine" onClick={() => setShowSuggestionModal(true)}>Sugestao de louvor</button>
+              <>
+                <button className="nav-assine" onClick={() => setShowSuggestionModal(true)}>Sugestao de louvor</button>
+                <button className="nav-assine" onClick={() => { setShowDomingoModal(true) }}>Esse Domingo</button>
+              </>
             ) : null}
             <button className="nav-link" onClick={() => { setSongFilter(''); setShowMySongs(true) }}>Louvores</button>
             <button className="nav-link" onClick={() => { fetchUserLists(user.email).then(setUserLists); setShowListsModal(true) }}>Listas</button>
@@ -454,6 +468,41 @@ function App() {
                 Cifra: Principal <span id="js-c-mode">(violao e guitarra)</span>
                 <span className="arrow"></span>
               </span>
+              {currentPlaylist && (
+                <div className="playlist-inline-controls">
+                  <span className="playlist-name">{currentPlaylist.name}</span>
+                  <button
+                    className="playlist-nav-btn"
+                    onClick={() => {
+                      if (currentPlaylistIndex > 0) {
+                        const newIndex = currentPlaylistIndex - 1
+                        setCurrentPlaylistIndex(newIndex)
+                        setSelectedSongId(currentPlaylist.song_ids[newIndex])
+                        sessionStorage.setItem('currentPlaylistIndex', newIndex.toString())
+                      }
+                    }}
+                    disabled={currentPlaylistIndex === 0}
+                    title="Anterior"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+                  </button>
+                  <button
+                    className="playlist-nav-btn"
+                    onClick={() => {
+                      if (currentPlaylistIndex < currentPlaylist.song_ids.length - 1) {
+                        const newIndex = currentPlaylistIndex + 1
+                        setCurrentPlaylistIndex(newIndex)
+                        setSelectedSongId(currentPlaylist.song_ids[newIndex])
+                        sessionStorage.setItem('currentPlaylistIndex', newIndex.toString())
+                      }
+                    }}
+                    disabled={currentPlaylistIndex >= currentPlaylist.song_ids.length - 1}
+                    title="Proxima"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+                  </button>
+                </div>
+              )}
               <button className="btn-fav">Favoritar Cifra</button>
             </div>
           </div>
@@ -1114,6 +1163,7 @@ function App() {
                       onClick={() => {
                         setSelectedSongId(song.id)
                         setCurrentPlaylistIndex(index)
+                        sessionStorage.setItem('currentPlaylistIndex', index.toString())
                         setShowPlaylistModal(false)
                       }}
                     >
@@ -1131,39 +1181,78 @@ function App() {
         </div>
       )}
 
-      {currentPlaylist && (
-        <div className="playlist-controls">
-          <div className="playlist-info">
-            <span className="playlist-name">{currentPlaylist.name}</span>
-            <span className="playlist-position">{currentPlaylistIndex + 1} / {currentPlaylist.song_ids?.length || 0}</span>
-          </div>
-          <div className="playlist-nav">
-            <button
-              className="playlist-prev-btn"
-              onClick={() => {
-                if (currentPlaylistIndex > 0) {
-                  const newIndex = currentPlaylistIndex - 1
-                  setCurrentPlaylistIndex(newIndex)
-                  setSelectedSongId(currentPlaylist.song_ids[newIndex])
-                }
-              }}
-              disabled={currentPlaylistIndex === 0}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
-            </button>
-            <button
-              className="playlist-next-btn"
-              onClick={() => {
-                if (currentPlaylistIndex < currentPlaylist.song_ids.length - 1) {
-                  const newIndex = currentPlaylistIndex + 1
-                  setCurrentPlaylistIndex(newIndex)
-                  setSelectedSongId(currentPlaylist.song_ids[newIndex])
-                }
-              }}
-              disabled={currentPlaylistIndex >= currentPlaylist.song_ids.length - 1}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
-            </button>
+      {showDomingoModal && (
+        <div className="modal-overlay" onClick={() => setShowDomingoModal(false)}>
+          <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
+            <h2 className="modal-title">Esse Domingo</h2>
+            <div className="modal-body">
+              {userIsAdmin ? (
+                <>
+                  <p className="modal-text">Selecione as musicas para o culto de domingo:</p>
+                  <div className="song-select-list">
+                    {songs.map(song => (
+                      <label key={song.id} className="song-select-item">
+                        <input
+                          type="checkbox"
+                          checked={selectedSongs.includes(song.id)}
+                          onChange={() => setSelectedSongs(prev => prev.includes(song.id) ? prev.filter(id => id !== song.id) : [...prev, song.id])}
+                        />
+                        <span>{song.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="modal-text">Musicas do culto de domingo:</p>
+                  {userLists.find(l => l.name === 'Esse Domingo') ? (
+                    <div className="playlist-songs">
+                      {userLists.find(l => l.name === 'Esse Domingo')?.song_ids?.map((songId, index) => {
+                        const song = songs.find(s => s.id === songId)
+                        if (!song) return null
+                        return (
+                          <button
+                            key={song.id}
+                            className="playlist-song-item"
+                            onClick={() => {
+                              setSelectedSongId(song.id)
+                              setShowDomingoModal(false)
+                            }}
+                          >
+                            <span className="playlist-song-number">{index + 1}</span>
+                            <span className="playlist-song-name">{song.name}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <p className="modal-text">Nenhuma lista agendada ainda.</p>
+                  )}
+                </>
+              )}
+            </div>
+            <div className="modal-actions">
+              <button className="modal-btn modal-btn-cancel" onClick={() => setShowDomingoModal(false)}>Fechar</button>
+              {userIsAdmin && (
+                <button
+                  className="modal-btn modal-btn-confirm"
+                  onClick={async () => {
+                    const existingList = userLists.find(l => l.name === 'Esse Domingo')
+                    if (existingList) {
+                      await updateList(existingList.id, 'Esse Domingo', selectedSongs)
+                    } else {
+                      await createList('Esse Domingo', user.email, selectedSongs)
+                    }
+                    setSelectedSongs([])
+                    setShowDomingoModal(false)
+                    fetchUserLists(user.email).then(setUserLists)
+                  }}
+                  disabled={selectedSongs.length === 0}
+                >
+                  Salvar lista
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

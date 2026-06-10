@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchSongs, signInWithGoogle, signOut, onAuthChange, getCurrentUser, isAdmin, fetchUserLists, createList, updateList, deleteList, saveSuggestion } from '../supabase'
+import { fetchSongs, signInWithGoogle, signOut, onAuthChange, getCurrentUser, isAdmin, fetchUserLists, createList, updateList, deleteList, saveSuggestion, fetchUserSuggestions } from '../supabase'
 
 export default function MusicasPage() {
   const [songs, setSongs] = useState([])
@@ -12,6 +12,8 @@ export default function MusicasPage() {
   const [showListsModal, setShowListsModal] = useState(false)
   const [showCreateListModal, setShowCreateListModal] = useState(false)
   const [showEditListModal, setShowEditListModal] = useState(false)
+  const [showPlaylistModal, setShowPlaylistModal] = useState(false)
+  const [showDomingoModal, setShowDomingoModal] = useState(false)
   const [suggSong, setSuggSong] = useState('')
   const [suggUrl, setSuggUrl] = useState('')
   const [user, setUser] = useState(null)
@@ -20,6 +22,8 @@ export default function MusicasPage() {
   const [newListName, setNewListName] = useState('')
   const [selectedSongs, setSelectedSongs] = useState([])
   const [editingList, setEditingList] = useState(null)
+  const [currentPlaylist, setCurrentPlaylist] = useState(null)
+  const [currentPlaylistIndex, setCurrentPlaylistIndex] = useState(0)
   const navigate = useNavigate()
   const userMenuRef = useRef(null)
 
@@ -28,6 +32,13 @@ export default function MusicasPage() {
       setSongs(data || [])
       setLoading(false)
     })
+
+    const storedPlaylist = sessionStorage.getItem('currentPlaylist')
+    const storedIndex = sessionStorage.getItem('currentPlaylistIndex')
+    if (storedPlaylist) {
+      setCurrentPlaylist(JSON.parse(storedPlaylist))
+      setCurrentPlaylistIndex(parseInt(storedIndex) || 0)
+    }
   }, [])
 
   useEffect(() => {
@@ -150,9 +161,15 @@ export default function MusicasPage() {
           </div>
           <nav className="nav-links">
             {user && userIsAdmin ? (
-              <button className="nav-assine" onClick={() => {}}>Adicionar</button>
+              <>
+                <button className="nav-assine" onClick={() => {}}>Adicionar</button>
+                <button className="nav-assine" onClick={() => { setSelectedSongs([]); setShowDomingoModal(true) }}>Esse Domingo</button>
+              </>
             ) : user ? (
-              <button className="nav-assine" onClick={() => setShowSuggestionModal(true)}>Sugestao de louvor</button>
+              <>
+                <button className="nav-assine" onClick={() => setShowSuggestionModal(true)}>Sugestao de louvor</button>
+                <button className="nav-assine" onClick={() => { setShowDomingoModal(true) }}>Esse Domingo</button>
+              </>
             ) : null}
             <button className="nav-link" onClick={() => {}}>Louvores</button>
             <button className="nav-link" onClick={() => setShowListsModal(true)}>Listas</button>
@@ -311,8 +328,13 @@ export default function MusicasPage() {
                       <button
                         className="list-item-name"
                         onClick={() => {
+                          sessionStorage.setItem('currentPlaylist', JSON.stringify(list))
+                          sessionStorage.setItem('currentPlaylistIndex', '0')
+                          const firstSongId = list.song_ids?.[0]
+                          if (firstSongId) {
+                            navigate(`/${firstSongId}`)
+                          }
                           setShowListsModal(false)
-                          navigate(`/${list.song_ids?.[0] || songs[0]?.id}`)
                         }}
                       >
                         {list.name}
@@ -421,6 +443,115 @@ export default function MusicasPage() {
               >
                 Salvar alteracoes
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPlaylistModal && currentPlaylist && (
+        <div className="modal-overlay" onClick={() => setShowPlaylistModal(false)}>
+          <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
+            <h2 className="modal-title">{currentPlaylist.name}</h2>
+            <div className="modal-body">
+              <div className="playlist-songs">
+                {currentPlaylist.song_ids?.map((songId, index) => {
+                  const song = songs.find(s => s.id === songId)
+                  if (!song) return null
+                  return (
+                    <button
+                      key={song.id}
+                      className={`playlist-song-item ${index === currentPlaylistIndex ? 'active' : ''}`}
+                      onClick={() => {
+                        navigate(`/${song.id}`)
+                        setCurrentPlaylistIndex(index)
+                        setShowPlaylistModal(false)
+                      }}
+                    >
+                      <span className="playlist-song-number">{index + 1}</span>
+                      <span className="playlist-song-name">{song.name}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+              <div className="modal-actions">
+              <button className="modal-btn modal-btn-cancel" onClick={() => setShowPlaylistModal(false)}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDomingoModal && (
+        <div className="modal-overlay" onClick={() => setShowDomingoModal(false)}>
+          <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
+            <h2 className="modal-title">Esse Domingo</h2>
+            <div className="modal-body">
+              {userIsAdmin ? (
+                <>
+                  <p className="modal-text">Selecione as musicas para o culto de domingo:</p>
+                  <div className="song-select-list">
+                    {songs.map(song => (
+                      <label key={song.id} className="song-select-item">
+                        <input
+                          type="checkbox"
+                          checked={selectedSongs.includes(song.id)}
+                          onChange={() => setSelectedSongs(prev => prev.includes(song.id) ? prev.filter(id => id !== song.id) : [...prev, song.id])}
+                        />
+                        <span>{song.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="modal-text">Musicas do culto de domingo:</p>
+                  {userLists.find(l => l.name === 'Esse Domingo') ? (
+                    <div className="playlist-songs">
+                      {userLists.find(l => l.name === 'Esse Domingo')?.song_ids?.map((songId, index) => {
+                        const song = songs.find(s => s.id === songId)
+                        if (!song) return null
+                        return (
+                          <button
+                            key={song.id}
+                            className="playlist-song-item"
+                            onClick={() => {
+                              navigate(`/${song.id}`)
+                              setShowDomingoModal(false)
+                            }}
+                          >
+                            <span className="playlist-song-number">{index + 1}</span>
+                            <span className="playlist-song-name">{song.name}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <p className="modal-text">Nenhuma lista agendada ainda.</p>
+                  )}
+                </>
+              )}
+            </div>
+            <div className="modal-actions">
+              <button className="modal-btn modal-btn-cancel" onClick={() => setShowDomingoModal(false)}>Fechar</button>
+              {userIsAdmin && (
+                <button
+                  className="modal-btn modal-btn-confirm"
+                  onClick={async () => {
+                    const existingList = userLists.find(l => l.name === 'Esse Domingo')
+                    if (existingList) {
+                      await updateList(existingList.id, 'Esse Domingo', selectedSongs)
+                    } else {
+                      await createList('Esse Domingo', user.email, selectedSongs)
+                    }
+                    setSelectedSongs([])
+                    setShowDomingoModal(false)
+                    fetchUserLists(user.email).then(setUserLists)
+                  }}
+                  disabled={selectedSongs.length === 0}
+                >
+                  Salvar lista
+                </button>
+              )}
             </div>
           </div>
         </div>
