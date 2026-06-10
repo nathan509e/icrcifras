@@ -188,32 +188,6 @@ function App() {
   }, [params.songId, songs])
 
   useEffect(() => {
-    if (domingoList && currentSong) {
-      const storedPlaylist = sessionStorage.getItem('currentPlaylist')
-      if (storedPlaylist) {
-        try {
-          const playlist = JSON.parse(storedPlaylist)
-          if (playlist && playlist.name === 'Esse Domingo' && Array.isArray(playlist.song_ids)) {
-            const currentItem = playlist.song_ids[currentPlaylistIndex]
-            if (currentItem && typeof currentItem === 'object' && currentItem.tom) {
-              const songKey = currentSong.key || ORIGINAL_KEY
-              const targetTom = currentItem.tom
-              const fromIdx = NOTES.indexOf(songKey)
-              const toIdx = NOTES.indexOf(targetTom)
-              if (fromIdx !== -1 && toIdx !== -1) {
-                const offset = toIdx - fromIdx
-                setTransposeOffset(offset)
-              }
-            }
-          }
-        } catch (e) {
-          console.error('Error parsing playlist:', e)
-        }
-      }
-    }
-  }, [domingoList, currentSong, currentPlaylistIndex])
-
-  useEffect(() => {
     getCurrentUser().then(setUser)
     const unsubscribe = onAuthChange(setUser)
     return unsubscribe
@@ -364,6 +338,32 @@ function App() {
     : RAW_CHORD_HTML
   const processedChordHtml = processChordHtml(currentRawHtml, transposeOffset, simplifyChords)
   const currentKey = getKeyFromOffset(currentSong?.key || ORIGINAL_KEY, transposeOffset)
+
+  useEffect(() => {
+    const storedPlaylist = sessionStorage.getItem('currentPlaylist')
+    if (storedPlaylist && currentSong) {
+      try {
+        const playlist = JSON.parse(storedPlaylist)
+        if (playlist && playlist.name === 'Esse Domingo' && Array.isArray(playlist.song_ids)) {
+          const currentItem = playlist.song_ids[currentPlaylistIndex]
+          if (currentItem && typeof currentItem === 'object' && currentItem.tom && currentItem.songId) {
+            const songKey = currentSong.key || ORIGINAL_KEY
+            const targetTom = currentItem.tom
+            const fromIdx = NOTES.indexOf(songKey)
+            const toIdx = NOTES.indexOf(targetTom)
+            if (fromIdx !== -1 && toIdx !== -1) {
+              const offset = toIdx - fromIdx
+              setTransposeOffset(offset)
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Error parsing playlist:', e)
+        sessionStorage.removeItem('currentPlaylist')
+        sessionStorage.removeItem('currentPlaylistIndex')
+      }
+    }
+  }, [currentSong, currentPlaylistIndex])
 
   const sortedSongs = [...songs].sort((a, b) => a.name.localeCompare(b.name, 'pt', { sensitivity: 'base' }))
   const filteredSongs = songFilter.trim()
