@@ -1,11 +1,19 @@
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box }
 :focus { outline: 0 }
+html {
+  -webkit-tap-highlight-color: transparent;
+}
 body {
   color: #424242;
   word-wrap: break-word;
   font: 13px/1.1 Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  touch-action: manipulation;
 }
 a { text-decoration: none; color: #059669 }
 li { list-style: none }
