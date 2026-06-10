@@ -74,23 +74,18 @@ function getYoutubeId(url) {
 }
 
 function detectKey(textContent) {
-  const text = textContent.replace(/<[^>]*>/g, '')
-  const rootPattern = /\b([A-G][#b]?)(?=\s|[\/\(\)\d]|m(?!\w)|M|dim|aug|sus|add|°|$)/g
+  const tomMatch = textContent.match(/^[Tt]om\s*:\s*([A-G][#b]?)/m)
+  if (tomMatch) return tomMatch[1]
+  const chordRoots = textContent.match(/\b([A-G][#b]?)(?=\s*[\/\(\)\d]|m(?!\w)|M|dim|aug|sus|add|°|7|$)/g)
+  if (!chordRoots || chordRoots.length === 0) return 'G'
   const counts = {}
-  const seenInOrder = []
-  let match
-  while ((match = rootPattern.exec(text)) !== null) {
-    const root = match[1]
-    if (!counts[root]) {
-      counts[root] = 0
-      seenInOrder.push(root)
-    }
-    counts[root]++
+  const seen = []
+  for (const r of chordRoots) {
+    if (!counts[r]) { counts[r] = 0; seen.push(r) }
+    counts[r]++
   }
-  if (seenInOrder.length === 0) return 'G'
-  let best = seenInOrder[0]
-  let bestCount = counts[best]
-  for (const r of seenInOrder) {
+  let best = seen[0], bestCount = counts[best]
+  for (const r of seen) {
     if (counts[r] > bestCount) { best = r; bestCount = counts[r] }
   }
   return best
@@ -122,12 +117,14 @@ function App() {
   const [showSearchResults, setShowSearchResults] = useState(false)
   const [selectedSongId, setSelectedSongId] = useState(null)
   const [showMySongs, setShowMySongs] = useState(false)
+  const [songFilter, setSongFilter] = useState('')
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [user, setUser] = useState(null)
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [userIsAdmin, setUserIsAdmin] = useState(false)
   const [showSuggestionModal, setShowSuggestionModal] = useState(false)
-  const [suggName, setSuggName] = useState('')
   const [suggSong, setSuggSong] = useState('')
   const [suggUrl, setSuggUrl] = useState('')
   const [suggestions, setSuggestions] = useState([])
@@ -273,6 +270,19 @@ function App() {
     }
   }
 
+  const requestDelete = (id) => {
+    setDeleteConfirmId(id)
+    setDeleteConfirmText('')
+  }
+
+  const confirmDelete = () => {
+    if (deleteConfirmText.trim().toLowerCase() === 'confirmar' && deleteConfirmId) {
+      handleDeleteSong(deleteConfirmId)
+      setDeleteConfirmId(null)
+      setDeleteConfirmText('')
+    }
+  }
+
   const currentSong = selectedSongId
     ? songs.find(s => s.id === selectedSongId)
     : null
@@ -282,6 +292,11 @@ function App() {
     : RAW_CHORD_HTML
   const processedChordHtml = processChordHtml(currentRawHtml, transposeOffset, simplifyChords)
   const currentKey = getKeyFromOffset(currentSong?.key || ORIGINAL_KEY, transposeOffset)
+
+  const sortedSongs = [...songs].sort((a, b) => a.name.localeCompare(b.name, 'pt', { sensitivity: 'base' }))
+  const filteredSongs = songFilter.trim()
+    ? sortedSongs.filter(s => s.name.toLowerCase().includes(songFilter.toLowerCase()))
+    : sortedSongs
 
   const handleChordClick = (e) => {
     if (e.target.tagName === 'B') {
@@ -326,7 +341,7 @@ function App() {
                     {userIsAdmin && (
                       <button
                         className="search-result-delete"
-                        onClick={e => { e.stopPropagation(); handleDeleteSong(song.id) }}
+                        onClick={e => { e.stopPropagation(); requestDelete(song.id) }}
                         title="Remover musica"
                       >
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
@@ -343,7 +358,7 @@ function App() {
             ) : user ? (
               <button className="nav-assine" onClick={() => setShowSuggestionModal(true)}>Sugestao de louvor</button>
             ) : null}
-            <button className="nav-link" onClick={() => setShowMySongs(true)}>Minhas musicas</button>
+            <button className="nav-link" onClick={() => { setSongFilter(''); setShowMySongs(true) }}>Musicas</button>
             <a href="#" className="nav-link">Listas</a>
             {user && userIsAdmin && (
               <button className="nav-link" onClick={() => { fetchSuggestions().then(setSuggestions); setShowSuggestionsList(true) }}>Sugestoes</button>
@@ -371,7 +386,7 @@ function App() {
                       </div>
                     </div>
                     <div className="nav-user-card-divider" />
-                    <button className="nav-user-card-item" onClick={() => { setShowMySongs(true); setShowUserMenu(false) }}>
+                    <button className="nav-user-card-item" onClick={() => { setSongFilter(''); setShowMySongs(true); setShowUserMenu(false) }}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
                       Minhas musicas
                     </button>
@@ -661,13 +676,24 @@ function App() {
       {showMySongs && (
         <div className="modal-overlay" onClick={() => setShowMySongs(false)}>
           <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
-            <h2 className="modal-title">Minhas musicas</h2>
+            <h2 className="modal-title">Musicas</h2>
             <div className="modal-body">
-              {songs.length === 0 ? (
-                <p className="modal-empty">Nenhuma musica adicionada ainda.</p>
+              <div className="song-filter-wrap">
+                <svg className="song-filter-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input
+                  className="song-filter-input"
+                  type="text"
+                  placeholder="Buscar musica..."
+                  value={songFilter}
+                  onChange={e => setSongFilter(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              {filteredSongs.length === 0 ? (
+                <p className="modal-empty">Nenhuma musica encontrada.</p>
               ) : (
                 <div className="my-songs-list">
-                  {songs.map(song => (
+                  {filteredSongs.map(song => (
                     <div key={song.id} className="my-song-item">
                       <button
                         className="my-song-name"
@@ -676,12 +702,13 @@ function App() {
                           setShowMySongs(false)
                         }}
                       >
-                        {song.name}
+                        <span className="my-song-title">{song.name}</span>
+                        {song.composer && <span className="my-song-composer">{song.composer}</span>}
                       </button>
                       {userIsAdmin && (
                         <button
                           className="my-song-delete"
-                          onClick={() => handleDeleteSong(song.id)}
+                          onClick={() => requestDelete(song.id)}
                           title="Remover musica"
                         >
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
@@ -704,15 +731,6 @@ function App() {
           <div className="modal" onClick={e => e.stopPropagation()}>
             <h2 className="modal-title">Sugestao de louvor</h2>
             <div className="modal-body">
-              <label className="modal-label">Seu nome</label>
-              <input
-                className="modal-input"
-                type="text"
-                placeholder="Digite seu nome"
-                value={suggName}
-                onChange={e => setSuggName(e.target.value)}
-                autoFocus
-              />
               <label className="modal-label">Nome da musica</label>
               <input
                 className="modal-input"
@@ -720,6 +738,7 @@ function App() {
                 placeholder="Digite o nome da musica"
                 value={suggSong}
                 onChange={e => setSuggSong(e.target.value)}
+                autoFocus
               />
               <label className="modal-label">Link do YouTube</label>
               <input
@@ -735,14 +754,14 @@ function App() {
               <button
                 className="modal-btn modal-btn-confirm"
                 onClick={async () => {
-                  if (!suggName.trim() || !suggSong.trim() || !suggUrl.trim()) return
-                  await saveSuggestion(suggName.trim(), suggSong.trim(), suggUrl.trim())
+                  const name = user?.user_metadata?.full_name || user?.email || ''
+                  if (!name || !suggSong.trim() || !suggUrl.trim()) return
+                  await saveSuggestion(name.trim(), suggSong.trim(), suggUrl.trim())
                   setShowSuggestionModal(false)
-                  setSuggName('')
                   setSuggSong('')
                   setSuggUrl('')
                 }}
-                disabled={!suggName.trim() || !suggSong.trim() || !suggUrl.trim()}
+                disabled={!suggSong.trim() || !suggUrl.trim()}
               >
                 Enviar sugestao
               </button>
@@ -795,6 +814,36 @@ function App() {
             </div>
             <div className="modal-actions">
               <button className="modal-btn modal-btn-cancel" onClick={() => setShowSuggestionsList(false)}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteConfirmId && (
+        <div className="modal-overlay" onClick={() => { setDeleteConfirmId(null); setDeleteConfirmText('') }}>
+          <div className="modal modal-sm" onClick={e => e.stopPropagation()}>
+            <h2 className="modal-title">Remover musica</h2>
+            <div className="modal-body">
+              <p className="modal-text">Voce realmente quer remover a musica?</p>
+              <label className="modal-label">Digite <strong>confirmar</strong> para prosseguir</label>
+              <input
+                className="modal-input"
+                type="text"
+                placeholder='digite "confirmar"'
+                value={deleteConfirmText}
+                onChange={e => setDeleteConfirmText(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div className="modal-actions">
+              <button className="modal-btn modal-btn-cancel" onClick={() => { setDeleteConfirmId(null); setDeleteConfirmText('') }}>Cancelar</button>
+              <button
+                className="modal-btn modal-btn-danger"
+                onClick={confirmDelete}
+                disabled={deleteConfirmText.trim().toLowerCase() !== 'confirmar'}
+              >
+                Remover
+              </button>
             </div>
           </div>
         </div>
