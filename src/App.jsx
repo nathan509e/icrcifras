@@ -370,7 +370,7 @@ function App() {
             ) : user ? (
               <button className="nav-assine" onClick={() => setShowSuggestionModal(true)}>Sugestao de louvor</button>
             ) : null}
-            <button className="nav-link" onClick={() => { setSongFilter(''); setShowMySongs(true) }}>Musicas</button>
+            <button className="nav-link" onClick={() => { setSongFilter(''); setShowMySongs(true) }}>Louvores</button>
             <a href="#" className="nav-link">Listas</a>
             {user && !userIsAdmin && (
               <button className="nav-link" onClick={() => { fetchUserSuggestions(user.email).then(setUserSuggestions); setShowUserSuggestions(true) }}>Minhas sugestoes</button>
@@ -697,7 +697,7 @@ function App() {
       {showMySongs && (
         <div className="modal-overlay" onClick={() => setShowMySongs(false)}>
           <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
-            <h2 className="modal-title">Musicas</h2>
+             <h2 className="modal-title">Louvores</h2>
             <div className="modal-body">
               <div className="song-filter-wrap">
                 <svg className="song-filter-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>

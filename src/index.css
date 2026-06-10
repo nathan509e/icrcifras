@@ -20,3 +20,69 @@ button, input { font: inherit; border: 0; background: transparent }
   clip: rect(1px, 1px, 1px, 1px);
   clip-path: polygon(0 0, 0 0, 0 0, 0 0);
 }
+
+.musicas-page { padding: 40px 20px 60px }
+.musicas-header { margin-bottom: 30px }
+.musicas-header h1 {
+  font-size: 36px;
+  font-weight: 700;
+  color: #1b1b1b;
+  margin-bottom: 8px;
+}
+.musicas-count { color: #757575; font-size: 14px }
+.search-section { margin-bottom: 24px }
+.search-section .search-input {
+  width: 100%;
+  max-width: 400px;
+  height: 44px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 0 16px;
+  font-size: 15px;
+}
+.search-section .search-input:focus { border-color: #059669 }
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #757575;
+}
+.empty-state svg { margin-bottom: 16px; opacity: 0.5 }
+.empty-state p { margin-bottom: 16px }
+.musicas-list { display: flex; flex-direction: column; gap: 8px }
+.musica-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.musica-item:hover { border-color: #059669; background: #f8faf9 }
+.musica-info { display: flex; flex-direction: column; gap: 4px }
+.musica-name { font-size: 16px; font-weight: 600; color: #1b1b1b }
+.musica-composer { font-size: 13px; color: #757575 }
+.musica-key { font-size: 12px; color: #059669 }
+.musica-arrow { color: #757575; flex-shrink: 0 }
+
+.btn-clear, .btn-primary {
+  display: inline-block;
+  padding: 10px 20px;
+  background: #059669;
+  color: #fff;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #424242;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+.back-link:hover { color: #059669 }
