@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchSongs, signInWithGoogle, signOut, onAuthChange, getCurrentUser, isAdmin, fetchUserLists, createList, updateList, deleteList, saveSuggestion, fetchUserSuggestions, fetchDomingoList } from '../supabase'
+import { fetchSongs, signInWithGoogle, signOut, onAuthChange, getCurrentUser, isAdmin, fetchUserLists, createList, updateList, deleteList, saveSuggestion, fetchUserSuggestions, fetchDomingoList, fetchSuggestions } from '../supabase'
+import Navbar from '../components/Navbar'
 
 const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 
@@ -8,17 +9,21 @@ export default function MusicasPage() {
   const [songs, setSongs] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const [showSearchResults, setShowSearchResults] = useState(false)
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [showSuggestionModal, setShowSuggestionModal] = useState(false)
+  const [showSuggestionsList, setShowSuggestionsList] = useState(false)
   const [showListsModal, setShowListsModal] = useState(false)
   const [showCreateListModal, setShowCreateListModal] = useState(false)
   const [showEditListModal, setShowEditListModal] = useState(false)
   const [showPlaylistModal, setShowPlaylistModal] = useState(false)
   const [showDomingoModal, setShowDomingoModal] = useState(false)
+  const [showAddModal, setShowAddModal] = useState(false)
   const [domingoList, setDomingoList] = useState(null)
   const [showUserSuggestions, setShowUserSuggestions] = useState(false)
   const [userSuggestions, setUserSuggestions] = useState([])
+  const [suggestions, setSuggestions] = useState([])
   const [suggSong, setSuggSong] = useState('')
   const [suggUrl, setSuggUrl] = useState('')
   const [user, setUser] = useState(null)
@@ -131,6 +136,27 @@ export default function MusicasPage() {
   const displayName = user?.user_metadata?.full_name || user?.email || ''
   const avatarLetter = displayName ? displayName[0].toUpperCase() : '?'
 
+  const getYoutubeId = (url) => {
+    if (!url) return ''
+    const match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/)
+    return match ? match[1] : ''
+  }
+
+  const searchResults = searchQuery.trim()
+    ? songs.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    : []
+
+  const loadSongContent = (id) => {
+    navigate(`/${id}`)
+    setShowSearchResults(false)
+    setSearchQuery('')
+  }
+
+  const requestDelete = (id) => {
+    // This is handled in the list modals
+    console.log('Request delete:', id)
+  }
+
   if (loading) {
     return (
       <div className="page-wrapper">
@@ -168,55 +194,45 @@ export default function MusicasPage() {
               />
             </form>
           </div>
-          <nav className="nav-links">
-            {user ? (
-              <button className="nav-assine" onClick={() => { setShowDomingoModal(true) }}>Esse Domingo</button>
-            ) : null}
-            <button className="nav-link" onClick={() => { setShowMySongs(true); setSongFilter('') }}>Louvores</button>
-            <button className="nav-link" onClick={() => { setShowListsModal(true) }}>Listas</button>
-            {user && !userIsAdmin && (
-              <button className="nav-link" onClick={() => { fetchUserSuggestions(user.email).then(setUserSuggestions); setShowUserSuggestions(true) }}>Minhas sugestoes</button>
-            )}
-            {user && userIsAdmin && (
-              <>
-                <button className="nav-link" onClick={() => {}}>Sugestoes</button>
-                <button className="nav-link" onClick={() => {}}>Adicionar</button>
-              </>
-            )}
-            {user ? (
-              <div className="nav-user" ref={userMenuRef}>
-                <button className="nav-user-trigger" onClick={() => setShowUserMenu(v => !v)}>
-                  <span className="nav-avatar-wrap">
-                    <img src={avatarUrl} alt="" className="nav-avatar" referrerPolicy="no-referrer" onLoad={e => { const fb = e.target.parentElement.querySelector('.nav-avatar-fallback'); if (fb) fb.style.display = 'none' }} onError={e => { e.target.style.display = 'none' }} />
-                    <span className="nav-avatar-fallback">{avatarLetter}</span>
-                  </span>
-                  <span className="nav-username">{displayName}</span>
-                  <span className="nav-user-arrow">&#9662;</span>
-                </button>
-                {showUserMenu && (
-                  <div className="nav-user-card">
-                    <div className="nav-user-card-header">
-                      <span className="nav-avatar-wrap">
-                        <img src={avatarUrl} alt="" className="nav-user-card-avatar" referrerPolicy="no-referrer" onLoad={e => { const fb = e.target.parentElement.querySelector('.nav-avatar-fallback'); if (fb) fb.style.display = 'none' }} onError={e => { e.target.style.display = 'none' }} />
-                        <span className="nav-avatar-fallback nav-avatar-fallback--lg">{avatarLetter}</span>
-                      </span>
-                      <div className="nav-user-card-info">
-                        <span className="nav-user-card-name">{user.user_metadata?.full_name || 'Usuario'}</span>
-                        <span className="nav-user-card-email">{user.email}</span>
-                      </div>
-                    </div>
-                    <div className="nav-user-card-divider" />
-                    <button className="nav-user-card-item nav-user-card-item--danger" onClick={() => { signOut(); setShowUserMenu(false) }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                      Sair
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <button className="nav-link" onClick={() => setShowLoginModal(true)}>Entrar</button>
-            )}
-          </nav>
+          <Navbar
+            user={user}
+            userIsAdmin={userIsAdmin}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            showSearchResults={showSearchResults}
+            setShowSearchResults={setShowSearchResults}
+            searchResults={[]}
+            loadSongContent={() => {}}
+            requestDelete={() => {}}
+            showDomingoModal={showDomingoModal}
+            setShowDomingoModal={setShowDomingoModal}
+            showMySongs={showMySongs}
+            setShowMySongs={setShowMySongs}
+            songFilter={songFilter}
+            setSongFilter={setSongFilter}
+            showListsModal={showListsModal}
+            setShowListsModal={setShowListsModal}
+            userLists={userLists}
+            setUserLists={setUserLists}
+            showUserSuggestions={showUserSuggestions}
+            setShowUserSuggestions={setShowUserSuggestions}
+            userSuggestions={userSuggestions}
+            setUserSuggestions={setUserSuggestions}
+            showSuggestionsList={showSuggestionsList}
+            setShowSuggestionsList={setShowSuggestionsList}
+            suggestions={suggestions}
+            setSuggestions={setSuggestions}
+            showAddModal={showAddModal}
+            setShowAddModal={setShowAddModal}
+            showLoginModal={showLoginModal}
+            setShowLoginModal={setShowLoginModal}
+            userMenuRef={userMenuRef}
+            showUserMenu={showUserMenu}
+            setShowUserMenu={setShowUserMenu}
+            avatarUrl={avatarUrl}
+            displayName={displayName}
+            avatarLetter={avatarLetter}
+          />
         </div>
       </header>
 
@@ -542,110 +558,39 @@ export default function MusicasPage() {
             <div className="modal-body">
               {userIsAdmin ? (
                 <>
-                  {domingoList ? (
-                    <>
-                      <p className="modal-text">Lista atual. Clique em uma musica para tocar.</p>
-                      <div className="playlist-songs">
-                        {domingoList.song_ids?.map((item, index) => {
-                          const songId = typeof item === 'object' ? item.songId : item
-                          const song = songs.find(s => s.id === songId)
-                          if (!song) return null
-                          return (
-                            <button
-                              key={song.id}
-                              className="playlist-song-item"
-                              onClick={() => {
-                                const playlistWithTom = {
-                                  ...domingoList,
-                                  song_ids: domingoList.song_ids.map((i) => ({
-                                    songId: typeof i === 'object' ? i.songId : i,
-                                    tom: typeof i === 'object' ? i.tom : null
-                                  }))
-                                }
-                                sessionStorage.setItem('currentPlaylist', JSON.stringify(playlistWithTom))
-                                sessionStorage.setItem('currentPlaylistIndex', index.toString())
-                                navigate(`/${song.id}`)
-                                setShowDomingoModal(false)
-                              }}
-                            >
-                              <span className="playlist-song-number">{index + 1}</span>
-                              <span className="playlist-song-name">{song.name}</span>
-                              {typeof item === 'object' && item.tom && <span className="playlist-song-key">Tom: {item.tom}</span>}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <p className="modal-text">Selecione as musicas para o culto de domingo:</p>
-                      <div className="song-select-list">
-                        {songs.map(song => (
-                          <div key={song.id} className="song-select-item-wrap">
-                            <label className="song-select-item">
-                              <input
-                                type="checkbox"
-                                checked={selectedSongs.some(s => s.songId === song.id)}
-                                onChange={() => setSelectedSongs(prev => {
-                                  const exists = prev.find(s => s.songId === song.id)
-                                  if (exists) {
-                                    return prev.filter(s => s.songId !== song.id)
-                                  } else {
-                                    return [...prev, { songId: song.id, tom: song.key || 'G' }]
-                                  }
-                                })}
-                              />
-                              <span>{song.name}</span>
-                            </label>
-                            {selectedSongs.find(s => s.songId === song.id) && (
-                              <select
-                                className="tom-select"
-                                value={selectedSongs.find(s => s.songId === song.id)?.tom || 'G'}
-                                onChange={(e) => {
-                                  setSelectedSongs(prev => prev.map(s => 
-                                    s.songId === song.id ? { ...s, tom: e.target.value } : s
-                                  ))
-                                }}
-                              >
-                                {NOTES.map(note => <option key={note} value={note}>{note}</option>)}
-                              </select>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  )}
+                  <p className="modal-text">Selecione as musicas para o culto de domingo:</p>
+                  <div className="song-select-list">
+                    {songs.map(song => (
+                      <label key={song.id} className="song-select-item">
+                        <input
+                          type="checkbox"
+                          checked={selectedSongs.includes(song.id)}
+                          onChange={() => setSelectedSongs(prev => prev.includes(song.id) ? prev.filter(id => id !== song.id) : [...prev, song.id])}
+                        />
+                        <span>{song.name}</span>
+                      </label>
+                    ))}
+                  </div>
                 </>
               ) : (
                 <>
                   <p className="modal-text">Musicas do culto de domingo:</p>
                   {domingoList ? (
                     <div className="playlist-songs">
-                      {domingoList.song_ids?.map((item, index) => {
-                        const songId = typeof item === 'object' ? item.songId : item
+                      {domingoList.song_ids?.map((songId, index) => {
                         const song = songs.find(s => s.id === songId)
                         if (!song) return null
-                        const playlistWithTom = {
-                          ...domingoList,
-                          song_ids: domingoList.song_ids.map((i) => ({
-                            songId: typeof i === 'object' ? i.songId : i,
-                            tom: typeof i === 'object' ? i.tom : null
-                          }))
-                        }
                         return (
                           <button
                             key={song.id}
                             className="playlist-song-item"
                             onClick={() => {
-                              sessionStorage.setItem('currentPlaylist', JSON.stringify(playlistWithTom))
-                              sessionStorage.setItem('currentPlaylistIndex', index.toString())
                               navigate(`/${song.id}`)
                               setShowDomingoModal(false)
                             }}
                           >
                             <span className="playlist-song-number">{index + 1}</span>
                             <span className="playlist-song-name">{song.name}</span>
-                            {typeof item === 'object' && item.tom && <span className="playlist-song-key">Tom: {item.tom}</span>}
                           </button>
                         )
                       })}
@@ -659,34 +604,23 @@ export default function MusicasPage() {
             <div className="modal-actions">
               <button className="modal-btn modal-btn-cancel" onClick={() => setShowDomingoModal(false)}>Fechar</button>
               {userIsAdmin && (
-                <>
-                  {domingoList ? (
-                    <button
-                      className="modal-btn modal-btn-danger"
-                      onClick={async () => {
-                        if (window.confirm('Tem certeza que deseja excluir a lista atual?')) {
-                          await deleteList(domingoList.id)
-                          setDomingoList(null)
-                        }
-                      }}
-                    >
-                      Excluir lista
-                    </button>
-                  ) : (
-                    <button
-                      className="modal-btn modal-btn-confirm"
-                      onClick={async () => {
-                        const newList = await createList('Esse Domingo', 'domingo@cifras', selectedSongs)
-                        setDomingoList(newList)
-                        setSelectedSongs([])
-                        setShowDomingoModal(false)
-                      }}
-                      disabled={selectedSongs.length === 0}
-                    >
-                      Criar lista
-                    </button>
-                  )}
-                </>
+                <button
+                  className="modal-btn modal-btn-confirm"
+                  onClick={async () => {
+                    if (domingoList) {
+                      await updateList(domingoList.id, 'Esse Domingo', selectedSongs)
+                      setDomingoList({ ...domingoList, song_ids: selectedSongs })
+                    } else {
+                      const newList = await createList('Esse Domingo', 'domingo@cifras', selectedSongs)
+                      setDomingoList(newList)
+                    }
+                    setSelectedSongs([])
+                    setShowDomingoModal(false)
+                  }}
+                  disabled={selectedSongs.length === 0}
+                >
+                  Salvar lista
+                </button>
               )}
             </div>
           </div>

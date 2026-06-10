@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { fetchSongs, saveSong, deleteSong, signInWithGoogle, signOut, onAuthChange, getCurrentUser, isAdmin, fetchSuggestions, saveSuggestion, deleteSuggestion, updateSuggestionStatus, fetchUserSuggestions, fetchUserLists, createList, updateList, deleteList, fetchDomingoList } from './supabase'
+import Navbar from './components/Navbar'
 import './App.css'
 
 const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
@@ -424,59 +425,45 @@ function App() {
               </div>
             )}
           </div>
-          <nav className="nav-links">
-            {user ? (
-              <button className="nav-assine" onClick={() => { setShowDomingoModal(true) }}>Esse Domingo</button>
-            ) : null}
-            <button className="nav-link" onClick={() => { setSongFilter(''); setShowMySongs(true) }}>Louvores</button>
-            <button className="nav-link" onClick={() => { fetchUserLists(user?.email).then(setUserLists); setShowListsModal(true) }}>Listas</button>
-            {user && !userIsAdmin && (
-              <button className="nav-link" onClick={() => { fetchUserSuggestions(user.email).then(setUserSuggestions); setShowUserSuggestions(true) }}>Minhas sugestoes</button>
-            )}
-            {user && userIsAdmin && (
-              <>
-                <button className="nav-link" onClick={() => { fetchSuggestions().then(setSuggestions); setShowSuggestionsList(true) }}>Sugestoes</button>
-                <button className="nav-link" onClick={() => setShowAddModal(true)}>Adicionar</button>
-              </>
-            )}
-            {user ? (
-              <div className="nav-user" ref={userMenuRef}>
-                <button className="nav-user-trigger" onClick={() => setShowUserMenu(v => !v)}>
-                  <span className="nav-avatar-wrap">
-                    <img src={avatarUrl} alt="" className="nav-avatar" referrerPolicy="no-referrer" onLoad={e => { const fb = e.target.parentElement.querySelector('.nav-avatar-fallback'); if (fb) fb.style.display = 'none' }} onError={e => { e.target.style.display = 'none' }} />
-                    <span className="nav-avatar-fallback">{avatarLetter}</span>
-                  </span>
-                  <span className="nav-username">{displayName}</span>
-                  <span className="nav-user-arrow">&#9662;</span>
-                </button>
-                {showUserMenu && (
-                  <div className="nav-user-card">
-                    <div className="nav-user-card-header">
-                      <span className="nav-avatar-wrap">
-                        <img src={avatarUrl} alt="" className="nav-user-card-avatar" referrerPolicy="no-referrer" onLoad={e => { const fb = e.target.parentElement.querySelector('.nav-avatar-fallback'); if (fb) fb.style.display = 'none' }} onError={e => { e.target.style.display = 'none' }} />
-                        <span className="nav-avatar-fallback nav-avatar-fallback--lg">{avatarLetter}</span>
-                      </span>
-                      <div className="nav-user-card-info">
-                        <span className="nav-user-card-name">{user.user_metadata?.full_name || 'Usuario'}</span>
-                        <span className="nav-user-card-email">{user.email}</span>
-                      </div>
-                    </div>
-                    <div className="nav-user-card-divider" />
-                    <button className="nav-user-card-item" onClick={() => { setSongFilter(''); setShowMySongs(true); setShowUserMenu(false) }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-                      Minhas musicas
-                    </button>
-                    <button className="nav-user-card-item nav-user-card-item--danger" onClick={() => { signOut(); setShowUserMenu(false) }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                      Sair
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <button className="nav-link" onClick={() => setShowLoginModal(true)}>Entrar</button>
-            )}
-          </nav>
+          <Navbar
+            user={user}
+            userIsAdmin={userIsAdmin}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            showSearchResults={showSearchResults}
+            setShowSearchResults={setShowSearchResults}
+            searchResults={searchResults}
+            loadSongContent={loadSongContent}
+            requestDelete={requestDelete}
+            showDomingoModal={showDomingoModal}
+            setShowDomingoModal={setShowDomingoModal}
+            showMySongs={showMySongs}
+            setShowMySongs={setShowMySongs}
+            songFilter={songFilter}
+            setSongFilter={setSongFilter}
+            showListsModal={showListsModal}
+            setShowListsModal={setShowListsModal}
+            userLists={userLists}
+            setUserLists={setUserLists}
+            showUserSuggestions={showUserSuggestions}
+            setShowUserSuggestions={setShowUserSuggestions}
+            userSuggestions={userSuggestions}
+            setUserSuggestions={setUserSuggestions}
+            showSuggestionsList={showSuggestionsList}
+            setShowSuggestionsList={setShowSuggestionsList}
+            suggestions={suggestions}
+            setSuggestions={setSuggestions}
+            showAddModal={showAddModal}
+            setShowAddModal={setShowAddModal}
+            showLoginModal={showLoginModal}
+            setShowLoginModal={setShowLoginModal}
+            userMenuRef={userMenuRef}
+            showUserMenu={showUserMenu}
+            setShowUserMenu={setShowUserMenu}
+            avatarUrl={avatarUrl}
+            displayName={displayName}
+            avatarLetter={avatarLetter}
+          />
         </div>
       </header>
 
