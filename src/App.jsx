@@ -399,12 +399,7 @@ function App() {
             )}
           </div>
           <nav className="nav-links">
-            {user && userIsAdmin ? (
-              <>
-                <button className="nav-assine" onClick={() => setShowSuggestionModal(true)}>Sugestao de louvor</button>
-                <button className="nav-assine" onClick={() => { setShowDomingoModal(true) }}>Esse Domingo</button>
-              </>
-            ) : user ? (
+            {user ? (
               <button className="nav-assine" onClick={() => { setShowDomingoModal(true) }}>Esse Domingo</button>
             ) : null}
             <button className="nav-link" onClick={() => { setSongFilter(''); setShowMySongs(true) }}>Louvores</button>
