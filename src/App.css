@@ -1160,7 +1160,7 @@
   gap: 6px;
   flex-shrink: 0;
 }
-.suggestion-actions-row {
+.suggestion-song-row {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1213,4 +1213,16 @@
   color: #dc2626;
   border-color: #dc2626;
   background: #fef2f2;
+}
+.suggestion-label {
+  font: 600 11px var(--font-roboto);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.suggestion-label--approved {
+  color: var(--green);
+}
+.suggestion-label--rejected {
+  color: #dc2626;
 }
