@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { signOut } from '../supabase'
+import { signOut, fetchUserLists, fetchSuggestions, fetchUserSuggestions } from '../supabase'
 
 export default function Navbar({
   user,
