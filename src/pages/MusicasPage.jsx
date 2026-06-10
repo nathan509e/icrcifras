@@ -15,6 +15,8 @@ export default function MusicasPage() {
   const [showPlaylistModal, setShowPlaylistModal] = useState(false)
   const [showDomingoModal, setShowDomingoModal] = useState(false)
   const [domingoList, setDomingoList] = useState(null)
+  const [showUserSuggestions, setShowUserSuggestions] = useState(false)
+  const [userSuggestions, setUserSuggestions] = useState([])
   const [suggSong, setSuggSong] = useState('')
   const [suggUrl, setSuggUrl] = useState('')
   const [user, setUser] = useState(null)
@@ -169,10 +171,7 @@ export default function MusicasPage() {
                 <button className="nav-assine" onClick={() => { setShowDomingoModal(true) }}>Esse Domingo</button>
               </>
             ) : user ? (
-              <>
-                <button className="nav-assine" onClick={() => setShowSuggestionModal(true)}>Sugestao de louvor</button>
-                <button className="nav-assine" onClick={() => { setShowDomingoModal(true) }}>Esse Domingo</button>
-              </>
+              <button className="nav-assine" onClick={() => { setShowDomingoModal(true) }}>Esse Domingo</button>
             ) : null}
             <button className="nav-link" onClick={() => {}}>Louvores</button>
             <button className="nav-link" onClick={() => { setShowListsModal(true) }}>Listas</button>
@@ -565,6 +564,39 @@ export default function MusicasPage() {
                   Salvar lista
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showUserSuggestions && (
+        <div className="modal-overlay" onClick={() => setShowUserSuggestions(false)}>
+          <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
+            <h2 className="modal-title">Minhas sugestoes</h2>
+            <div className="modal-body">
+              {userSuggestions.length === 0 ? (
+                <p className="modal-empty">Nenhuma sugestao enviada.</p>
+              ) : (
+                <div className="suggestions-list">
+                  {userSuggestions.map(s => {
+                    const st = s.status === 'approved' ? { text: 'Aprovado', cls: 'status-approved' } : s.status === 'rejected' ? { text: 'Reprovado', cls: 'status-rejected' } : { text: 'Em analise', cls: 'status-pending' }
+                    return (
+                      <div key={s.id} className="suggestion-item">
+                        <div className="suggestion-info">
+                          <div className="suggestion-song-row">
+                            <span className="suggestion-song">{s.song_name}</span>
+                          </div>
+                          <span className={`suggestion-status ${st.cls}`}>{st.text}</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+            <div className="modal-actions">
+              <button className="modal-btn modal-btn-confirm" onClick={() => { setShowUserSuggestions(false); setShowSuggestionModal(true) }}>Adicionar sugestao</button>
+              <button className="modal-btn modal-btn-cancel" onClick={() => setShowUserSuggestions(false)}>Fechar</button>
             </div>
           </div>
         </div>

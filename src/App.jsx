@@ -405,10 +405,7 @@ function App() {
                 <button className="nav-assine" onClick={() => { setShowDomingoModal(true) }}>Esse Domingo</button>
               </>
             ) : user ? (
-              <>
-                <button className="nav-assine" onClick={() => setShowSuggestionModal(true)}>Sugestao de louvor</button>
-                <button className="nav-assine" onClick={() => { setShowDomingoModal(true) }}>Esse Domingo</button>
-              </>
+              <button className="nav-assine" onClick={() => { setShowDomingoModal(true) }}>Esse Domingo</button>
             ) : null}
             <button className="nav-link" onClick={() => { setSongFilter(''); setShowMySongs(true) }}>Louvores</button>
             <button className="nav-link" onClick={() => { fetchUserLists(user?.email).then(setUserLists); setShowListsModal(true) }}>Listas</button>
@@ -905,6 +902,7 @@ function App() {
               )}
             </div>
             <div className="modal-actions">
+              <button className="modal-btn modal-btn-confirm" onClick={() => setShowSuggestionModal(true)}>Adicionar sugestao</button>
               <button className="modal-btn modal-btn-cancel" onClick={() => setShowUserSuggestions(false)}>Fechar</button>
             </div>
           </div>
