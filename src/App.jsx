@@ -188,6 +188,22 @@ function App() {
   }, [params.songId, songs])
 
   useEffect(() => {
+    if (currentPlaylist && currentPlaylist.name === 'Esse Domingo' && currentSong) {
+      const currentItem = currentPlaylist.song_ids[currentPlaylistIndex]
+      if (currentItem && typeof currentItem === 'object' && currentItem.tom) {
+        const songKey = currentSong.key || ORIGINAL_KEY
+        const targetTom = currentItem.tom
+        const fromIdx = NOTES.indexOf(songKey)
+        const toIdx = NOTES.indexOf(targetTom)
+        if (fromIdx !== -1 && toIdx !== -1) {
+          const offset = toIdx - fromIdx
+          setTransposeOffset(offset)
+        }
+      }
+    }
+  }, [currentPlaylist, currentPlaylistIndex, currentSong])
+
+  useEffect(() => {
     getCurrentUser().then(setUser)
     const unsubscribe = onAuthChange(setUser)
     return unsubscribe

@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { fetchSongs, signInWithGoogle, signOut, onAuthChange, getCurrentUser, isAdmin, fetchUserLists, createList, updateList, deleteList, saveSuggestion, fetchUserSuggestions, fetchDomingoList } from '../supabase'
 
+const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+
 export default function MusicasPage() {
   const [songs, setSongs] = useState([])
   const [loading, setLoading] = useState(true)
@@ -27,6 +29,8 @@ export default function MusicasPage() {
   const [editingList, setEditingList] = useState(null)
   const [currentPlaylist, setCurrentPlaylist] = useState(null)
   const [currentPlaylistIndex, setCurrentPlaylistIndex] = useState(0)
+  const [showMySongs, setShowMySongs] = useState(false)
+  const [songFilter, setSongFilter] = useState('')
   const navigate = useNavigate()
   const userMenuRef = useRef(null)
 
@@ -168,7 +172,7 @@ export default function MusicasPage() {
             {user ? (
               <button className="nav-assine" onClick={() => { setShowDomingoModal(true) }}>Esse Domingo</button>
             ) : null}
-            <button className="nav-link" onClick={() => {}}>Louvores</button>
+            <button className="nav-link" onClick={() => { setShowMySongs(true); setSongFilter('') }}>Louvores</button>
             <button className="nav-link" onClick={() => { setShowListsModal(true) }}>Listas</button>
             {user && !userIsAdmin && (
               <button className="nav-link" onClick={() => { fetchUserSuggestions(user.email).then(setUserSuggestions); setShowUserSuggestions(true) }}>Minhas sugestoes</button>
@@ -179,7 +183,6 @@ export default function MusicasPage() {
                 <button className="nav-link" onClick={() => {}}>Adicionar</button>
               </>
             )}
-            <button className="nav-link" onClick={() => setShowListsModal(true)}>Listas</button>
             {user ? (
               <div className="nav-user" ref={userMenuRef}>
                 <button className="nav-user-trigger" onClick={() => setShowUserMenu(v => !v)}>
@@ -252,6 +255,50 @@ export default function MusicasPage() {
           </div>
         </div>
       </main>
+
+      {showMySongs && (
+        <div className="modal-overlay" onClick={() => setShowMySongs(false)}>
+          <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
+            <h2 className="modal-title">Louvores</h2>
+            <div className="modal-body">
+              <div className="song-filter-wrap">
+                <svg className="song-filter-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input
+                  className="song-filter-input"
+                  type="text"
+                  placeholder="Buscar musica..."
+                  value={songFilter}
+                  onChange={e => setSongFilter(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              {songs.filter(s => s.name.toLowerCase().includes(songFilter.toLowerCase())).length === 0 ? (
+                <p className="modal-empty">Nenhuma musica encontrada.</p>
+              ) : (
+                <div className="my-songs-list">
+                  {songs.filter(s => s.name.toLowerCase().includes(songFilter.toLowerCase())).map(song => (
+                    <div key={song.id} className="my-song-item">
+                      <button
+                        className="my-song-name"
+                        onClick={() => {
+                          navigate(`/${song.id}`)
+                          setShowMySongs(false)
+                        }}
+                      >
+                        <span className="my-song-title">{song.name}</span>
+                        {song.composer && <span className="my-song-composer">{song.composer}</span>}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="modal-actions">
+              <button className="modal-btn modal-btn-cancel" onClick={() => setShowMySongs(false)}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showLoginModal && (
         <div className="modal-overlay" onClick={() => setShowLoginModal(false)}>
@@ -497,16 +544,34 @@ export default function MusicasPage() {
                 <>
                   {domingoList ? (
                     <>
-                      <p className="modal-text">Lista atual. Voce pode excluir e criar uma nova.</p>
+                      <p className="modal-text">Lista atual. Clique em uma musica para tocar.</p>
                       <div className="playlist-songs">
-                        {domingoList.song_ids?.map((songId, index) => {
+                        {domingoList.song_ids?.map((item, index) => {
+                          const songId = typeof item === 'object' ? item.songId : item
                           const song = songs.find(s => s.id === songId)
                           if (!song) return null
                           return (
-                            <div key={song.id} className="playlist-song-item" style={{ cursor: 'default' }}>
+                            <button
+                              key={song.id}
+                              className="playlist-song-item"
+                              onClick={() => {
+                                const playlistWithTom = {
+                                  ...domingoList,
+                                  song_ids: domingoList.song_ids.map((i) => ({
+                                    songId: typeof i === 'object' ? i.songId : i,
+                                    tom: typeof i === 'object' ? i.tom : null
+                                  }))
+                                }
+                                sessionStorage.setItem('currentPlaylist', JSON.stringify(playlistWithTom))
+                                sessionStorage.setItem('currentPlaylistIndex', index.toString())
+                                navigate(`/${song.id}`)
+                                setShowDomingoModal(false)
+                              }}
+                            >
                               <span className="playlist-song-number">{index + 1}</span>
                               <span className="playlist-song-name">{song.name}</span>
-                            </div>
+                              {typeof item === 'object' && item.tom && <span className="playlist-song-key">Tom: {item.tom}</span>}
+                            </button>
                           )
                         })}
                       </div>
@@ -516,14 +581,36 @@ export default function MusicasPage() {
                       <p className="modal-text">Selecione as musicas para o culto de domingo:</p>
                       <div className="song-select-list">
                         {songs.map(song => (
-                          <label key={song.id} className="song-select-item">
-                            <input
-                              type="checkbox"
-                              checked={selectedSongs.includes(song.id)}
-                              onChange={() => setSelectedSongs(prev => prev.includes(song.id) ? prev.filter(id => id !== song.id) : [...prev, song.id])}
-                            />
-                            <span>{song.name}</span>
-                          </label>
+                          <div key={song.id} className="song-select-item-wrap">
+                            <label className="song-select-item">
+                              <input
+                                type="checkbox"
+                                checked={selectedSongs.some(s => s.songId === song.id)}
+                                onChange={() => setSelectedSongs(prev => {
+                                  const exists = prev.find(s => s.songId === song.id)
+                                  if (exists) {
+                                    return prev.filter(s => s.songId !== song.id)
+                                  } else {
+                                    return [...prev, { songId: song.id, tom: song.key || 'G' }]
+                                  }
+                                })}
+                              />
+                              <span>{song.name}</span>
+                            </label>
+                            {selectedSongs.find(s => s.songId === song.id) && (
+                              <select
+                                className="tom-select"
+                                value={selectedSongs.find(s => s.songId === song.id)?.tom || 'G'}
+                                onChange={(e) => {
+                                  setSelectedSongs(prev => prev.map(s => 
+                                    s.songId === song.id ? { ...s, tom: e.target.value } : s
+                                  ))
+                                }}
+                              >
+                                {NOTES.map(note => <option key={note} value={note}>{note}</option>)}
+                              </select>
+                            )}
+                          </div>
                         ))}
                       </div>
                     </>
@@ -534,15 +621,23 @@ export default function MusicasPage() {
                   <p className="modal-text">Musicas do culto de domingo:</p>
                   {domingoList ? (
                     <div className="playlist-songs">
-                      {domingoList.song_ids?.map((songId, index) => {
+                      {domingoList.song_ids?.map((item, index) => {
+                        const songId = typeof item === 'object' ? item.songId : item
                         const song = songs.find(s => s.id === songId)
                         if (!song) return null
+                        const playlistWithTom = {
+                          ...domingoList,
+                          song_ids: domingoList.song_ids.map((i) => ({
+                            songId: typeof i === 'object' ? i.songId : i,
+                            tom: typeof i === 'object' ? i.tom : null
+                          }))
+                        }
                         return (
                           <button
                             key={song.id}
                             className="playlist-song-item"
                             onClick={() => {
-                              sessionStorage.setItem('currentPlaylist', JSON.stringify(domingoList))
+                              sessionStorage.setItem('currentPlaylist', JSON.stringify(playlistWithTom))
                               sessionStorage.setItem('currentPlaylistIndex', index.toString())
                               navigate(`/${song.id}`)
                               setShowDomingoModal(false)
@@ -550,6 +645,7 @@ export default function MusicasPage() {
                           >
                             <span className="playlist-song-number">{index + 1}</span>
                             <span className="playlist-song-name">{song.name}</span>
+                            {typeof item === 'object' && item.tom && <span className="playlist-song-key">Tom: {item.tom}</span>}
                           </button>
                         )
                       })}
