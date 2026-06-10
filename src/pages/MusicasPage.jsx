@@ -573,7 +573,7 @@ export default function MusicasPage() {
                         {domingoList.song_ids?.map((item, index) => {
                           const songId = typeof item === 'object' ? item.songId : item
                           const tom = typeof item === 'object' ? item.tom : null
-                          const song = songs.find(s => s.id === songId)
+                          const song = songs.find(s => String(s.id) === String(songId))
                           if (!song) return null
                           return (
                             <button
@@ -642,7 +642,7 @@ export default function MusicasPage() {
                       {domingoList.song_ids?.map((item, index) => {
                         const songId = typeof item === 'object' ? item.songId : item
                         const tom = typeof item === 'object' ? item.tom : null
-                        const song = songs.find(s => s.id === songId)
+                        const song = songs.find(s => String(s.id) === String(songId))
                         if (!song) return null
                         return (
                           <button
