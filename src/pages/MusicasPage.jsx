@@ -585,6 +585,8 @@ export default function MusicasPage() {
                             key={song.id}
                             className="playlist-song-item"
                             onClick={() => {
+                              sessionStorage.setItem('currentPlaylist', JSON.stringify(domingoList))
+                              sessionStorage.setItem('currentPlaylistIndex', index.toString())
                               navigate(`/${song.id}`)
                               setShowDomingoModal(false)
                             }}

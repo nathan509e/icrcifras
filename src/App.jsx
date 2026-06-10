@@ -1227,6 +1227,8 @@ function App() {
                             key={song.id}
                             className="playlist-song-item"
                             onClick={() => {
+                              sessionStorage.setItem('currentPlaylist', JSON.stringify(domingoList))
+                              sessionStorage.setItem('currentPlaylistIndex', index.toString())
                               setSelectedSongId(song.id)
                               setShowDomingoModal(false)
                             }}
