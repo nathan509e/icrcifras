@@ -116,11 +116,11 @@ export async function fetchSuggestions() {
   return data || []
 }
 
-export async function saveSuggestion(userName, songName, youtubeUrl) {
+export async function saveSuggestion(userName, songName, youtubeUrl, userEmail = '') {
   if (!supabase) return null
   const { data, error } = await supabase
     .from('suggestions')
-    .insert([{ user_name: userName, song_name: songName, youtube_url: youtubeUrl }])
+    .insert([{ user_name: userName, song_name: songName, youtube_url: youtubeUrl, user_email: userEmail, status: 'pending' }])
     .select()
     .single()
   if (error) {
@@ -141,4 +141,31 @@ export async function deleteSuggestion(id) {
     return false
   }
   return true
+}
+
+export async function updateSuggestionStatus(id, status) {
+  if (!supabase) return false
+  const { error } = await supabase
+    .from('suggestions')
+    .update({ status })
+    .eq('id', id)
+  if (error) {
+    console.error('Error updating suggestion status:', error)
+    return false
+  }
+  return true
+}
+
+export async function fetchUserSuggestions(email) {
+  if (!supabase || !email) return []
+  const { data, error } = await supabase
+    .from('suggestions')
+    .select('*')
+    .eq('user_email', email)
+    .order('created_at', { ascending: false })
+  if (error) {
+    console.error('Error fetching user suggestions:', error)
+    return []
+  }
+  return data || []
 }

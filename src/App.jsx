@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { fetchSongs, saveSong, deleteSong, signInWithGoogle, signOut, onAuthChange, getCurrentUser, isAdmin, fetchSuggestions, saveSuggestion, deleteSuggestion } from './supabase'
+import { fetchSongs, saveSong, deleteSong, signInWithGoogle, signOut, onAuthChange, getCurrentUser, isAdmin, fetchSuggestions, saveSuggestion, deleteSuggestion, updateSuggestionStatus, fetchUserSuggestions } from './supabase'
 import './App.css'
 
 const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
@@ -73,6 +73,16 @@ function getYoutubeId(url) {
   return match ? match[1] : ''
 }
 
+function statusLabel(s) {
+  if (s === 'approved') return { text: 'Aprovado', cls: 'status-approved' }
+  if (s === 'rejected') return { text: 'Reprovado', cls: 'status-rejected' }
+  return { text: 'Em analise', cls: 'status-pending' }
+}
+
+function stripTomLine(text) {
+  return text.replace(/^[Tt]om\s*:\s*[A-G][#b]?\s*\n?/m, '')
+}
+
 function detectKey(textContent) {
   const tomMatch = textContent.match(/^[Tt]om\s*:\s*([A-G][#b]?)/m)
   if (tomMatch) return tomMatch[1]
@@ -129,6 +139,8 @@ function App() {
   const [suggUrl, setSuggUrl] = useState('')
   const [suggestions, setSuggestions] = useState([])
   const [showSuggestionsList, setShowSuggestionsList] = useState(false)
+  const [userSuggestions, setUserSuggestions] = useState([])
+  const [showUserSuggestions, setShowUserSuggestions] = useState(false)
 
   const scrollRef = useRef(null)
   const metronomeRef = useRef(null)
@@ -288,7 +300,7 @@ function App() {
     : null
 
   const currentRawHtml = currentSong
-    ? (currentSong.content.includes('<b>') ? currentSong.content : convertPlainTextToHtml(currentSong.content))
+    ? (currentSong.content.includes('<b>') ? stripTomLine(currentSong.content) : convertPlainTextToHtml(stripTomLine(currentSong.content)))
     : RAW_CHORD_HTML
   const processedChordHtml = processChordHtml(currentRawHtml, transposeOffset, simplifyChords)
   const currentKey = getKeyFromOffset(currentSong?.key || ORIGINAL_KEY, transposeOffset)
@@ -360,6 +372,9 @@ function App() {
             ) : null}
             <button className="nav-link" onClick={() => { setSongFilter(''); setShowMySongs(true) }}>Musicas</button>
             <a href="#" className="nav-link">Listas</a>
+            {user && !userIsAdmin && (
+              <button className="nav-link" onClick={() => { fetchUserSuggestions(user.email).then(setUserSuggestions); setShowUserSuggestions(true) }}>Minhas sugestoes</button>
+            )}
             {user && userIsAdmin && (
               <button className="nav-link" onClick={() => { fetchSuggestions().then(setSuggestions); setShowSuggestionsList(true) }}>Sugestoes</button>
             )}
@@ -756,7 +771,7 @@ function App() {
                 onClick={async () => {
                   const name = user?.user_metadata?.full_name || user?.email || ''
                   if (!name || !suggSong.trim() || !suggUrl.trim()) return
-                  await saveSuggestion(name.trim(), suggSong.trim(), suggUrl.trim())
+                  await saveSuggestion(name.trim(), suggSong.trim(), suggUrl.trim(), user?.email || '')
                   setShowSuggestionModal(false)
                   setSuggSong('')
                   setSuggUrl('')
@@ -765,6 +780,48 @@ function App() {
               >
                 Enviar sugestao
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showUserSuggestions && (
+        <div className="modal-overlay" onClick={() => setShowUserSuggestions(false)}>
+          <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
+            <h2 className="modal-title">Minhas sugestoes</h2>
+            <div className="modal-body">
+              {userSuggestions.length === 0 ? (
+                <p className="modal-empty">Nenhuma sugestao enviada.</p>
+              ) : (
+                <div className="suggestions-list">
+                  {userSuggestions.map(s => {
+                    const st = statusLabel(s.status)
+                    return (
+                      <div key={s.id} className="suggestion-item">
+                        <div className="suggestion-info">
+                          <span className="suggestion-song">{s.song_name}</span>
+                          <span className={`suggestion-status ${st.cls}`}>{st.text}</span>
+                        </div>
+                        <div className="suggestion-actions">
+                          <button
+                            className="suggestion-play"
+                            onClick={() => {
+                              const id = getYoutubeId(s.youtube_url)
+                              if (id) window.open(`https://www.youtube.com/watch?v=${id}`, '_blank')
+                            }}
+                            title="Abrir no YouTube"
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+            <div className="modal-actions">
+              <button className="modal-btn modal-btn-cancel" onClick={() => setShowUserSuggestions(false)}>Fechar</button>
             </div>
           </div>
         </div>
@@ -779,36 +836,40 @@ function App() {
                 <p className="modal-empty">Nenhuma sugestao ainda.</p>
               ) : (
                 <div className="suggestions-list">
-                  {suggestions.map(s => (
-                    <div key={s.id} className="suggestion-item">
-                      <div className="suggestion-info">
-                        <span className="suggestion-song">{s.song_name}</span>
-                        <span className="suggestion-user">por {s.user_name}</span>
+                  {suggestions.map(s => {
+                    const st = statusLabel(s.status)
+                    return (
+                      <div key={s.id} className="suggestion-item">
+                        <div className="suggestion-info">
+                          <span className="suggestion-song">{s.song_name}</span>
+                          <span className="suggestion-user">por {s.user_name}</span>
+                          <span className={`suggestion-status ${st.cls}`}>{st.text}</span>
+                        </div>
+                        <div className="suggestion-actions">
+                          <button
+                            className="suggestion-play"
+                            onClick={() => {
+                              const id = getYoutubeId(s.youtube_url)
+                              if (id) window.open(`https://www.youtube.com/watch?v=${id}`, '_blank')
+                            }}
+                            title="Abrir no YouTube"
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                          </button>
+                          {s.status !== 'approved' && (
+                            <button className="suggestion-status-btn suggestion-status-btn--approve" onClick={async () => { await updateSuggestionStatus(s.id, 'approved'); setSuggestions(prev => prev.map(x => x.id === s.id ? { ...x, status: 'approved' } : x)) }} title="Aprovar">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                            </button>
+                          )}
+                          {s.status !== 'rejected' && (
+                            <button className="suggestion-status-btn suggestion-status-btn--reject" onClick={async () => { await updateSuggestionStatus(s.id, 'rejected'); setSuggestions(prev => prev.map(x => x.id === s.id ? { ...x, status: 'rejected' } : x)) }} title="Reprovar">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <div className="suggestion-actions">
-                        <button
-                          className="suggestion-play"
-                          onClick={() => {
-                            const id = getYoutubeId(s.youtube_url)
-                            if (id) window.open(`https://www.youtube.com/watch?v=${id}`, '_blank')
-                          }}
-                          title="Abrir no YouTube"
-                        >
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                        </button>
-                        <button
-                          className="my-song-delete"
-                          onClick={async () => {
-                            await deleteSuggestion(s.id)
-                            setSuggestions(prev => prev.filter(x => x.id !== s.id))
-                          }}
-                          title="Remover sugestao"
-                        >
-                          Remover
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>

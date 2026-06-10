@@ -730,7 +730,7 @@
   box-shadow: 0 8px 32px rgba(0,0,0,0.2);
 }
 .modal-lg {
-  max-width: 560px;
+  max-width: 640px;
 }
 .modal-title {
   font: 700 20px var(--font-mont);
@@ -1180,4 +1180,36 @@
 }
 .suggestion-play:hover {
   background: #047857;
+}
+.suggestion-status {
+  font: 600 11px var(--font-roboto);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 4px;
+}
+.status-pending { color: #2563eb; }
+.status-approved { color: var(--green); }
+.status-rejected { color: #dc2626; }
+.suggestion-status-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--gray-border);
+  background: var(--white);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.suggestion-status-btn--approve:hover {
+  color: var(--green);
+  border-color: var(--green);
+  background: #f0fdf4;
+}
+.suggestion-status-btn--reject:hover {
+  color: #dc2626;
+  border-color: #dc2626;
+  background: #fef2f2;
 }
