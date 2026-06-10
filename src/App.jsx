@@ -855,7 +855,6 @@ function App() {
                             </button>
                           </div>
                           <span className="suggestion-user">por {s.user_name}</span>
-                          <span className={`suggestion-status ${st.cls}`}>{st.text}</span>
                         </div>
                         <div className="suggestion-actions">
                           {s.status === 'approved' ? (
