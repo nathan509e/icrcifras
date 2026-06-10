@@ -76,6 +76,13 @@ export default function MusicasPage() {
   }, [showDomingoModal])
 
   useEffect(() => {
+    if (showDomingoModal && domingoList && userIsAdmin) {
+      // Initialize selectedSongs with the current domingo list when admin opens modal
+      setSelectedSongs(domingoList.song_ids || [])
+    }
+  }, [showDomingoModal, domingoList, userIsAdmin])
+
+  useEffect(() => {
     getCurrentUser().then(setUser)
     const unsubscribe = onAuthChange(setUser)
     return unsubscribe
@@ -131,6 +138,13 @@ export default function MusicasPage() {
   const handleDeleteList = async (id) => {
     await deleteList(id)
     fetchUserLists(user.email).then(setUserLists)
+  }
+
+  const handleSaveDomingoList = async () => {
+    if (!domingoList) return
+    await updateList(domingoList.id, 'Esse Domingo', selectedSongs)
+    setDomingoList({ ...domingoList, song_ids: selectedSongs })
+    setSelectedSongs([])
   }
 
   const openEditList = (list) => {
@@ -578,35 +592,67 @@ export default function MusicasPage() {
             <div className="modal-body">
               {loading ? (
                 <div className="loading-spinner">Carregando...</div>
-              ) : userIsAdmin ? (
+               ) : userIsAdmin ? (
                 <>
                   {domingoList ? (
                     <>
-                      <p className="modal-text">Lista atual. Clique em uma musica para tocar.</p>
-                      <div className="playlist-songs">
-                        {domingoList.song_ids?.map((item, index) => {
-                          const parsed = parseSongIdItem(item)
-                          if (!parsed) return null
-                          const { songId, tom } = parsed
-                          const song = songs.find(s => String(s.id) === String(songId))
-                          if (!song) return null
-                          return (
-                            <button
-                              key={song.id}
-                              className="playlist-song-item"
-                              onClick={() => {
-                                sessionStorage.setItem('currentPlaylist', JSON.stringify(domingoList))
-                                sessionStorage.setItem('currentPlaylistIndex', index.toString())
-                                navigate(`/${song.id}`)
-                                setShowDomingoModal(false)
-                              }}
-                            >
-                              <span className="playlist-song-number">{index + 1}</span>
-                              <span className="playlist-song-name">{song.name}</span>
-                              {tom && <span className="playlist-song-key">Tom: {tom}</span>}
-                            </button>
-                          )
-                        })}
+                      <p className="modal-text">Selecione as musicas e o tom para o culto de domingo:</p>
+                      <div className="song-select-list">
+                        {songs.map(song => (
+                          <div key={song.id} className="song-select-item-wrap">
+                            <label className="song-select-item">
+                              <input
+                                type="checkbox"
+                                checked={selectedSongs.some(s => {
+                                  const parsed = parseSongIdItem(s)
+                                  return parsed && parsed.songId === song.id
+                                })}
+                                onChange={() => setSelectedSongs(prev => {
+                                  const exists = prev.some(s => {
+                                    const parsed = parseSongIdItem(s)
+                                    return parsed && parsed.songId === song.id
+                                  })
+                                  if (exists) {
+                                    return prev.filter(s => {
+                                      const parsed = parseSongIdItem(s)
+                                      return parsed && parsed.songId !== song.id
+                                    })
+                                  } else {
+                                    return [...prev, JSON.stringify({ songId: song.id, tom: song.key || 'G' })]
+                                  }
+                                })}
+                              />
+                              <span>{song.name}</span>
+                            </label>
+                            {selectedSongs.some(s => {
+                              const parsed = parseSongIdItem(s)
+                              return parsed && parsed.songId === song.id
+                            }) && (
+                              <select
+                                className="tom-select"
+                                value={(() => {
+                                  const found = selectedSongs.find(s => {
+                                    const parsed = parseSongIdItem(s)
+                                    return parsed && parsed.songId === song.id
+                                  })
+                                  const parsed = parseSongIdItem(found)
+                                  return (parsed && parsed.tom) || song.key || 'G'
+                                })()}
+                                onChange={(e) => {
+                                  setSelectedSongs(prev => prev.map(s => {
+                                    const parsed = parseSongIdItem(s)
+                                    if (parsed && parsed.songId === song.id) {
+                                      return JSON.stringify({ songId: song.id, tom: e.target.value })
+                                    }
+                                    return s
+                                  }))
+                                }}
+                              >
+                                {NOTES.map(note => <option key={note} value={note}>{note}</option>)}
+                              </select>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     </>
                   ) : (
@@ -712,17 +758,26 @@ export default function MusicasPage() {
               {userIsAdmin && (
                 <>
                   {domingoList ? (
-                    <button
-                      className="modal-btn modal-btn-danger"
-                      onClick={async () => {
-                        if (window.confirm('Tem certeza que deseja excluir a lista atual?')) {
-                          await deleteList(domingoList.id)
-                          setDomingoList(null)
-                        }
-                      }}
-                    >
-                      Excluir lista
-                    </button>
+                    <>
+                      <button
+                        className="modal-btn modal-btn-confirm"
+                        onClick={handleSaveDomingoList}
+                        disabled={selectedSongs.length === 0}
+                      >
+                        Salvar alteracoes
+                      </button>
+                      <button
+                        className="modal-btn modal-btn-danger"
+                        onClick={async () => {
+                          if (window.confirm('Tem certeza que deseja excluir a lista atual?')) {
+                            await deleteList(domingoList.id)
+                            setDomingoList(null)
+                          }
+                        }}
+                      >
+                        Excluir lista
+                      </button>
+                    </>
                   ) : (
                     <button
                       className="modal-btn modal-btn-confirm"
