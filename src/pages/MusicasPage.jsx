@@ -562,7 +562,9 @@ export default function MusicasPage() {
           <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
             <h2 className="modal-title">Esse Domingo</h2>
             <div className="modal-body">
-              {userIsAdmin ? (
+              {loading ? (
+                <div className="loading-spinner">Carregando...</div>
+              ) : userIsAdmin ? (
                 <>
                   {domingoList ? (
                     <>
