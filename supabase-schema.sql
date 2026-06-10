@@ -35,3 +35,18 @@ ALTER TABLE suggestions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow anonymous read" ON suggestions FOR SELECT USING (true);
 CREATE POLICY "Allow anonymous insert" ON suggestions FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow anonymous delete" ON suggestions FOR DELETE USING (true);
+
+-- LISTS TABLE
+CREATE TABLE IF NOT EXISTS lists (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  user_email TEXT NOT NULL,
+  song_ids TEXT[] DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+ALTER TABLE lists ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow anonymous read" ON lists FOR SELECT USING (true);
+CREATE POLICY "Allow anonymous insert" ON lists FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow anonymous update" ON lists FOR UPDATE USING (true);
+CREATE POLICY "Allow anonymous delete" ON lists FOR DELETE USING (true);

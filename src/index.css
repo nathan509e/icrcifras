@@ -86,3 +86,55 @@ button, input { font: inherit; border: 0; background: transparent }
   margin-bottom: 16px;
 }
 .back-link:hover { color: #059669 }
+
+.lists-list { display: flex; flex-direction: column; gap: 8px }
+.list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+}
+.list-item-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1b1b1b;
+  cursor: pointer;
+  text-align: left;
+}
+.list-item-name:hover { color: #059669 }
+.list-item-count { font-weight: 400; color: #757575; font-size: 13px }
+.list-item-actions { display: flex; gap: 8px }
+.list-edit-btn, .list-delete-btn {
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.list-edit-btn { background: #f5f5f5; color: #424242 }
+.list-edit-btn:hover { background: #e0e0e0 }
+.list-delete-btn { background: #fee2e2; color: #dc2626 }
+.list-delete-btn:hover { background: #fecaca }
+
+.song-select-list {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 8px;
+}
+.song-select-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  border-radius: 6px;
+}
+.song-select-item:hover { background: #f5f5f5 }
+.song-select-item input { width: 18px; height: 18px }

@@ -169,3 +169,59 @@ export async function fetchUserSuggestions(email) {
   }
   return data || []
 }
+
+// ---- LISTS ----
+
+export async function fetchUserLists(email) {
+  if (!supabase || !email) return []
+  const { data, error } = await supabase
+    .from('lists')
+    .select('*')
+    .eq('user_email', email)
+    .order('created_at', { ascending: false })
+  if (error) {
+    console.error('Error fetching user lists:', error)
+    return []
+  }
+  return data || []
+}
+
+export async function createList(name, userEmail, songIds = []) {
+  if (!supabase) return null
+  const { data, error } = await supabase
+    .from('lists')
+    .insert([{ name, user_email: userEmail, song_ids: songIds }])
+    .select()
+    .single()
+  if (error) {
+    console.error('Error creating list:', error)
+    return null
+  }
+  return data
+}
+
+export async function updateList(id, name, songIds) {
+  if (!supabase) return false
+  const { error } = await supabase
+    .from('lists')
+    .update({ name, song_ids: songIds })
+    .eq('id', id)
+  if (error) {
+    console.error('Error updating list:', error)
+    return false
+  }
+  return true
+}
+
+export async function deleteList(id) {
+  if (!supabase) return false
+  const { error } = await supabase
+    .from('lists')
+    .delete()
+    .eq('id', id)
+  if (error) {
+    console.error('Error deleting list:', error)
+    return false
+  }
+  return true
+}
