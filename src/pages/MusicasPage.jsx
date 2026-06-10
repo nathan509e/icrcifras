@@ -558,19 +558,48 @@ export default function MusicasPage() {
             <div className="modal-body">
               {userIsAdmin ? (
                 <>
-                  <p className="modal-text">Selecione as musicas para o culto de domingo:</p>
-                  <div className="song-select-list">
-                    {songs.map(song => (
-                      <label key={song.id} className="song-select-item">
-                        <input
-                          type="checkbox"
-                          checked={selectedSongs.includes(song.id)}
-                          onChange={() => setSelectedSongs(prev => prev.includes(song.id) ? prev.filter(id => id !== song.id) : [...prev, song.id])}
-                        />
-                        <span>{song.name}</span>
-                      </label>
-                    ))}
-                  </div>
+                  {domingoList ? (
+                    <>
+                      <p className="modal-text">Lista atual. Clique em uma musica para tocar.</p>
+                      <div className="playlist-songs">
+                        {domingoList.song_ids?.map((songId, index) => {
+                          const song = songs.find(s => s.id === songId)
+                          if (!song) return null
+                          return (
+                            <button
+                              key={song.id}
+                              className="playlist-song-item"
+                              onClick={() => {
+                                sessionStorage.setItem('currentPlaylist', JSON.stringify(domingoList))
+                                sessionStorage.setItem('currentPlaylistIndex', index.toString())
+                                navigate(`/${song.id}`)
+                                setShowDomingoModal(false)
+                              }}
+                            >
+                              <span className="playlist-song-number">{index + 1}</span>
+                              <span className="playlist-song-name">{song.name}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p className="modal-text">Selecione as musicas para o culto de domingo:</p>
+                      <div className="song-select-list">
+                        {songs.map(song => (
+                          <label key={song.id} className="song-select-item">
+                            <input
+                              type="checkbox"
+                              checked={selectedSongs.includes(song.id)}
+                              onChange={() => setSelectedSongs(prev => prev.includes(song.id) ? prev.filter(id => id !== song.id) : [...prev, song.id])}
+                            />
+                            <span>{song.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </>
               ) : (
                 <>
@@ -606,23 +635,34 @@ export default function MusicasPage() {
             <div className="modal-actions">
               <button className="modal-btn modal-btn-cancel" onClick={() => setShowDomingoModal(false)}>Fechar</button>
               {userIsAdmin && (
-                <button
-                  className="modal-btn modal-btn-confirm"
-                  onClick={async () => {
-                    if (domingoList) {
-                      await updateList(domingoList.id, 'Esse Domingo', selectedSongs)
-                      setDomingoList({ ...domingoList, song_ids: selectedSongs })
-                    } else {
-                      const newList = await createList('Esse Domingo', 'domingo@cifras', selectedSongs)
-                      setDomingoList(newList)
-                    }
-                    setSelectedSongs([])
-                    setShowDomingoModal(false)
-                  }}
-                  disabled={selectedSongs.length === 0}
-                >
-                  Salvar lista
-                </button>
+                <>
+                  {domingoList ? (
+                    <button
+                      className="modal-btn modal-btn-danger"
+                      onClick={async () => {
+                        if (window.confirm('Tem certeza que deseja excluir a lista atual?')) {
+                          await deleteList(domingoList.id)
+                          setDomingoList(null)
+                        }
+                      }}
+                    >
+                      Excluir lista
+                    </button>
+                  ) : (
+                    <button
+                      className="modal-btn modal-btn-confirm"
+                      onClick={async () => {
+                        const newList = await createList('Esse Domingo', 'domingo@cifras', selectedSongs)
+                        setDomingoList(newList)
+                        setSelectedSongs([])
+                        setShowDomingoModal(false)
+                      }}
+                      disabled={selectedSongs.length === 0}
+                    >
+                      Criar lista
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>

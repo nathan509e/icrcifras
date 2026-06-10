@@ -487,8 +487,10 @@ function App() {
                     onClick={() => {
                       if (currentPlaylistIndex > 0) {
                         const newIndex = currentPlaylistIndex - 1
+                        const currentItem = currentPlaylist.song_ids[newIndex]
+                        const songId = typeof currentItem === 'object' ? currentItem.songId : currentItem
                         setCurrentPlaylistIndex(newIndex)
-                        setSelectedSongId(currentPlaylist.song_ids[newIndex])
+                        setSelectedSongId(songId)
                         sessionStorage.setItem('currentPlaylistIndex', newIndex.toString())
                       }
                     }}
@@ -500,14 +502,16 @@ function App() {
                   <button
                     className="playlist-nav-btn"
                     onClick={() => {
-                      if (currentPlaylistIndex < currentPlaylist.song_ids.length - 1) {
+                      if (currentPlaylistIndex < currentPlaylist.song_ids?.length - 1) {
                         const newIndex = currentPlaylistIndex + 1
+                        const currentItem = currentPlaylist.song_ids[newIndex]
+                        const songId = typeof currentItem === 'object' ? currentItem.songId : currentItem
                         setCurrentPlaylistIndex(newIndex)
-                        setSelectedSongId(currentPlaylist.song_ids[newIndex])
+                        setSelectedSongId(songId)
                         sessionStorage.setItem('currentPlaylistIndex', newIndex.toString())
                       }
                     }}
-                    disabled={currentPlaylistIndex >= currentPlaylist.song_ids.length - 1}
+                    disabled={currentPlaylistIndex >= currentPlaylist.song_ids?.length - 1}
                     title="Proxima"
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
@@ -1200,19 +1204,48 @@ function App() {
             <div className="modal-body">
               {userIsAdmin ? (
                 <>
-                  <p className="modal-text">Selecione as musicas para o culto de domingo:</p>
-                  <div className="song-select-list">
-                    {songs.map(song => (
-                      <label key={song.id} className="song-select-item">
-                        <input
-                          type="checkbox"
-                          checked={selectedSongs.includes(song.id)}
-                          onChange={() => setSelectedSongs(prev => prev.includes(song.id) ? prev.filter(id => id !== song.id) : [...prev, song.id])}
-                        />
-                        <span>{song.name}</span>
-                      </label>
-                    ))}
-                  </div>
+                  {domingoList ? (
+                    <>
+                      <p className="modal-text">Lista atual. Clique em uma musica para tocar.</p>
+                      <div className="playlist-songs">
+                        {domingoList.song_ids?.map((songId, index) => {
+                          const song = songs.find(s => s.id === songId)
+                          if (!song) return null
+                          return (
+                            <button
+                              key={song.id}
+                              className="playlist-song-item"
+                              onClick={() => {
+                                sessionStorage.setItem('currentPlaylist', JSON.stringify(domingoList))
+                                sessionStorage.setItem('currentPlaylistIndex', index.toString())
+                                setSelectedSongId(song.id)
+                                setShowDomingoModal(false)
+                              }}
+                            >
+                              <span className="playlist-song-number">{index + 1}</span>
+                              <span className="playlist-song-name">{song.name}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p className="modal-text">Selecione as musicas para o culto de domingo:</p>
+                      <div className="song-select-list">
+                        {songs.map(song => (
+                          <label key={song.id} className="song-select-item">
+                            <input
+                              type="checkbox"
+                              checked={selectedSongs.includes(song.id)}
+                              onChange={() => setSelectedSongs(prev => prev.includes(song.id) ? prev.filter(id => id !== song.id) : [...prev, song.id])}
+                            />
+                            <span>{song.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </>
               ) : (
                 <>
@@ -1248,23 +1281,34 @@ function App() {
             <div className="modal-actions">
               <button className="modal-btn modal-btn-cancel" onClick={() => setShowDomingoModal(false)}>Fechar</button>
               {userIsAdmin && (
-                <button
-                  className="modal-btn modal-btn-confirm"
-                  onClick={async () => {
-                    if (domingoList) {
-                      await updateList(domingoList.id, 'Esse Domingo', selectedSongs)
-                      setDomingoList({ ...domingoList, song_ids: selectedSongs })
-                    } else {
-                      const newList = await createList('Esse Domingo', 'domingo@cifras', selectedSongs)
-                      setDomingoList(newList)
-                    }
-                    setSelectedSongs([])
-                    setShowDomingoModal(false)
-                  }}
-                  disabled={selectedSongs.length === 0}
-                >
-                  Salvar lista
-                </button>
+                <>
+                  {domingoList ? (
+                    <button
+                      className="modal-btn modal-btn-danger"
+                      onClick={async () => {
+                        if (window.confirm('Tem certeza que deseja excluir a lista atual?')) {
+                          await deleteList(domingoList.id)
+                          setDomingoList(null)
+                        }
+                      }}
+                    >
+                      Excluir lista
+                    </button>
+                  ) : (
+                    <button
+                      className="modal-btn modal-btn-confirm"
+                      onClick={async () => {
+                        const newList = await createList('Esse Domingo', 'domingo@cifras', selectedSongs)
+                        setDomingoList(newList)
+                        setSelectedSongs([])
+                        setShowDomingoModal(false)
+                      }}
+                      disabled={selectedSongs.length === 0}
+                    >
+                      Criar lista
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>
