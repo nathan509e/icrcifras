@@ -56,6 +56,12 @@ export default function MusicasPage() {
   }, [])
 
   useEffect(() => {
+    if (showDomingoModal) {
+      fetchDomingoList().then(data => setDomingoList(data))
+    }
+  }, [showDomingoModal])
+
+  useEffect(() => {
     getCurrentUser().then(setUser)
     const unsubscribe = onAuthChange(setUser)
     return unsubscribe
