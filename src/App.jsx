@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
-import { fetchSongs, saveSong, deleteSong, signInWithGoogle, signOut, onAuthChange, getCurrentUser, isAdmin, fetchSuggestions, saveSuggestion, deleteSuggestion, updateSuggestionStatus, fetchUserSuggestions } from './supabase'
+import { fetchSongs, saveSong, deleteSong, signInWithGoogle, signOut, onAuthChange, getCurrentUser, isAdmin, fetchSuggestions, saveSuggestion, deleteSuggestion, updateSuggestionStatus, fetchUserSuggestions, fetchUserLists, createList, updateList, deleteList } from './supabase'
 import './App.css'
 
 const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
@@ -143,6 +143,16 @@ function App() {
   const [showSuggestionsList, setShowSuggestionsList] = useState(false)
   const [userSuggestions, setUserSuggestions] = useState([])
   const [showUserSuggestions, setShowUserSuggestions] = useState(false)
+  const [showListsModal, setShowListsModal] = useState(false)
+  const [showCreateListModal, setShowCreateListModal] = useState(false)
+  const [showEditListModal, setShowEditListModal] = useState(false)
+  const [showPlaylistModal, setShowPlaylistModal] = useState(false)
+  const [userLists, setUserLists] = useState([])
+  const [newListName, setNewListName] = useState('')
+  const [selectedSongs, setSelectedSongs] = useState([])
+  const [editingList, setEditingList] = useState(null)
+  const [currentPlaylist, setCurrentPlaylist] = useState(null)
+  const [currentPlaylistIndex, setCurrentPlaylistIndex] = useState(0)
 
   const scrollRef = useRef(null)
   const metronomeRef = useRef(null)
@@ -175,8 +185,10 @@ function App() {
   useEffect(() => {
     if (user?.email) {
       isAdmin(user.email).then(setUserIsAdmin)
+      fetchUserLists(user.email).then(setUserLists)
     } else {
       setUserIsAdmin(false)
+      setUserLists([])
     }
   }, [user])
 
@@ -382,7 +394,7 @@ function App() {
               <button className="nav-assine" onClick={() => setShowSuggestionModal(true)}>Sugestao de louvor</button>
             ) : null}
             <button className="nav-link" onClick={() => { setSongFilter(''); setShowMySongs(true) }}>Louvores</button>
-            <a href="#" className="nav-link">Listas</a>
+            <button className="nav-link" onClick={() => { fetchUserLists(user.email).then(setUserLists); setShowListsModal(true) }}>Listas</button>
             {user && !userIsAdmin && (
               <button className="nav-link" onClick={() => { fetchUserSuggestions(user.email).then(setUserSuggestions); setShowUserSuggestions(true) }}>Minhas sugestoes</button>
             )}
@@ -938,6 +950,220 @@ function App() {
                 Remover
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showListsModal && (
+        <div className="modal-overlay" onClick={() => setShowListsModal(false)}>
+          <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
+            <h2 className="modal-title">Minhas Listas</h2>
+            <div className="modal-body">
+              {!user ? (
+                <p className="modal-text">Faca login para criar e visualizar suas listas.</p>
+              ) : userLists.length === 0 ? (
+                <p className="modal-text">Voce ainda nao tem nenhuma lista.</p>
+              ) : (
+                <div className="lists-list">
+                  {userLists.map(list => (
+                    <div key={list.id} className="list-item">
+                      <button
+                        className="list-item-name"
+                        onClick={() => {
+                          setCurrentPlaylist(list)
+                          setCurrentPlaylistIndex(0)
+                          setShowListsModal(false)
+                          setShowPlaylistModal(true)
+                        }}
+                      >
+                        {list.name}
+                        <span className="list-item-count">({list.song_ids?.length || 0} musicas)</span>
+                      </button>
+                      <div className="list-item-actions">
+                        <button className="list-edit-btn" onClick={() => { setEditingList(list); setNewListName(list.name); setSelectedSongs(list.song_ids || []); setShowEditListModal(true) }}>Editar</button>
+                        <button className="list-delete-btn" onClick={async () => { await deleteList(list.id); setUserLists(prev => prev.filter(l => l.id !== list.id)) }}>Excluir</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="modal-actions">
+              {user && (
+                <button className="modal-btn modal-btn-confirm" onClick={() => { setNewListName(''); setSelectedSongs([]); setShowCreateListModal(true) }}>
+                  Criar nova lista
+                </button>
+              )}
+              <button className="modal-btn modal-btn-cancel" onClick={() => setShowListsModal(false)}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCreateListModal && (
+        <div className="modal-overlay" onClick={() => setShowCreateListModal(false)}>
+          <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
+            <h2 className="modal-title">Criar nova lista</h2>
+            <div className="modal-body">
+              <label className="modal-label">Nome da lista</label>
+              <input
+                className="modal-input"
+                type="text"
+                placeholder="Digite o nome da lista"
+                value={newListName}
+                onChange={e => setNewListName(e.target.value)}
+                autoFocus
+              />
+              <label className="modal-label">Selecione as musicas</label>
+              <div className="song-select-list">
+                {songs.map(song => (
+                  <label key={song.id} className="song-select-item">
+                    <input
+                      type="checkbox"
+                      checked={selectedSongs.includes(song.id)}
+                      onChange={() => setSelectedSongs(prev => prev.includes(song.id) ? prev.filter(id => id !== song.id) : [...prev, song.id])}
+                    />
+                    <span>{song.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button className="modal-btn modal-btn-cancel" onClick={() => setShowCreateListModal(false)}>Cancelar</button>
+              <button
+                className="modal-btn modal-btn-confirm"
+                onClick={async () => {
+                  if (!newListName.trim() || !user?.email) return
+                  await createList(newListName.trim(), user.email, selectedSongs)
+                  setNewListName('')
+                  setSelectedSongs([])
+                  setShowCreateListModal(false)
+                  fetchUserLists(user.email).then(setUserLists)
+                }}
+                disabled={!newListName.trim()}
+              >
+                Criar lista
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEditListModal && (
+        <div className="modal-overlay" onClick={() => setShowEditListModal(false)}>
+          <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
+            <h2 className="modal-title">Editar lista</h2>
+            <div className="modal-body">
+              <label className="modal-label">Nome da lista</label>
+              <input
+                className="modal-input"
+                type="text"
+                placeholder="Digite o nome da lista"
+                value={newListName}
+                onChange={e => setNewListName(e.target.value)}
+              />
+              <label className="modal-label">Selecione as musicas</label>
+              <div className="song-select-list">
+                {songs.map(song => (
+                  <label key={song.id} className="song-select-item">
+                    <input
+                      type="checkbox"
+                      checked={selectedSongs.includes(song.id)}
+                      onChange={() => setSelectedSongs(prev => prev.includes(song.id) ? prev.filter(id => id !== song.id) : [...prev, song.id])}
+                    />
+                    <span>{song.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button className="modal-btn modal-btn-cancel" onClick={() => setShowEditListModal(false)}>Cancelar</button>
+              <button
+                className="modal-btn modal-btn-confirm"
+                onClick={async () => {
+                  if (!editingList || !newListName.trim()) return
+                  await updateList(editingList.id, newListName.trim(), selectedSongs)
+                  setEditingList(null)
+                  setNewListName('')
+                  setSelectedSongs([])
+                  setShowEditListModal(false)
+                  fetchUserLists(user.email).then(setUserLists)
+                }}
+                disabled={!newListName.trim()}
+              >
+                Salvar alteracoes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPlaylistModal && currentPlaylist && (
+        <div className="modal-overlay" onClick={() => setShowPlaylistModal(false)}>
+          <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
+            <h2 className="modal-title">{currentPlaylist.name}</h2>
+            <div className="modal-body">
+              <div className="playlist-songs">
+                {currentPlaylist.song_ids?.map((songId, index) => {
+                  const song = songs.find(s => s.id === songId)
+                  if (!song) return null
+                  return (
+                    <button
+                      key={song.id}
+                      className={`playlist-song-item ${index === currentPlaylistIndex ? 'active' : ''}`}
+                      onClick={() => {
+                        setSelectedSongId(song.id)
+                        setCurrentPlaylistIndex(index)
+                        setShowPlaylistModal(false)
+                      }}
+                    >
+                      <span className="playlist-song-number">{index + 1}</span>
+                      <span className="playlist-song-name">{song.name}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button className="modal-btn modal-btn-cancel" onClick={() => setShowPlaylistModal(false)}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {currentPlaylist && (
+        <div className="playlist-controls">
+          <div className="playlist-info">
+            <span className="playlist-name">{currentPlaylist.name}</span>
+            <span className="playlist-position">{currentPlaylistIndex + 1} / {currentPlaylist.song_ids?.length || 0}</span>
+          </div>
+          <div className="playlist-nav">
+            <button
+              className="playlist-prev-btn"
+              onClick={() => {
+                if (currentPlaylistIndex > 0) {
+                  const newIndex = currentPlaylistIndex - 1
+                  setCurrentPlaylistIndex(newIndex)
+                  setSelectedSongId(currentPlaylist.song_ids[newIndex])
+                }
+              }}
+              disabled={currentPlaylistIndex === 0}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+            </button>
+            <button
+              className="playlist-next-btn"
+              onClick={() => {
+                if (currentPlaylistIndex < currentPlaylist.song_ids.length - 1) {
+                  const newIndex = currentPlaylistIndex + 1
+                  setCurrentPlaylistIndex(newIndex)
+                  setSelectedSongId(currentPlaylist.song_ids[newIndex])
+                }
+              }}
+              disabled={currentPlaylistIndex >= currentPlaylist.song_ids.length - 1}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+            </button>
           </div>
         </div>
       )}
