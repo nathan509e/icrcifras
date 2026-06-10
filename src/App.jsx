@@ -92,6 +92,7 @@ function App() {
   const [songs, setSongs] = useState([])
   const [showAddModal, setShowAddModal] = useState(false)
   const [newSongName, setNewSongName] = useState('')
+  const [newSongComposer, setNewSongComposer] = useState('')
   const [newSongFile, setNewSongFile] = useState(null)
   const [newSongYoutubeUrl, setNewSongYoutubeUrl] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
@@ -229,11 +230,12 @@ function App() {
   const handleAddSong = async () => {
     if (!newSongName.trim() || !newSongFile) return
     const content = await newSongFile.text()
-    const saved = await saveSong(newSongName.trim(), content, newSongYoutubeUrl.trim())
+    const saved = await saveSong(newSongName.trim(), content, newSongYoutubeUrl.trim(), newSongComposer.trim())
     if (saved) {
       setSongs(prev => [saved, ...prev])
       setShowAddModal(false)
       setNewSongName('')
+      setNewSongComposer('')
       setNewSongFile(null)
       setNewSongYoutubeUrl('')
     }
@@ -294,6 +296,7 @@ function App() {
                     onClick={() => loadSongContent(song.id)}
                   >
                     <span className="search-result-name">{song.name}</span>
+                    {song.composer && <span className="search-result-composer">{song.composer}</span>}
                   </button>
                 ))}
               </div>
@@ -314,7 +317,7 @@ function App() {
               <div className="nav-user" ref={userMenuRef}>
                 <button className="nav-user-trigger" onClick={() => setShowUserMenu(v => !v)}>
                   <span className="nav-avatar-wrap">
-                    <img src={avatarUrl} alt="" className="nav-avatar" referrerPolicy="no-referrer" onError={e => { e.target.style.display = 'none' }} />
+                    <img src={avatarUrl} alt="" className="nav-avatar" referrerPolicy="no-referrer" onLoad={e => { const fb = e.target.parentElement.querySelector('.nav-avatar-fallback'); if (fb) fb.style.display = 'none' }} onError={e => { e.target.style.display = 'none' }} />
                     <span className="nav-avatar-fallback">{avatarLetter}</span>
                   </span>
                   <span className="nav-username">{displayName}</span>
@@ -324,7 +327,7 @@ function App() {
                   <div className="nav-user-card">
                     <div className="nav-user-card-header">
                       <span className="nav-avatar-wrap">
-                        <img src={avatarUrl} alt="" className="nav-user-card-avatar" referrerPolicy="no-referrer" onError={e => { e.target.style.display = 'none' }} />
+                        <img src={avatarUrl} alt="" className="nav-user-card-avatar" referrerPolicy="no-referrer" onLoad={e => { const fb = e.target.parentElement.querySelector('.nav-avatar-fallback'); if (fb) fb.style.display = 'none' }} onError={e => { e.target.style.display = 'none' }} />
                         <span className="nav-avatar-fallback nav-avatar-fallback--lg">{avatarLetter}</span>
                       </span>
                       <div className="nav-user-card-info">
@@ -356,7 +359,7 @@ function App() {
         <div className="container cifra-page">
           <div className="cifra-header">
             <h1 className="cifra-title">{currentSong ? currentSong.name : 'Ah, Jesus / Coracao Igual Ao Teu'}</h1>
-            <h2 className="cifra-artist">{currentSong ? '' : <a href="/julliany-souza/">Julliany Souza</a>}</h2>
+            <h2 className="cifra-artist">{currentSong ? (currentSong.composer || '') : <a href="/julliany-souza/">Julliany Souza</a>}</h2>
             <div className="cifra-meta">
               <span className="version-badge">
                 <span className="check"></span>
@@ -554,6 +557,14 @@ function App() {
                 value={newSongName}
                 onChange={e => setNewSongName(e.target.value)}
                 autoFocus
+              />
+              <label className="modal-label">Compositor</label>
+              <input
+                className="modal-input"
+                type="text"
+                placeholder="Digite o nome do compositor"
+                value={newSongComposer}
+                onChange={e => setNewSongComposer(e.target.value)}
               />
               <label className="modal-label">Arquivo TXT</label>
               <div className="modal-file-area" onClick={() => fileInputRef.current?.click()}>

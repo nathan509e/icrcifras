@@ -29,11 +29,11 @@ export async function fetchSongs() {
   return data || []
 }
 
-export async function saveSong(name, content, youtubeUrl = '') {
+export async function saveSong(name, content, youtubeUrl = '', composer = '') {
   if (!supabase) return null
   const { data, error } = await supabase
     .from('songs')
-    .insert([{ name, content, youtube_url: youtubeUrl }])
+    .insert([{ name, content, youtube_url: youtubeUrl, composer }])
     .select()
     .single()
   if (error) {
