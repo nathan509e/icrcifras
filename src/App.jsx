@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
-import { fetchSongs, saveSong, deleteSong, signInWithGoogle, signOut, onAuthChange, getCurrentUser, isAdmin, fetchSuggestions, saveSuggestion, deleteSuggestion, updateSuggestionStatus, fetchUserSuggestions, fetchUserLists, createList, updateList, deleteList } from './supabase'
+import { fetchSongs, saveSong, deleteSong, signInWithGoogle, signOut, onAuthChange, getCurrentUser, isAdmin, fetchSuggestions, saveSuggestion, deleteSuggestion, updateSuggestionStatus, fetchUserSuggestions, fetchUserLists, createList, updateList, deleteList, fetchDomingoList } from './supabase'
 import './App.css'
 
 const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
@@ -148,6 +148,7 @@ function App() {
   const [showEditListModal, setShowEditListModal] = useState(false)
   const [showPlaylistModal, setShowPlaylistModal] = useState(false)
   const [showDomingoModal, setShowDomingoModal] = useState(false)
+  const [domingoList, setDomingoList] = useState(null)
   const [userLists, setUserLists] = useState([])
   const [newListName, setNewListName] = useState('')
   const [selectedSongs, setSelectedSongs] = useState([])
@@ -175,6 +176,8 @@ function App() {
       setCurrentPlaylist(JSON.parse(storedPlaylist))
       setCurrentPlaylistIndex(parseInt(storedIndex) || 0)
     }
+
+    fetchDomingoList().then(data => setDomingoList(data))
   }, [])
 
   useEffect(() => {
@@ -398,8 +401,8 @@ function App() {
           <nav className="nav-links">
             {user && userIsAdmin ? (
               <>
-                <button className="nav-assine" onClick={() => setShowAddModal(true)}>Adicionar</button>
-                <button className="nav-assine" onClick={() => { setSelectedSongs([]); setShowDomingoModal(true) }}>Esse Domingo</button>
+                <button className="nav-assine" onClick={() => setShowSuggestionModal(true)}>Sugestao de louvor</button>
+                <button className="nav-assine" onClick={() => { setShowDomingoModal(true) }}>Esse Domingo</button>
               </>
             ) : user ? (
               <>
@@ -408,12 +411,15 @@ function App() {
               </>
             ) : null}
             <button className="nav-link" onClick={() => { setSongFilter(''); setShowMySongs(true) }}>Louvores</button>
-            <button className="nav-link" onClick={() => { fetchUserLists(user.email).then(setUserLists); setShowListsModal(true) }}>Listas</button>
+            <button className="nav-link" onClick={() => { fetchUserLists(user?.email).then(setUserLists); setShowListsModal(true) }}>Listas</button>
             {user && !userIsAdmin && (
               <button className="nav-link" onClick={() => { fetchUserSuggestions(user.email).then(setUserSuggestions); setShowUserSuggestions(true) }}>Minhas sugestoes</button>
             )}
             {user && userIsAdmin && (
-              <button className="nav-link" onClick={() => { fetchSuggestions().then(setSuggestions); setShowSuggestionsList(true) }}>Sugestoes</button>
+              <>
+                <button className="nav-link" onClick={() => { fetchSuggestions().then(setSuggestions); setShowSuggestionsList(true) }}>Sugestoes</button>
+                <button className="nav-link" onClick={() => setShowAddModal(true)}>Adicionar</button>
+              </>
             )}
             {user ? (
               <div className="nav-user" ref={userMenuRef}>
@@ -1205,9 +1211,9 @@ function App() {
               ) : (
                 <>
                   <p className="modal-text">Musicas do culto de domingo:</p>
-                  {userLists.find(l => l.name === 'Esse Domingo') ? (
+                  {domingoList ? (
                     <div className="playlist-songs">
-                      {userLists.find(l => l.name === 'Esse Domingo')?.song_ids?.map((songId, index) => {
+                      {domingoList.song_ids?.map((songId, index) => {
                         const song = songs.find(s => s.id === songId)
                         if (!song) return null
                         return (
@@ -1237,15 +1243,15 @@ function App() {
                 <button
                   className="modal-btn modal-btn-confirm"
                   onClick={async () => {
-                    const existingList = userLists.find(l => l.name === 'Esse Domingo')
-                    if (existingList) {
-                      await updateList(existingList.id, 'Esse Domingo', selectedSongs)
+                    if (domingoList) {
+                      await updateList(domingoList.id, 'Esse Domingo', selectedSongs)
+                      setDomingoList({ ...domingoList, song_ids: selectedSongs })
                     } else {
-                      await createList('Esse Domingo', user.email, selectedSongs)
+                      const newList = await createList('Esse Domingo', 'domingo@cifras', selectedSongs)
+                      setDomingoList(newList)
                     }
                     setSelectedSongs([])
                     setShowDomingoModal(false)
-                    fetchUserLists(user.email).then(setUserLists)
                   }}
                   disabled={selectedSongs.length === 0}
                 >

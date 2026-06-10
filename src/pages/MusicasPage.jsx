@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchSongs, signInWithGoogle, signOut, onAuthChange, getCurrentUser, isAdmin, fetchUserLists, createList, updateList, deleteList, saveSuggestion, fetchUserSuggestions } from '../supabase'
+import { fetchSongs, signInWithGoogle, signOut, onAuthChange, getCurrentUser, isAdmin, fetchUserLists, createList, updateList, deleteList, saveSuggestion, fetchUserSuggestions, fetchDomingoList } from '../supabase'
 
 export default function MusicasPage() {
   const [songs, setSongs] = useState([])
@@ -14,6 +14,7 @@ export default function MusicasPage() {
   const [showEditListModal, setShowEditListModal] = useState(false)
   const [showPlaylistModal, setShowPlaylistModal] = useState(false)
   const [showDomingoModal, setShowDomingoModal] = useState(false)
+  const [domingoList, setDomingoList] = useState(null)
   const [suggSong, setSuggSong] = useState('')
   const [suggUrl, setSuggUrl] = useState('')
   const [user, setUser] = useState(null)
@@ -39,6 +40,8 @@ export default function MusicasPage() {
       setCurrentPlaylist(JSON.parse(storedPlaylist))
       setCurrentPlaylistIndex(parseInt(storedIndex) || 0)
     }
+
+    fetchDomingoList().then(data => setDomingoList(data))
   }, [])
 
   useEffect(() => {
@@ -162,8 +165,8 @@ export default function MusicasPage() {
           <nav className="nav-links">
             {user && userIsAdmin ? (
               <>
-                <button className="nav-assine" onClick={() => {}}>Adicionar</button>
-                <button className="nav-assine" onClick={() => { setSelectedSongs([]); setShowDomingoModal(true) }}>Esse Domingo</button>
+                <button className="nav-assine" onClick={() => setShowSuggestionModal(true)}>Sugestao de louvor</button>
+                <button className="nav-assine" onClick={() => { setShowDomingoModal(true) }}>Esse Domingo</button>
               </>
             ) : user ? (
               <>
@@ -172,6 +175,16 @@ export default function MusicasPage() {
               </>
             ) : null}
             <button className="nav-link" onClick={() => {}}>Louvores</button>
+            <button className="nav-link" onClick={() => { setShowListsModal(true) }}>Listas</button>
+            {user && !userIsAdmin && (
+              <button className="nav-link" onClick={() => { fetchUserSuggestions(user.email).then(setUserSuggestions); setShowUserSuggestions(true) }}>Minhas sugestoes</button>
+            )}
+            {user && userIsAdmin && (
+              <>
+                <button className="nav-link" onClick={() => {}}>Sugestoes</button>
+                <button className="nav-link" onClick={() => {}}>Adicionar</button>
+              </>
+            )}
             <button className="nav-link" onClick={() => setShowListsModal(true)}>Listas</button>
             {user ? (
               <div className="nav-user" ref={userMenuRef}>
@@ -505,9 +518,9 @@ export default function MusicasPage() {
               ) : (
                 <>
                   <p className="modal-text">Musicas do culto de domingo:</p>
-                  {userLists.find(l => l.name === 'Esse Domingo') ? (
+                  {domingoList ? (
                     <div className="playlist-songs">
-                      {userLists.find(l => l.name === 'Esse Domingo')?.song_ids?.map((songId, index) => {
+                      {domingoList.song_ids?.map((songId, index) => {
                         const song = songs.find(s => s.id === songId)
                         if (!song) return null
                         return (
@@ -537,15 +550,15 @@ export default function MusicasPage() {
                 <button
                   className="modal-btn modal-btn-confirm"
                   onClick={async () => {
-                    const existingList = userLists.find(l => l.name === 'Esse Domingo')
-                    if (existingList) {
-                      await updateList(existingList.id, 'Esse Domingo', selectedSongs)
+                    if (domingoList) {
+                      await updateList(domingoList.id, 'Esse Domingo', selectedSongs)
+                      setDomingoList({ ...domingoList, song_ids: selectedSongs })
                     } else {
-                      await createList('Esse Domingo', user.email, selectedSongs)
+                      const newList = await createList('Esse Domingo', 'domingo@cifras', selectedSongs)
+                      setDomingoList(newList)
                     }
                     setSelectedSongs([])
                     setShowDomingoModal(false)
-                    fetchUserLists(user.email).then(setUserLists)
                   }}
                   disabled={selectedSongs.length === 0}
                 >

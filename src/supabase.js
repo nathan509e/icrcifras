@@ -225,3 +225,17 @@ export async function deleteList(id) {
   }
   return true
 }
+
+export async function fetchDomingoList() {
+  if (!supabase) return null
+  const { data, error } = await supabase
+    .from('lists')
+    .select('*')
+    .eq('name', 'Esse Domingo')
+    .maybeSingle()
+  if (error) {
+    console.error('Error fetching domingo list:', error)
+    return null
+  }
+  return data
+}
