@@ -142,6 +142,10 @@ function App() {
       )
     : []
 
+  const avatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || ''
+  const displayName = user?.user_metadata?.full_name || user?.email || ''
+  const avatarLetter = displayName ? displayName[0].toUpperCase() : '?'
+
   const loadSongContent = useCallback((id) => {
     setSelectedSongId(id)
     setShowSearchResults(false)
@@ -310,18 +314,18 @@ function App() {
               <div className="nav-user" ref={userMenuRef}>
                 <button className="nav-user-trigger" onClick={() => setShowUserMenu(v => !v)}>
                   <span className="nav-avatar-wrap">
-                    <img src={user.user_metadata?.avatar_url} alt="" className="nav-avatar" onError={e => { e.target.style.display = 'none' }} />
-                    <span className="nav-avatar-fallback">{(user.user_metadata?.full_name || user.email || '?')[0].toUpperCase()}</span>
+                    <img src={avatarUrl} alt="" className="nav-avatar" referrerPolicy="no-referrer" onError={e => { e.target.style.display = 'none' }} />
+                    <span className="nav-avatar-fallback">{avatarLetter}</span>
                   </span>
-                  <span className="nav-username">{user.user_metadata?.full_name || user.email}</span>
+                  <span className="nav-username">{displayName}</span>
                   <span className="nav-user-arrow">&#9662;</span>
                 </button>
                 {showUserMenu && (
                   <div className="nav-user-card">
                     <div className="nav-user-card-header">
                       <span className="nav-avatar-wrap">
-                        <img src={user.user_metadata?.avatar_url} alt="" className="nav-user-card-avatar" onError={e => { e.target.style.display = 'none' }} />
-                        <span className="nav-avatar-fallback nav-avatar-fallback--lg">{(user.user_metadata?.full_name || user.email || '?')[0].toUpperCase()}</span>
+                        <img src={avatarUrl} alt="" className="nav-user-card-avatar" referrerPolicy="no-referrer" onError={e => { e.target.style.display = 'none' }} />
+                        <span className="nav-avatar-fallback nav-avatar-fallback--lg">{avatarLetter}</span>
                       </span>
                       <div className="nav-user-card-info">
                         <span className="nav-user-card-name">{user.user_metadata?.full_name || 'Usuario'}</span>
@@ -348,20 +352,6 @@ function App() {
       </header>
 
       <main>
-        <div className="container breadcrumb">
-          <ol>
-            <li><a href="/">Pagina Inicial</a><span className="sep">&#9658;</span></li>
-            {currentSong ? (
-              <li>{currentSong.name}</li>
-            ) : (
-              <>
-                <li><a href="/estilos/gospelreligioso/">Gospel/Religioso</a><span className="sep">&#9658;</span></li>
-                <li><a href="/julliany-souza/">Julliany Souza</a><span className="sep">&#9658;</span></li>
-                <li>Ah, Jesus / Coracao Igual Ao Teu</li>
-              </>
-            )}
-          </ol>
-        </div>
 
         <div className="container cifra-page">
           <div className="cifra-header">
