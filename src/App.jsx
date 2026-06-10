@@ -295,8 +295,19 @@ function App() {
                     className="search-result-item"
                     onClick={() => loadSongContent(song.id)}
                   >
-                    <span className="search-result-name">{song.name}</span>
-                    {song.composer && <span className="search-result-composer">{song.composer}</span>}
+                    <div className="search-result-info">
+                      <span className="search-result-name">{song.name}</span>
+                      {song.composer && <span className="search-result-composer">{song.composer}</span>}
+                    </div>
+                    {userIsAdmin && (
+                      <button
+                        className="search-result-delete"
+                        onClick={e => { e.stopPropagation(); handleDeleteSong(song.id) }}
+                        title="Remover musica"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                      </button>
+                    )}
                   </button>
                 ))}
               </div>
@@ -649,7 +660,7 @@ function App() {
                           onClick={() => handleDeleteSong(song.id)}
                           title="Remover musica"
                         >
-                          Remover
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
                         </button>
                       )}
                     </div>
