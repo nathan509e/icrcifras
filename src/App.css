@@ -877,21 +877,16 @@
 }
 .my-song-delete {
   flex-shrink: 0;
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  border: 1px solid var(--gray-border);
-  background: var(--white);
+  background: none;
+  border: none;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   color: #999;
+  font: 11px var(--font-roboto);
+  padding: 0;
   margin-left: 8px;
 }
 .my-song-delete:hover {
-  color: #e00;
-  border-color: #e00;
+  color: #dc2626;
 }
 
 /* SONG FILTER */
@@ -1160,9 +1155,15 @@
 }
 .suggestion-actions {
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.suggestion-actions-row {
+  display: flex;
   align-items: center;
   gap: 8px;
-  flex-shrink: 0;
 }
 .suggestion-play {
   width: 36px;

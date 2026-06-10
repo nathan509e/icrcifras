@@ -846,26 +846,28 @@ function App() {
                           <span className={`suggestion-status ${st.cls}`}>{st.text}</span>
                         </div>
                         <div className="suggestion-actions">
-                          <button
-                            className="suggestion-play"
-                            onClick={() => {
-                              const id = getYoutubeId(s.youtube_url)
-                              if (id) window.open(`https://www.youtube.com/watch?v=${id}`, '_blank')
-                            }}
-                            title="Abrir no YouTube"
-                          >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                          </button>
-                          {s.status !== 'approved' && (
-                            <button className="suggestion-status-btn suggestion-status-btn--approve" onClick={async () => { await updateSuggestionStatus(s.id, 'approved'); setSuggestions(prev => prev.map(x => x.id === s.id ? { ...x, status: 'approved' } : x)) }} title="Aprovar">
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                          <div className="suggestion-actions-row">
+                            <button
+                              className="suggestion-play"
+                              onClick={() => {
+                                const id = getYoutubeId(s.youtube_url)
+                                if (id) window.open(`https://www.youtube.com/watch?v=${id}`, '_blank')
+                              }}
+                              title="Abrir no YouTube"
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                             </button>
-                          )}
-                          {s.status !== 'rejected' && (
-                            <button className="suggestion-status-btn suggestion-status-btn--reject" onClick={async () => { await updateSuggestionStatus(s.id, 'rejected'); setSuggestions(prev => prev.map(x => x.id === s.id ? { ...x, status: 'rejected' } : x)) }} title="Reprovar">
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                            </button>
-                          )}
+                            {s.status !== 'approved' && (
+                              <button className="suggestion-status-btn suggestion-status-btn--approve" onClick={async () => { await updateSuggestionStatus(s.id, 'approved'); setSuggestions(prev => prev.map(x => x.id === s.id ? { ...x, status: 'approved' } : x)) }} title="Aprovar">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                              </button>
+                            )}
+                            {s.status !== 'rejected' && (
+                              <button className="suggestion-status-btn suggestion-status-btn--reject" onClick={async () => { await updateSuggestionStatus(s.id, 'rejected'); setSuggestions(prev => prev.map(x => x.id === s.id ? { ...x, status: 'rejected' } : x)) }} title="Reprovar">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                              </button>
+                            )}
+                          </div>
                           <button
                             className="my-song-delete"
                             onClick={async () => {
@@ -874,7 +876,7 @@ function App() {
                             }}
                             title="Remover sugestao"
                           >
-                            Remover
+                            remover
                           </button>
                         </div>
                       </div>
