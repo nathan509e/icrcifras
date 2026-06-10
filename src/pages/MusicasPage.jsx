@@ -5,6 +5,20 @@ import Navbar from '../components/Navbar'
 
 const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 
+function parseSongIdItem(item) {
+  if (!item) return null
+  if (typeof item === 'object') return item
+  try {
+    const parsed = JSON.parse(item)
+    if (parsed && typeof parsed === 'object') {
+      return parsed
+    }
+  } catch (e) {
+    // Not JSON
+  }
+  return { songId: item, tom: null }
+}
+
 export default function MusicasPage() {
   const [songs, setSongs] = useState([])
   const [loading, setLoading] = useState(true)
@@ -571,8 +585,9 @@ export default function MusicasPage() {
                       <p className="modal-text">Lista atual. Clique em uma musica para tocar.</p>
                       <div className="playlist-songs">
                         {domingoList.song_ids?.map((item, index) => {
-                          const songId = typeof item === 'object' ? item.songId : item
-                          const tom = typeof item === 'object' ? item.tom : null
+                          const parsed = parseSongIdItem(item)
+                          if (!parsed) return null
+                          const { songId, tom } = parsed
                           const song = songs.find(s => String(s.id) === String(songId))
                           if (!song) return null
                           return (
@@ -603,26 +618,49 @@ export default function MusicasPage() {
                             <label className="song-select-item">
                               <input
                                 type="checkbox"
-                                checked={selectedSongs.some(s => (typeof s === 'object' ? s.songId : s) === song.id)}
+                                checked={selectedSongs.some(s => {
+                                  const parsed = parseSongIdItem(s)
+                                  return parsed && parsed.songId === song.id
+                                })}
                                 onChange={() => setSelectedSongs(prev => {
-                                  const exists = prev.find(s => (typeof s === 'object' ? s.songId : s) === song.id)
+                                  const exists = prev.some(s => {
+                                    const parsed = parseSongIdItem(s)
+                                    return parsed && parsed.songId === song.id
+                                  })
                                   if (exists) {
-                                    return prev.filter(s => (typeof s === 'object' ? s.songId : s) !== song.id)
+                                    return prev.filter(s => {
+                                      const parsed = parseSongIdItem(s)
+                                      return parsed && parsed.songId !== song.id
+                                    })
                                   } else {
-                                    return [...prev, { songId: song.id, tom: song.key || 'G' }]
+                                    return [...prev, JSON.stringify({ songId: song.id, tom: song.key || 'G' })]
                                   }
                                 })}
                               />
                               <span>{song.name}</span>
                             </label>
-                            {selectedSongs.some(s => (typeof s === 'object' ? s.songId : s) === song.id) && (
+                            {selectedSongs.some(s => {
+                              const parsed = parseSongIdItem(s)
+                              return parsed && parsed.songId === song.id
+                            }) && (
                               <select
                                 className="tom-select"
-                                value={selectedSongs.find(s => (typeof s === 'object' ? s.songId : s) === song.id)?.tom || song.key || 'G'}
+                                value={(() => {
+                                  const found = selectedSongs.find(s => {
+                                    const parsed = parseSongIdItem(s)
+                                    return parsed && parsed.songId === song.id
+                                  })
+                                  const parsed = parseSongIdItem(found)
+                                  return (parsed && parsed.tom) || song.key || 'G'
+                                })()}
                                 onChange={(e) => {
-                                  setSelectedSongs(prev => prev.map(s => 
-                                    (typeof s === 'object' ? s.songId : s) === song.id ? { ...s, tom: e.target.value } : s
-                                  ))
+                                  setSelectedSongs(prev => prev.map(s => {
+                                    const parsed = parseSongIdItem(s)
+                                    if (parsed && parsed.songId === song.id) {
+                                      return JSON.stringify({ songId: song.id, tom: e.target.value })
+                                    }
+                                    return s
+                                  }))
                                 }}
                               >
                                 {NOTES.map(note => <option key={note} value={note}>{note}</option>)}
@@ -640,8 +678,9 @@ export default function MusicasPage() {
                   {domingoList ? (
                     <div className="playlist-songs">
                       {domingoList.song_ids?.map((item, index) => {
-                        const songId = typeof item === 'object' ? item.songId : item
-                        const tom = typeof item === 'object' ? item.tom : null
+                        const parsed = parseSongIdItem(item)
+                        if (!parsed) return null
+                        const { songId, tom } = parsed
                         const song = songs.find(s => String(s.id) === String(songId))
                         if (!song) return null
                         return (
