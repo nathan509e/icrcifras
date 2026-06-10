@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { fetchSongs, saveSong, deleteSong, signInWithGoogle, signOut, onAuthChange, getCurrentUser, isAdmin, fetchSuggestions, saveSuggestion, deleteSuggestion, updateSuggestionStatus, fetchUserSuggestions, fetchUserLists, createList, updateList, deleteList, fetchDomingoList } from './supabase'
 import Navbar from './components/Navbar'
 import './App.css'
@@ -124,6 +124,7 @@ const RAW_CHORD_HTML = `[Intro]\n<b>C7M</b>  <b>G/B</b>  <b>Am7</b>  <b>A7(2)</b
 
 function App() {
   const params = useParams()
+  const navigate = useNavigate()
   const [autoScrollSpeed, setAutoScrollSpeed] = useState(5)
   const [isScrolling, setIsScrolling] = useState(false)
   const [fontSize, setFontSize] = useState(15)
@@ -498,40 +499,42 @@ function App() {
               {currentPlaylist && (
                 <div className="playlist-inline-controls">
                   <span className="playlist-name">{currentPlaylist.name}</span>
-                  <button
-                    className="playlist-nav-btn"
-                    onClick={() => {
-                      if (currentPlaylistIndex > 0) {
-                        const newIndex = currentPlaylistIndex - 1
-                        const currentItem = currentPlaylist.song_ids[newIndex]
-                        const songId = typeof currentItem === 'object' ? currentItem.songId : currentItem
-                        setCurrentPlaylistIndex(newIndex)
-                        setSelectedSongId(songId)
-                        sessionStorage.setItem('currentPlaylistIndex', newIndex.toString())
-                      }
-                    }}
-                    disabled={currentPlaylistIndex === 0}
-                    title="Anterior"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
-                  </button>
-                  <button
-                    className="playlist-nav-btn"
-                    onClick={() => {
-                      if (currentPlaylistIndex < currentPlaylist.song_ids?.length - 1) {
-                        const newIndex = currentPlaylistIndex + 1
-                        const currentItem = currentPlaylist.song_ids[newIndex]
-                        const songId = typeof currentItem === 'object' ? currentItem.songId : currentItem
-                        setCurrentPlaylistIndex(newIndex)
-                        setSelectedSongId(songId)
-                        sessionStorage.setItem('currentPlaylistIndex', newIndex.toString())
-                      }
-                    }}
-                    disabled={currentPlaylistIndex >= currentPlaylist.song_ids?.length - 1}
-                    title="Proxima"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
-                  </button>
+                   <button
+                     className="playlist-nav-btn"
+                     onClick={() => {
+                       if (currentPlaylistIndex > 0) {
+                         const newIndex = currentPlaylistIndex - 1
+                         const currentItem = currentPlaylist.song_ids[newIndex]
+                         const songId = typeof currentItem === 'object' ? currentItem.songId : currentItem
+                         setCurrentPlaylistIndex(newIndex)
+                         setSelectedSongId(songId)
+                         sessionStorage.setItem('currentPlaylistIndex', newIndex.toString())
+                         navigate(`/${songId}`)
+                       }
+                     }}
+                     disabled={currentPlaylistIndex === 0}
+                     title="Anterior"
+                   >
+                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+                   </button>
+                   <button
+                     className="playlist-nav-btn"
+                     onClick={() => {
+                       if (currentPlaylistIndex < currentPlaylist.song_ids?.length - 1) {
+                         const newIndex = currentPlaylistIndex + 1
+                         const currentItem = currentPlaylist.song_ids[newIndex]
+                         const songId = typeof currentItem === 'object' ? currentItem.songId : currentItem
+                         setCurrentPlaylistIndex(newIndex)
+                         setSelectedSongId(songId)
+                         sessionStorage.setItem('currentPlaylistIndex', newIndex.toString())
+                         navigate(`/${songId}`)
+                       }
+                     }}
+                     disabled={currentPlaylistIndex >= currentPlaylist.song_ids?.length - 1}
+                     title="Proxima"
+                   >
+                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+                   </button>
                 </div>
               )}
               <button className="btn-fav">Favoritar Cifra</button>
