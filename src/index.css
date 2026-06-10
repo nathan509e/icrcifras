@@ -1,0 +1,22 @@
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box }
+:focus { outline: 0 }
+body {
+  color: #424242;
+  word-wrap: break-word;
+  font: 13px/1.1 Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+a { text-decoration: none; color: #f70 }
+li { list-style: none }
+img { overflow: hidden; border: 0 }
+button, input { font: inherit; border: 0; background: transparent }
+.hidden-text {
+  position: absolute !important;
+  font-size: 16px;
+  height: 1px;
+  width: 1px;
+  overflow: hidden;
+  clip: rect(1px, 1px, 1px, 1px);
+  clip-path: polygon(0 0, 0 0, 0 0, 0 0);
+}
