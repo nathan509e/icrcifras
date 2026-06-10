@@ -562,7 +562,9 @@ export default function MusicasPage() {
                     <>
                       <p className="modal-text">Lista atual. Clique em uma musica para tocar.</p>
                       <div className="playlist-songs">
-                        {domingoList.song_ids?.map((songId, index) => {
+                        {domingoList.song_ids?.map((item, index) => {
+                          const songId = typeof item === 'object' ? item.songId : item
+                          const tom = typeof item === 'object' ? item.tom : null
                           const song = songs.find(s => s.id === songId)
                           if (!song) return null
                           return (
@@ -578,6 +580,7 @@ export default function MusicasPage() {
                             >
                               <span className="playlist-song-number">{index + 1}</span>
                               <span className="playlist-song-name">{song.name}</span>
+                              {tom && <span className="playlist-song-key">Tom: {tom}</span>}
                             </button>
                           )
                         })}
@@ -585,17 +588,39 @@ export default function MusicasPage() {
                     </>
                   ) : (
                     <>
-                      <p className="modal-text">Selecione as musicas para o culto de domingo:</p>
+                      <p className="modal-text">Selecione as musicas e o tom para o culto de domingo:</p>
                       <div className="song-select-list">
                         {songs.map(song => (
-                          <label key={song.id} className="song-select-item">
-                            <input
-                              type="checkbox"
-                              checked={selectedSongs.includes(song.id)}
-                              onChange={() => setSelectedSongs(prev => prev.includes(song.id) ? prev.filter(id => id !== song.id) : [...prev, song.id])}
-                            />
-                            <span>{song.name}</span>
-                          </label>
+                          <div key={song.id} className="song-select-item-wrap">
+                            <label className="song-select-item">
+                              <input
+                                type="checkbox"
+                                checked={selectedSongs.some(s => (typeof s === 'object' ? s.songId : s) === song.id)}
+                                onChange={() => setSelectedSongs(prev => {
+                                  const exists = prev.find(s => (typeof s === 'object' ? s.songId : s) === song.id)
+                                  if (exists) {
+                                    return prev.filter(s => (typeof s === 'object' ? s.songId : s) !== song.id)
+                                  } else {
+                                    return [...prev, { songId: song.id, tom: song.key || 'G' }]
+                                  }
+                                })}
+                              />
+                              <span>{song.name}</span>
+                            </label>
+                            {selectedSongs.some(s => (typeof s === 'object' ? s.songId : s) === song.id) && (
+                              <select
+                                className="tom-select"
+                                value={selectedSongs.find(s => (typeof s === 'object' ? s.songId : s) === song.id)?.tom || song.key || 'G'}
+                                onChange={(e) => {
+                                  setSelectedSongs(prev => prev.map(s => 
+                                    (typeof s === 'object' ? s.songId : s) === song.id ? { ...s, tom: e.target.value } : s
+                                  ))
+                                }}
+                              >
+                                {NOTES.map(note => <option key={note} value={note}>{note}</option>)}
+                              </select>
+                            )}
+                          </div>
                         ))}
                       </div>
                     </>
@@ -606,7 +631,9 @@ export default function MusicasPage() {
                   <p className="modal-text">Musicas do culto de domingo:</p>
                   {domingoList ? (
                     <div className="playlist-songs">
-                      {domingoList.song_ids?.map((songId, index) => {
+                      {domingoList.song_ids?.map((item, index) => {
+                        const songId = typeof item === 'object' ? item.songId : item
+                        const tom = typeof item === 'object' ? item.tom : null
                         const song = songs.find(s => s.id === songId)
                         if (!song) return null
                         return (
@@ -622,6 +649,7 @@ export default function MusicasPage() {
                           >
                             <span className="playlist-song-number">{index + 1}</span>
                             <span className="playlist-song-name">{song.name}</span>
+                            {tom && <span className="playlist-song-key">Tom: {tom}</span>}
                           </button>
                         )
                       })}
