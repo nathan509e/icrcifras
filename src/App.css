@@ -1778,14 +1778,14 @@ main {
     align-items: center !important;
     justify-content: center !important;
     flex-direction: row !important;
-    height: auto !important;
+    height: 60px !important;
     position: fixed !important;
     bottom: 0 !important;
     left: 0 !important;
     right: 0 !important;
-    background: white !important;
+    background: white !important; /* Reverted to white */
     border-top: 1px solid #e0e0e0 !important;
-    z-index: 100 !important;
+    z-index: 1000 !important; /* Increased z-index */
   }
 
   /* Mobile bottom buttons */

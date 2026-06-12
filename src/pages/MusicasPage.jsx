@@ -820,6 +820,27 @@ export default function MusicasPage() {
           </div>
         </div>
       )}
+
+      <Navbar
+        user={user}
+        userIsAdmin={userIsAdmin}
+        setShowDomingoModal={setShowDomingoModal}
+        setShowUserSuggestions={setShowUserSuggestions}
+        showUserSuggestions={showUserSuggestions}
+        setShowSuggestionsList={setShowSuggestionsList}
+        showSuggestionsList={showSuggestionsList}
+        showUserMenu={showUserMenu}
+        setShowUserMenu={setShowUserMenu}
+        avatarUrl={avatarUrl}
+        displayName={displayName}
+        avatarLetter={avatarLetter}
+        setShowLoginModal={setShowLoginModal}
+        setShowMySongs={setShowMySongs}
+        setSongFilter={setSongFilter}
+        setShowListsModal={setShowListsModal}
+        setShowAddModal={setShowAddModal}
+        isMobileNav={true}
+      />
     </div>
   )
 }
