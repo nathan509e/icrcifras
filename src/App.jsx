@@ -166,6 +166,7 @@ function App() {
   const [showPlaylistModal, setShowPlaylistModal] = useState(false)
   const [showDomingoModal, setShowDomingoModal] = useState(false)
   const [domingoList, setDomingoList] = useState(null)
+  const [isEditingDomingo, setIsEditingDomingo] = useState(false)
   const [userLists, setUserLists] = useState([])
   const [newListName, setNewListName] = useState('')
   const [selectedSongs, setSelectedSongs] = useState([])
@@ -1217,13 +1218,13 @@ function App() {
       )}
 
       {showDomingoModal && (
-        <div className="modal-overlay" onClick={() => setShowDomingoModal(false)}>
+        <div className="modal-overlay" onClick={() => { setShowDomingoModal(false); setIsEditingDomingo(false); }}>
           <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
             <h2 className="modal-title">Esse Domingo</h2>
             <div className="modal-body">
               {userIsAdmin ? (
                 <>
-                  {domingoList ? (
+                  {domingoList && !isEditingDomingo ? (
                     <>
                       <p className="modal-text">Lista atual. Clique em uma musica para tocar.</p>
                       <div className="playlist-songs">
@@ -1351,34 +1352,66 @@ function App() {
               )}
             </div>
             <div className="modal-actions">
-              <button className="modal-btn modal-btn-cancel" onClick={() => setShowDomingoModal(false)}>Fechar</button>
-              {userIsAdmin && (
+              {isEditingDomingo ? (
                 <>
-                  {domingoList ? (
-                    <button
-                      className="modal-btn modal-btn-danger"
-                      onClick={async () => {
-                        if (window.confirm('Tem certeza que deseja excluir a lista atual?')) {
-                          await deleteList(domingoList.id)
-                          setDomingoList(null)
-                        }
-                      }}
-                    >
-                      Excluir lista
-                    </button>
-                  ) : (
-                    <button
-                      className="modal-btn modal-btn-confirm"
-                      onClick={async () => {
-                        const newList = await createList('Esse Domingo', 'domingo@cifras', selectedSongs)
-                        setDomingoList(newList)
-                        setSelectedSongs([])
-                        setShowDomingoModal(false)
-                      }}
-                      disabled={selectedSongs.length === 0}
-                    >
-                      Criar lista
-                    </button>
+                  <button className="modal-btn modal-btn-cancel" onClick={() => setIsEditingDomingo(false)}>Voltar</button>
+                  <button
+                    className="modal-btn modal-btn-confirm"
+                    onClick={async () => {
+                      if (!domingoList) return
+                      await updateList(domingoList.id, 'Esse Domingo', selectedSongs)
+                      setDomingoList({ ...domingoList, song_ids: selectedSongs })
+                      setSelectedSongs([])
+                      setIsEditingDomingo(false)
+                    }}
+                    disabled={selectedSongs.length === 0}
+                  >
+                    Salvar alteracoes
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button className="modal-btn modal-btn-cancel" onClick={() => { setShowDomingoModal(false); setIsEditingDomingo(false); }}>Fechar</button>
+                  {userIsAdmin && (
+                    <>
+                      {domingoList ? (
+                        <>
+                          <button
+                            className="modal-btn modal-btn-confirm"
+                            onClick={() => {
+                              setSelectedSongs(domingoList.song_ids || [])
+                              setIsEditingDomingo(true)
+                            }}
+                          >
+                            Editar lista
+                          </button>
+                          <button
+                            className="modal-btn modal-btn-danger"
+                            onClick={async () => {
+                              if (window.confirm('Tem certeza que deseja excluir a lista atual?')) {
+                                await deleteList(domingoList.id)
+                                setDomingoList(null)
+                              }
+                            }}
+                          >
+                            Excluir lista
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          className="modal-btn modal-btn-confirm"
+                          onClick={async () => {
+                            const newList = await createList('Esse Domingo', 'domingo@cifras', selectedSongs)
+                            setDomingoList(newList)
+                            setSelectedSongs([])
+                            setShowDomingoModal(false)
+                          }}
+                          disabled={selectedSongs.length === 0}
+                        >
+                          Criar lista
+                        </button>
+                      )}
+                    </>
                   )}
                 </>
               )}
