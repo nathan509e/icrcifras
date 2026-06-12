@@ -1847,10 +1847,10 @@ main {
     color: #d32f2f;
   }
 
-  /* Hide empty sticky header on mobile (replaced by nav-song-header-mobile) */
+  /* Hide empty sticky header on mobile (nav-song-header-mobile replaces it) */
   .header { display: none !important }
 
-  /* Remove double margin-top on main that causes white strip */
+  /* Remove double margin-top on main that causes white strip below header */
   .page-wrapper main {
     padding-bottom: 80px;
     margin-top: 0;
@@ -1861,9 +1861,24 @@ main {
     padding-top: 70px !important;
   }
 
-  /* Prevent horizontal overflow caused by zoom + fixed-width elements */
-  body {
+  /* Allow horizontal scroll within chord content instead of whole page */
+  .cifra-content {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .cifra-content pre {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Prevent horizontal overflow from any element */
+  html, body {
     overflow-x: hidden;
-    width: 100%;
+    max-width: 100vw;
+  }
+
+  /* Ensure images/media don't overflow */
+  img, video, iframe {
+    max-width: 100%;
   }
 }
