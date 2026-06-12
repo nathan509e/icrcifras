@@ -1155,6 +1155,10 @@ main {
   display: none;
 }
 
+.nav-install-btn-mobile {
+  display: none;
+}
+
 .nav-desktop-links {
   display: flex;
   align-items: center;
@@ -1304,6 +1308,22 @@ main {
 
   /* Nav assine button mobile */
   .nav-assine { height: 40px; font-size: 13px; padding: 0 14px; margin: 0; display: flex !important }
+
+  /* Install app button mobile */
+  .nav-install-btn-mobile {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid var(--gray-border);
+    color: var(--dark);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .nav-install-btn-mobile:hover { background: var(--gray-bg) }
 
   /* Hide desktop sidebar */
   .instrument-sidebar {
