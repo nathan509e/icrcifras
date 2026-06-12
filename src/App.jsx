@@ -198,11 +198,14 @@ function App() {
       }
     })
 
-    const storedPlaylist = sessionStorage.getItem('currentPlaylist')
-    const storedIndex = sessionStorage.getItem('currentPlaylistIndex')
-    if (storedPlaylist) {
-      setCurrentPlaylist(JSON.parse(storedPlaylist))
-      setCurrentPlaylistIndex(parseInt(storedIndex) || 0)
+    // Only load playlist from sessionStorage if no songId in URL
+    if (!params.songId) {
+      const storedPlaylist = sessionStorage.getItem('currentPlaylist')
+      const storedIndex = sessionStorage.getItem('currentPlaylistIndex')
+      if (storedPlaylist) {
+        setCurrentPlaylist(JSON.parse(storedPlaylist))
+        setCurrentPlaylistIndex(parseInt(storedIndex) || 0)
+      }
     }
 
     fetchDomingoList().then(data => setDomingoList(data))
@@ -217,21 +220,16 @@ function App() {
 
   // Apply tone from playlist when playing a song from the playlist
   useEffect(() => {
-    if (currentPlaylist && selectedSongId && songs.length > 0) {
+    if (currentPlaylist && currentSong) {
       const currentItem = currentPlaylist.song_ids[currentPlaylistIndex]
-      if (currentItem) {
-        const parsed = parseSongIdItem(currentItem)
-        if (parsed && parsed.tom) {
-          const currentSong = songs.find(s => s.id === selectedSongId)
-          if (currentSong) {
-            const originalKey = currentSong.key || 'G'
-            const offset = getTransposeOffsetFromNotes(originalKey, parsed.tom)
-            setTransposeOffset(offset)
-          }
-        }
+      const parsed = parseSongIdItem(currentItem)
+      if (parsed && parsed.tom && parsed.songId === currentSong.id) {
+        const songKey = currentSong.key || ORIGINAL_KEY
+        const offset = getTransposeOffsetFromNotes(songKey, parsed.tom)
+        setTransposeOffset(offset)
       }
     }
-  }, [currentPlaylist, currentPlaylistIndex, selectedSongId, songs])
+  }, [currentPlaylist, currentPlaylistIndex, currentSong])
 
   useEffect(() => {
     getCurrentUser().then(setUser)
@@ -259,11 +257,13 @@ function App() {
   const displayName = user?.user_metadata?.full_name || user?.email || ''
   const avatarLetter = displayName ? displayName[0].toUpperCase() : '?'
 
-  const loadSongContent = useCallback((id) => {
+  const loadSongContent = useCallback((id, fromPlaylist = false) => {
     setSelectedSongId(id)
     setShowSearchResults(false)
     setSearchQuery('')
-    setTransposeOffset(0)
+    if (!fromPlaylist) {
+      setTransposeOffset(0)
+    }
     setSimplifyChords(false)
     setCapo(0)
     setIsScrolling(false)
@@ -386,28 +386,18 @@ function App() {
   const currentKey = getKeyFromOffset(currentSong?.key || ORIGINAL_KEY, transposeOffset)
 
   useEffect(() => {
-    const storedPlaylist = sessionStorage.getItem('currentPlaylist')
-    if (storedPlaylist && currentSong) {
-      try {
-        const playlist = JSON.parse(storedPlaylist)
-        if (playlist && playlist.name === 'Esse Domingo' && Array.isArray(playlist.song_ids)) {
-          const currentItem = playlist.song_ids[currentPlaylistIndex]
-          const parsed = parseSongIdItem(currentItem)
-          if (parsed && parsed.tom && parsed.songId) {
-            const songKey = currentSong.key || ORIGINAL_KEY
-            const targetTom = parsed.tom
-            const fromIdx = NOTES.indexOf(songKey)
-            const toIdx = NOTES.indexOf(targetTom)
-            if (fromIdx !== -1 && toIdx !== -1) {
-              const offset = toIdx - fromIdx
-              setTransposeOffset(offset)
-            }
-          }
+    if (currentPlaylist && currentSong) {
+      const currentItem = currentPlaylist.song_ids[currentPlaylistIndex]
+      const parsed = parseSongIdItem(currentItem)
+      if (parsed && parsed.tom && parsed.songId === currentSong.id) {
+        const songKey = currentSong.key || ORIGINAL_KEY
+        const targetTom = parsed.tom
+        const fromIdx = NOTES.indexOf(songKey)
+        const toIdx = NOTES.indexOf(targetTom)
+        if (fromIdx !== -1 && toIdx !== -1) {
+          const offset = toIdx - fromIdx
+          setTransposeOffset(offset)
         }
-      } catch (e) {
-        console.error('Error parsing playlist:', e)
-        sessionStorage.removeItem('currentPlaylist')
-        sessionStorage.removeItem('currentPlaylistIndex')
       }
     }
   }, [currentSong, currentPlaylistIndex])
@@ -527,46 +517,46 @@ function App() {
               </span>
               {currentPlaylist && (
                 <div className="playlist-inline-controls">
-                  <span className="playlist-name">{currentPlaylist.name}</span>
-                   <button
-                     className="playlist-nav-btn"
-                     onClick={() => {
-                       if (currentPlaylistIndex > 0) {
-                         const newIndex = currentPlaylistIndex - 1
-                         const currentItem = currentPlaylist.song_ids[newIndex]
-                         const parsed = parseSongIdItem(currentItem)
-                         const songId = parsed ? parsed.songId : currentItem
-                         setCurrentPlaylistIndex(newIndex)
-                         setSelectedSongId(songId)
-                         sessionStorage.setItem('currentPlaylistIndex', newIndex.toString())
-                         navigate(`/${songId}`)
-                       }
-                     }}
-                     disabled={currentPlaylistIndex === 0}
-                     title="Anterior"
-                   >
-                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
-                   </button>
-                   <button
-                     className="playlist-nav-btn"
-                     onClick={() => {
-                       if (currentPlaylistIndex < currentPlaylist.song_ids?.length - 1) {
-                         const newIndex = currentPlaylistIndex + 1
-                         const currentItem = currentPlaylist.song_ids[newIndex]
-                         const parsed = parseSongIdItem(currentItem)
-                         const songId = parsed ? parsed.songId : currentItem
-                         setCurrentPlaylistIndex(newIndex)
-                         setSelectedSongId(songId)
-                         sessionStorage.setItem('currentPlaylistIndex', newIndex.toString())
-                         navigate(`/${songId}`)
-                       }
-                     }}
-                     disabled={currentPlaylistIndex >= currentPlaylist.song_ids?.length - 1}
-                     title="Proxima"
-                   >
-                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
-                   </button>
-                </div>
+                   <span className="playlist-name">{currentPlaylist.name}</span>
+                    <button
+                      className="playlist-nav-btn"
+                      onClick={() => {
+                        if (currentPlaylistIndex > 0) {
+                          const newIndex = currentPlaylistIndex - 1
+                          const currentItem = currentPlaylist.song_ids[newIndex]
+                          const parsed = parseSongIdItem(currentItem)
+                          const songId = parsed ? parsed.songId : currentItem
+                          setCurrentPlaylistIndex(newIndex)
+                          sessionStorage.setItem('currentPlaylist', JSON.stringify(currentPlaylist))
+                          sessionStorage.setItem('currentPlaylistIndex', newIndex.toString())
+                          navigate(`/${songId}`)
+                        }
+                      }}
+                      disabled={currentPlaylistIndex === 0}
+                      title="Anterior"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+                    </button>
+                    <button
+                      className="playlist-nav-btn"
+                      onClick={() => {
+                        if (currentPlaylistIndex < currentPlaylist.song_ids?.length - 1) {
+                          const newIndex = currentPlaylistIndex + 1
+                          const currentItem = currentPlaylist.song_ids[newIndex]
+                          const parsed = parseSongIdItem(currentItem)
+                          const songId = parsed ? parsed.songId : currentItem
+                          setCurrentPlaylistIndex(newIndex)
+                          sessionStorage.setItem('currentPlaylist', JSON.stringify(currentPlaylist))
+                          sessionStorage.setItem('currentPlaylistIndex', newIndex.toString())
+                          navigate(`/${songId}`)
+                        }
+                      }}
+                      disabled={currentPlaylistIndex >= currentPlaylist.song_ids?.length - 1}
+                      title="Proxima"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+                    </button>
+                 </div>
               )}
               <button className="btn-fav">Favoritar Cifra</button>
             </div>
@@ -1229,6 +1219,7 @@ function App() {
                       onClick={() => {
                         setSelectedSongId(song.id)
                         setCurrentPlaylistIndex(index)
+                        sessionStorage.setItem('currentPlaylist', JSON.stringify(currentPlaylist))
                         sessionStorage.setItem('currentPlaylistIndex', index.toString())
                         setShowPlaylistModal(false)
                       }}
@@ -1269,6 +1260,8 @@ function App() {
                               key={song.id}
                               className="playlist-song-item"
                               onClick={() => {
+                                setCurrentPlaylist(domingoList)
+                                setCurrentPlaylistIndex(index)
                                 sessionStorage.setItem('currentPlaylist', JSON.stringify(domingoList))
                                 sessionStorage.setItem('currentPlaylistIndex', index.toString())
                                 setSelectedSongId(song.id)
@@ -1362,6 +1355,8 @@ function App() {
                             key={song.id}
                             className="playlist-song-item"
                             onClick={() => {
+                              setCurrentPlaylist(domingoList)
+                              setCurrentPlaylistIndex(index)
                               sessionStorage.setItem('currentPlaylist', JSON.stringify(domingoList))
                               sessionStorage.setItem('currentPlaylistIndex', index.toString())
                               setSelectedSongId(song.id)
