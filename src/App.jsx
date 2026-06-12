@@ -221,16 +221,19 @@ function App() {
 
   // Apply tone from playlist when playing a song from the playlist
   useEffect(() => {
-    if (currentPlaylist && currentSong) {
-      const currentItem = currentPlaylist.song_ids[currentPlaylistIndex]
-      const parsed = parseSongIdItem(currentItem)
-      if (parsed && parsed.tom && parsed.songId === currentSong.id) {
-        const songKey = currentSong.key || ORIGINAL_KEY
-        const offset = getTransposeOffsetFromNotes(songKey, parsed.tom)
-        setTransposeOffset(offset)
+    if (currentPlaylist && selectedSongId && songs.length > 0) {
+      const currentSongData = songs.find(s => s.id === selectedSongId)
+      if (currentSongData) {
+        const currentItem = currentPlaylist.song_ids[currentPlaylistIndex]
+        const parsed = parseSongIdItem(currentItem)
+        if (parsed && parsed.tom && parsed.songId === currentSongData.id) {
+          const songKey = currentSongData.key || ORIGINAL_KEY
+          const offset = getTransposeOffsetFromNotes(songKey, parsed.tom)
+          setTransposeOffset(offset)
+        }
       }
     }
-  }, [currentPlaylist, currentPlaylistIndex, currentSong])
+  }, [currentPlaylist, currentPlaylistIndex, selectedSongId, songs])
 
   useEffect(() => {
     getCurrentUser().then(setUser)
