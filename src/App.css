@@ -1718,6 +1718,7 @@ main {
     margin-top: 8px;
   }
 
+
   .mobile-player-container iframe {
     position: absolute;
     top: 0;
@@ -1725,5 +1726,126 @@ main {
     width: 100%;
     height: 100%;
     border: none;
+  }
+
+  /* NEW MOBILE NAV LAYOUT */
+  /* Nav header com seta de voltar quando vendo cifra */
+  .nav-song-header-mobile {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 56px;
+    background: white;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    z-index: 100;
+  }
+
+  .nav-back-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #333;
+    transition: opacity 0.2s;
+  }
+
+  .nav-back-btn:active {
+    opacity: 0.6;
+  }
+
+  /* Nav home mobile - em baixo */
+  .nav-home-mobile {
+    display: flex !important;
+    gap: 8px !important;
+    padding: 12px !important;
+    margin: 0 !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-direction: row !important;
+    height: auto !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    background: white !important;
+    border-top: 1px solid #e0e0e0 !important;
+    z-index: 100 !important;
+  }
+
+  /* Mobile bottom buttons */
+  .nav-mobile-bottom-btn {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: opacity 0.2s;
+  }
+
+  .nav-mobile-bottom-btn:active {
+    opacity: 0.7;
+  }
+
+  /* Mobile user menu dropdown */
+  .nav-mobile-user-menu {
+    position: fixed;
+    bottom: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    min-width: 200px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 200;
+  }
+
+  .nav-mobile-menu-item {
+    width: 100%;
+    padding: 12px 16px;
+    border: none;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+    font-size: 14px;
+    color: #333;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: background 0.2s;
+  }
+
+  .nav-mobile-menu-item:last-child {
+    border-bottom: none;
+  }
+
+  .nav-mobile-menu-item:active {
+    background: #f5f5f5;
+  }
+
+  .nav-mobile-menu-item--danger {
+    color: #d32f2f;
+  }
+
+  /* Adjust main content for fixed bottom nav */
+  .page-wrapper main {
+    padding-bottom: 80px;
+  }
+
+  /* Adjust for song view - no bottom nav, add top spacing */
+  .cifra-page {
+    padding-top: 70px;
   }
 }
