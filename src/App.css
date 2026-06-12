@@ -1239,3 +1239,341 @@ main {
 .suggestion-label--rejected {
   color: #dc2626;
 }
+
+/* MOBILE BOTTOM BAR & FLOATING CONTROLS */
+@media (max-width: 767px) {
+  /* Hide desktop sidebar */
+  .instrument-sidebar {
+    display: none !important;
+  }
+
+  /* Make sure container doesn't overflow */
+  .container {
+    width: 100% !important;
+    padding: 0 16px !important;
+  }
+
+  /* Chords section padding bottom so it doesn't get covered by menu */
+  .cifra-page {
+    padding-bottom: 220px !important;
+  }
+
+  /* Floating Playlist Controls */
+  .playlist-inline-controls {
+    position: fixed !important;
+    bottom: 105px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    display: flex !important;
+    gap: 16px !important;
+    z-index: 998 !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    align-items: center !important;
+    justify-content: center !important;
+    pointer-events: none;
+  }
+  .playlist-inline-controls > * {
+    pointer-events: auto;
+  }
+  .playlist-name {
+    display: none !important; /* hide the playlist name in floating controls */
+  }
+  .playlist-nav-btn {
+    width: 56px !important;
+    height: 56px !important;
+    border-radius: 16px !important;
+    background: rgba(30, 30, 30, 0.75) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3) !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+  }
+  .playlist-nav-btn svg {
+    width: 24px !important;
+    height: 24px !important;
+    fill: #ffffff !important;
+  }
+  .playlist-nav-btn:disabled {
+    opacity: 0.3 !important;
+    cursor: not-allowed !important;
+    box-shadow: none !important;
+  }
+
+  /* Bottom Menu Bar Pill */
+  .mobile-bottom-bar {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 32px);
+    max-width: 480px;
+    background: rgba(20, 20, 20, 0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 30px;
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 8px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+    z-index: 999;
+  }
+
+  .mobile-menu-item {
+    background: none;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    color: #a0a0a0;
+    cursor: pointer;
+    font-size: 11px;
+    font-family: var(--font-roboto);
+    flex: 1;
+    transition: color 0.2s, transform 0.1s;
+    padding: 4px 0;
+  }
+
+  .mobile-menu-item:active {
+    transform: scale(0.95);
+  }
+
+  .mobile-menu-item.active {
+    color: #10b981; /* green accent */
+  }
+
+  .mobile-menu-item svg {
+    width: 24px;
+    height: 24px;
+    stroke: currentColor;
+    transition: stroke 0.2s;
+  }
+
+  /* Floating Menu Panels */
+  .mobile-menu-panel {
+    position: fixed;
+    bottom: 95px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 32px);
+    max-width: 480px;
+    background: rgba(26, 26, 26, 0.98);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    padding: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    z-index: 999;
+    color: #ffffff;
+  }
+
+  .mobile-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 8px;
+  }
+
+  .mobile-panel-title {
+    font: 700 14px var(--font-mont);
+    margin: 0;
+    color: #ffffff;
+  }
+
+  .mobile-panel-close {
+    background: none;
+    border: none;
+    color: #a0a0a0;
+    font-size: 18px;
+    cursor: pointer;
+  }
+
+  .mobile-tool-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    margin: 12px 0;
+  }
+
+  .mobile-tool-btn {
+    width: 44px;
+    height: 44px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    color: #ffffff;
+    font: 700 20px var(--font-roboto);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+  }
+
+  .mobile-tool-btn:active {
+    background: rgba(255, 255, 255, 0.15);
+  }
+
+  .mobile-tool-value {
+    font: 700 24px var(--font-mont);
+    color: #10b981;
+    min-width: 50px;
+    text-align: center;
+  }
+
+  .mobile-panel-hint {
+    text-align: center;
+    font-size: 12px;
+    color: #a0a0a0;
+  }
+
+  .mobile-slider-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 12px 0;
+  }
+
+  .mobile-slider {
+    width: 100%;
+    height: 6px;
+    -webkit-appearance: none;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    outline: none;
+  }
+
+  .mobile-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #10b981;
+    cursor: pointer;
+  }
+
+  .mobile-tool-btn-play {
+    width: 100%;
+    height: 40px;
+    background: #10b981;
+    border: none;
+    border-radius: 8px;
+    color: #ffffff;
+    font: 700 14px var(--font-roboto);
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .mobile-tool-btn-play.active {
+    background: #dc2626;
+  }
+
+  /* Grid details for Opções panel */
+  .mobile-panel-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    max-height: 280px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  .mobile-panel-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 13px;
+  }
+
+  .mobile-tool-row-small {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .mobile-tool-btn-small {
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+  }
+  
+  .mobile-tool-btn-small.active {
+    background: #10b981;
+    border-color: #10b981;
+  }
+
+  .mobile-tool-value-small {
+    font-weight: 700;
+    min-width: 28px;
+    text-align: center;
+  }
+
+  .mobile-slider-small {
+    width: 80px;
+    height: 4px;
+    -webkit-appearance: none;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 2px;
+    outline: none;
+  }
+
+  .mobile-slider-small::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #10b981;
+  }
+
+  .mobile-select {
+    background: #2a2a2a;
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    height: 30px;
+    padding: 0 6px;
+    font-size: 12px;
+  }
+
+  /* Player section styles inside Ouvir panel */
+  .mobile-player-container {
+    position: relative;
+    padding-bottom: 56.25%;
+    height: 0;
+    overflow: hidden;
+    border-radius: 10px;
+    background: #000000;
+    margin-top: 8px;
+  }
+
+  .mobile-player-container iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+}

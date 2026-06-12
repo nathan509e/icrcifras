@@ -167,6 +167,7 @@ function App() {
   const [showDomingoModal, setShowDomingoModal] = useState(false)
   const [domingoList, setDomingoList] = useState(null)
   const [isEditingDomingo, setIsEditingDomingo] = useState(false)
+  const [activeMobilePanel, setActiveMobilePanel] = useState(null)
   const [userLists, setUserLists] = useState([])
   const [newListName, setNewListName] = useState('')
   const [selectedSongs, setSelectedSongs] = useState([])
@@ -1421,6 +1422,215 @@ function App() {
           </div>
         </div>
       )}
+      {/* MOBILE BOTTOM MENU AND FLOATING PANELS */}
+      {activeMobilePanel && (
+        <div className="mobile-menu-panel">
+          <div className="mobile-panel-header">
+            <h4 className="mobile-panel-title">
+              {activeMobilePanel === 'tom' && 'Alterar Tom'}
+              {activeMobilePanel === 'rolagem' && 'Auto Rolagem'}
+              {activeMobilePanel === 'ouvir' && 'Ouvir Música'}
+              {activeMobilePanel === 'opcoes' && 'Mais Opções'}
+            </h4>
+            <button className="mobile-panel-close" onClick={() => setActiveMobilePanel(null)}>×</button>
+          </div>
+          
+          <div className="mobile-panel-body">
+            {activeMobilePanel === 'tom' && (
+              <div className="mobile-panel-content">
+                <div className="mobile-tool-row">
+                  <button className="mobile-tool-btn" onClick={() => setTransposeOffset(t => Math.max(-6, t - 1))}>−</button>
+                  <span className="mobile-tool-value">{currentKey}</span>
+                  <button className="mobile-tool-btn" onClick={() => setTransposeOffset(t => Math.min(6, t + 1))}>+</button>
+                </div>
+                {transposeOffset !== 0 && (
+                  <div className="mobile-panel-hint">({transposeOffset > 0 ? '+' : ''}{transposeOffset} semitons)</div>
+                )}
+              </div>
+            )}
+
+            {activeMobilePanel === 'rolagem' && (
+              <div className="mobile-panel-content">
+                <div className="mobile-tool-row">
+                  <button className={`mobile-tool-btn-play ${isScrolling ? 'active' : ''}`} onClick={() => setIsScrolling(s => !s)}>
+                    {isScrolling ? 'Pausar Rolagem' : 'Iniciar Rolagem'}
+                  </button>
+                </div>
+                <div className="mobile-slider-row">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                    <span>Velocidade</span>
+                    <span>{autoScrollSpeed}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="1"
+                    max="10"
+                    value={autoScrollSpeed}
+                    onChange={(e) => setAutoScrollSpeed(Number(e.target.value))}
+                    className="mobile-slider"
+                  />
+                </div>
+              </div>
+            )}
+
+            {activeMobilePanel === 'ouvir' && (
+              <div className="mobile-panel-content">
+                <div className="mobile-player-container">
+                  {(() => {
+                    const videoId = currentSong ? getYoutubeId(currentSong.youtube_url) : 'ldK43s9UyQI'
+                    return videoId ? (
+                      <iframe
+                        src={`https://www.youtube.com/embed/${videoId}`}
+                        title="YouTube video player"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    ) : (
+                      <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
+                        Nenhum vídeo disponível
+                      </div>
+                    )
+                  })()}
+                </div>
+              </div>
+            )}
+
+            {activeMobilePanel === 'opcoes' && (
+              <div className="mobile-panel-content mobile-panel-grid">
+                <div className="mobile-panel-item">
+                  <span>Simplificar Acordes</span>
+                  <label className="toggle-switch">
+                    <input type="checkbox" checked={simplifyChords} onChange={(e) => setSimplifyChords(e.target.checked)} />
+                    <span className="toggle-track"></span>
+                  </label>
+                </div>
+
+                <div className="mobile-panel-item">
+                  <span>Capotraste</span>
+                  <div className="mobile-tool-row-small">
+                    <button className="mobile-tool-btn-small" onClick={() => setCapo(c => Math.max(0, c - 1))}>−</button>
+                    <span className="mobile-tool-value-small">{capo}ª</span>
+                    <button className="mobile-tool-btn-small" onClick={() => setCapo(c => Math.min(12, c + 1))}>+</button>
+                  </div>
+                </div>
+
+                <div className="mobile-panel-item">
+                  <span>Metrônomo ({metronomeBpm} BPM)</span>
+                  <div className="mobile-tool-row-small">
+                    <button className={`mobile-tool-btn-small ${isMetronomePlaying ? 'active' : ''}`} onClick={() => setIsMetronomePlaying(s => !s)}>
+                      {isMetronomePlaying ? '⏹' : '▶'}
+                    </button>
+                    <input
+                      type="range"
+                      min="40"
+                      max="240"
+                      value={metronomeBpm}
+                      onChange={(e) => setMetronomeBpm(Number(e.target.value))}
+                      className="mobile-slider-small"
+                    />
+                  </div>
+                </div>
+
+                <div className="mobile-panel-item">
+                  <span>Tamanho da Fonte ({fontSize}px)</span>
+                  <input
+                    type="range"
+                    min="12"
+                    max="24"
+                    value={fontSize}
+                    onChange={(e) => setFontSize(Number(e.target.value))}
+                    className="mobile-slider-small"
+                  />
+                </div>
+
+                <div className="mobile-panel-item">
+                  <span>Afinação</span>
+                  <select className="mobile-select" value={tuning} onChange={(e) => setTuning(e.target.value)}>
+                    {Object.entries(TUNINGS).map(([key, label]) => (
+                      <option key={key} value={key}>{key.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="mobile-bottom-bar">
+        <button
+          className={`mobile-menu-item ${showPlaylistModal ? 'active' : ''}`}
+          onClick={() => {
+            setActiveMobilePanel(null);
+            if (currentPlaylist) {
+              setShowPlaylistModal(true);
+            } else {
+              setShowListsModal(true);
+            }
+          }}
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="8" y1="6" x2="21" y2="6"></line>
+            <line x1="8" y1="12" x2="21" y2="12"></line>
+            <line x1="8" y1="18" x2="21" y2="18"></line>
+            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+          </svg>
+          <span>Lista</span>
+        </button>
+
+        <button
+          className={`mobile-menu-item ${activeMobilePanel === 'tom' ? 'active' : ''}`}
+          onClick={() => setActiveMobilePanel(prev => prev === 'tom' ? null : 'tom')}
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="6" ry="6"></rect>
+            <line x1="12" y1="7" x2="12" y2="13"></line>
+            <line x1="9" y1="10" x2="15" y2="10"></line>
+            <line x1="9" y1="16" x2="15" y2="16"></line>
+          </svg>
+          <span>Tom</span>
+        </button>
+
+        <button
+          className={`mobile-menu-item ${activeMobilePanel === 'rolagem' ? 'active' : ''}`}
+          onClick={() => setActiveMobilePanel(prev => prev === 'rolagem' ? null : 'rolagem')}
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="6" ry="6"></rect>
+            <polyline points="8 9 12 13 16 9"></polyline>
+            <polyline points="8 13 12 17 16 13"></polyline>
+          </svg>
+          <span>Rolagem</span>
+        </button>
+
+        <button
+          className={`mobile-menu-item ${activeMobilePanel === 'ouvir' ? 'active' : ''}`}
+          onClick={() => setActiveMobilePanel(prev => prev === 'ouvir' ? null : 'ouvir')}
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polygon points="10 8 16 12 10 16 10 8"></polygon>
+          </svg>
+          <span>Ouvir</span>
+        </button>
+
+        <button
+          className={`mobile-menu-item ${activeMobilePanel === 'opcoes' ? 'active' : ''}`}
+          onClick={() => setActiveMobilePanel(prev => prev === 'opcoes' ? null : 'opcoes')}
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="7" cy="7" r="2"></circle>
+            <circle cx="17" cy="7" r="2"></circle>
+            <circle cx="7" cy="17" r="2"></circle>
+            <circle cx="17" cy="17" r="2"></circle>
+            <line x1="12" y1="10" x2="12" y2="14"></line>
+            <line x1="10" y1="12" x2="14" y2="12"></line>
+          </svg>
+          <span>Opções</span>
+        </button>
+      </div>
     </div>
   )
 }
