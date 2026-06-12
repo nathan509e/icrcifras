@@ -71,6 +71,15 @@ function getKeyFromOffset(originalKey, offset) {
   return transposeNote(originalKey, offset)
 }
 
+function getTransposeOffsetFromNotes(originalNote, targetNote) {
+  const normalized1 = normalizeNote(originalNote)
+  const normalized2 = normalizeNote(targetNote)
+  const idx1 = NOTES.indexOf(normalized1)
+  const idx2 = NOTES.indexOf(normalized2)
+  if (idx1 === -1 || idx2 === -1) return 0
+  return (idx2 - idx1 + 12) % 12
+}
+
 function convertPlainTextToHtml(text) {
   const chordPattern = /^[A-G][#b]?(?:m|M|dim|aug|sus|add|°|7M)?[0-9]*(?:\([^)]*\))?(?:\/[A-G][#b]?(?:m|M|dim|aug|sus|add|°|7M)?[0-9]*)?$/
   const sectionPattern = /^\[.*\]$/
@@ -205,6 +214,24 @@ function App() {
       if (song) setSelectedSongId(song.id)
     }
   }, [params.songId, songs])
+
+  // Apply tone from playlist when playing a song from the playlist
+  useEffect(() => {
+    if (currentPlaylist && selectedSongId && songs.length > 0) {
+      const currentItem = currentPlaylist.song_ids[currentPlaylistIndex]
+      if (currentItem) {
+        const parsed = parseSongIdItem(currentItem)
+        if (parsed && parsed.tom) {
+          const currentSong = songs.find(s => s.id === selectedSongId)
+          if (currentSong) {
+            const originalKey = currentSong.key || 'G'
+            const offset = getTransposeOffsetFromNotes(originalKey, parsed.tom)
+            setTransposeOffset(offset)
+          }
+        }
+      }
+    }
+  }, [currentPlaylist, currentPlaylistIndex, selectedSongId, songs])
 
   useEffect(() => {
     getCurrentUser().then(setUser)
