@@ -492,6 +492,50 @@ function App() {
         </div>
       </header>
 
+      {/* Mobile Nav - renderiza fora do header no mobile */}
+      <Navbar
+        user={user}
+        userIsAdmin={userIsAdmin}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        showSearchResults={showSearchResults}
+        setShowSearchResults={setShowSearchResults}
+        searchResults={searchResults}
+        loadSongContent={loadSongContent}
+        requestDelete={requestDelete}
+        showDomingoModal={showDomingoModal}
+        setShowDomingoModal={setShowDomingoModal}
+        showMySongs={showMySongs}
+        setShowMySongs={setShowMySongs}
+        songFilter={songFilter}
+        setSongFilter={setSongFilter}
+        showListsModal={showListsModal}
+        setShowListsModal={setShowListsModal}
+        userLists={userLists}
+        setUserLists={setUserLists}
+        showUserSuggestions={showUserSuggestions}
+        setShowUserSuggestions={setShowUserSuggestions}
+        userSuggestions={userSuggestions}
+        setUserSuggestions={setUserSuggestions}
+        showSuggestionsList={showSuggestionsList}
+        setShowSuggestionsList={setShowSuggestionsList}
+        suggestions={suggestions}
+        setSuggestions={setSuggestions}
+        showAddModal={showAddModal}
+        setShowAddModal={setShowAddModal}
+        showLoginModal={showLoginModal}
+        setShowLoginModal={setShowLoginModal}
+        userMenuRef={userMenuRef}
+        showUserMenu={showUserMenu}
+        setShowUserMenu={setShowUserMenu}
+        avatarUrl={avatarUrl}
+        displayName={displayName}
+        avatarLetter={avatarLetter}
+        isViewingSong={!!selectedSongId}
+        navigate={navigate}
+        isMobileNav={true}
+      />
+
       <main>
 
         <div className="container cifra-page">

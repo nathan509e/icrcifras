@@ -1339,6 +1339,12 @@ main {
   /* Mobile Nav - only search icon and domingo button */
   .nav-desktop-links { display: none !important }
 
+  /* Hide navbar inside header on mobile, show the mobile one outside */
+  .header .nav-links { display: none !important }
+
+  /* Make sure mobile nav shows */
+  .nav-home-mobile { display: flex !important }
+
   /* Make sure nav-links shows all buttons */
   .nav-links {
     display: flex !important;
