@@ -20,6 +20,11 @@
 html {
   zoom: 1.1;
 }
+@media (max-width: 767px) {
+  html {
+    zoom: 1;
+  }
+}
 main {
   margin-top: 60px;
 }
@@ -38,6 +43,28 @@ main {
 }
 @media (max-width: 1023px) {
   .container { width: 100%; padding: 0 20px }
+}
+@media (max-width: 767px) {
+  .container { width: 100% !important; max-width: 100% !important; padding: 0 16px !important }
+
+  /* Prevent horizontal scroll */
+  body, html { overflow-x: hidden !important; max-width: 100vw }
+
+  /* Make cifra content full width */
+  .cifra-body { flex-direction: column !important }
+  .cifra-col-left { max-width: 100% !important; width: 100% !important }
+  .cifra-col-right { width: 100% !important; margin-top: 20px }
+
+  /* Fix header */
+  .header { position: fixed !important; top: 0; left: 0; right: 0; width: 100% }
+  main { margin-top: 60px }
+
+  /* Hide non-essential elements on mobile */
+  .cifra-footer { display: none }
+  .cifra-meta { flex-direction: column; align-items: flex-start; gap: 12px }
+
+  /* Ensure buttons are touch-friendly */
+  .btn-fav { height: 40px; padding: 8px 20px }
 }
 
 /* HEADER */
