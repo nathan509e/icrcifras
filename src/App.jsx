@@ -72,6 +72,7 @@ function getKeyFromOffset(originalKey, offset) {
 }
 
 function getTransposeOffsetFromNotes(originalNote, targetNote) {
+  if (!originalNote || !targetNote) return 0
   const normalized1 = normalizeNote(originalNote)
   const normalized2 = normalizeNote(targetNote)
   const idx1 = NOTES.indexOf(normalized1)
@@ -384,23 +385,6 @@ function App() {
     : RAW_CHORD_HTML
   const processedChordHtml = processChordHtml(currentRawHtml, transposeOffset, simplifyChords)
   const currentKey = getKeyFromOffset(currentSong?.key || ORIGINAL_KEY, transposeOffset)
-
-  useEffect(() => {
-    if (currentPlaylist && currentSong) {
-      const currentItem = currentPlaylist.song_ids[currentPlaylistIndex]
-      const parsed = parseSongIdItem(currentItem)
-      if (parsed && parsed.tom && parsed.songId === currentSong.id) {
-        const songKey = currentSong.key || ORIGINAL_KEY
-        const targetTom = parsed.tom
-        const fromIdx = NOTES.indexOf(songKey)
-        const toIdx = NOTES.indexOf(targetTom)
-        if (fromIdx !== -1 && toIdx !== -1) {
-          const offset = toIdx - fromIdx
-          setTransposeOffset(offset)
-        }
-      }
-    }
-  }, [currentSong, currentPlaylistIndex])
 
   const sortedSongs = [...songs].sort((a, b) => a.name.localeCompare(b.name, 'pt', { sensitivity: 'base' }))
   const filteredSongs = songFilter.trim()
