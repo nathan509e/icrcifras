@@ -506,7 +506,8 @@ function App() {
                        if (currentPlaylistIndex > 0) {
                          const newIndex = currentPlaylistIndex - 1
                          const currentItem = currentPlaylist.song_ids[newIndex]
-                         const songId = typeof currentItem === 'object' ? currentItem.songId : currentItem
+                         const parsed = parseSongIdItem(currentItem)
+                         const songId = parsed ? parsed.songId : currentItem
                          setCurrentPlaylistIndex(newIndex)
                          setSelectedSongId(songId)
                          sessionStorage.setItem('currentPlaylistIndex', newIndex.toString())
@@ -524,7 +525,8 @@ function App() {
                        if (currentPlaylistIndex < currentPlaylist.song_ids?.length - 1) {
                          const newIndex = currentPlaylistIndex + 1
                          const currentItem = currentPlaylist.song_ids[newIndex]
-                         const songId = typeof currentItem === 'object' ? currentItem.songId : currentItem
+                         const parsed = parseSongIdItem(currentItem)
+                         const songId = parsed ? parsed.songId : currentItem
                          setCurrentPlaylistIndex(newIndex)
                          setSelectedSongId(songId)
                          sessionStorage.setItem('currentPlaylistIndex', newIndex.toString())
