@@ -17,8 +17,10 @@
   flex-direction: column;
   min-height: 100vh;
 }
-html {
-  zoom: 1.1;
+@media (min-width: 768px) {
+  html {
+    zoom: 1.1;
+  }
 }
 @media (max-width: 767px) {
   html {
@@ -1845,13 +1847,23 @@ main {
     color: #d32f2f;
   }
 
-  /* Adjust main content for fixed bottom nav */
+  /* Hide empty sticky header on mobile (replaced by nav-song-header-mobile) */
+  .header { display: none !important }
+
+  /* Remove double margin-top on main that causes white strip */
   .page-wrapper main {
     padding-bottom: 80px;
+    margin-top: 0;
   }
 
-  /* Adjust for song view - no bottom nav, add top spacing */
+  /* Ensure cifra-page has proper top padding (override !important from earlier) */
   .cifra-page {
-    padding-top: 70px;
+    padding-top: 70px !important;
+  }
+
+  /* Prevent horizontal overflow caused by zoom + fixed-width elements */
+  body {
+    overflow-x: hidden;
+    width: 100%;
   }
 }
