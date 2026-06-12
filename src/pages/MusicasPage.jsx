@@ -197,10 +197,10 @@ export default function MusicasPage() {
         <header className="header">
           <div className="container header-inner">
             <h1 className="header-logo"><a href="/">Cifra Club</a></h1>
-            <nav className="nav-links">
-              <button className="nav-link" onClick={() => navigate('/musicas')}>Louvores</button>
-              <button className="nav-link" onClick={() => setShowLoginModal(true)}>Entrar</button>
-            </nav>
+             <nav className="nav-links">
+               <button className="nav-link" onClick={() => navigate('/')}>Louvores</button>
+               <button className="nav-link" onClick={() => setShowLoginModal(true)}>Entrar</button>
+             </nav>
           </div>
         </header>
         <main>
