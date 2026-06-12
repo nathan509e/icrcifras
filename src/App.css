@@ -62,6 +62,59 @@ main {
   .search-form { display: none }
   .cifra-title { font-size: 22px !important; line-height: 28px !important }
   .cifra-artist { font-size: 16px !important }
+
+  /* Mobile nav */
+  .nav-desktop-links { display: none !important }
+  .nav-links {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    gap: 10px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    align-items: center !important;
+    flex-direction: row !important;
+    height: auto !important;
+  }
+  .nav-search-btn-mobile {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    border-radius: 10px;
+    background: var(--green);
+    border: none;
+    color: white;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .nav-install-btn-mobile {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid var(--gray-border);
+    color: var(--dark);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .nav-assine {
+    height: 40px;
+    font-size: 13px;
+    padding: 0 14px;
+    margin: 0;
+    display: flex !important;
+  }
 }
 
 /* HEADER */
@@ -1285,31 +1338,20 @@ main {
 @media (max-width: 767px) {
   /* Mobile Nav - only search icon and domingo button */
   .nav-desktop-links { display: none !important }
-  .nav-search-btn-mobile {
+
+  /* Make sure nav-links shows all buttons */
+  .nav-links {
     display: flex !important;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    background: var(--green);
-    border: none;
-    color: white;
-    cursor: pointer;
-    flex-shrink: 0;
+    gap: 10px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    align-items: center !important;
+    flex-direction: row !important;
+    height: auto !important;
   }
-  .nav-search-btn-mobile:hover { opacity: 0.9 }
 
-  /* Header mobile */
-  .header-inner { gap: 12px !important; padding: 0 12px !important; justify-content: space-between }
-  .header-logo { display: none !important }
-  .search-wrapper { display: none }
-  .nav-links { display: flex !important; gap: 12px; padding: 0; margin: 0; align-items: center }
-
-  /* Nav assine button mobile */
-  .nav-assine { height: 40px; font-size: 13px; padding: 0 14px; margin: 0; display: flex !important }
-
-  /* Install app button mobile */
+  /* Mobile nav buttons */
+  .nav-search-btn-mobile,
   .nav-install-btn-mobile {
     display: flex !important;
     align-items: center;
@@ -1317,13 +1359,34 @@ main {
     width: 40px;
     height: 40px;
     border-radius: 10px;
-    background: rgba(255,255,255,0.1);
-    border: 1px solid var(--gray-border);
-    color: var(--dark);
     cursor: pointer;
     flex-shrink: 0;
   }
-  .nav-install-btn-mobile:hover { background: var(--gray-bg) }
+
+  .nav-search-btn-mobile {
+    background: var(--green);
+    border: none;
+    color: white;
+  }
+
+  .nav-install-btn-mobile {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid var(--gray-border);
+    color: var(--dark);
+  }
+
+  /* Nav assine button mobile */
+  .nav-assine {
+    height: 40px;
+    font-size: 13px;
+    padding: 0 14px;
+    margin: 0;
+  }
+
+  /* Header mobile */
+  .header-inner { gap: 12px !important; padding: 0 12px !important; justify-content: space-between }
+  .header-logo { display: none !important }
+  .search-wrapper { display: none }
 
   /* Hide desktop sidebar */
   .instrument-sidebar {
