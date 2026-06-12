@@ -42,6 +42,8 @@ export default function Navbar({
 }) {
   const [showInstallButton, setShowInstallButton] = useState(false)
   const [deferredPrompt, setDeferredPrompt] = useState(null)
+  const [showMobileMenu, setShowMobileMenu] = useState(false)
+  const mobileMenuRef = useRef(null)
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e) => {
@@ -112,16 +114,124 @@ export default function Navbar({
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="9" cy="10" r="1"/><circle cx="12" cy="10" r="1"/><circle cx="15" cy="10" r="1"/></svg>
         </button>
       )}
-      {showInstallButton && (
-        <button
-          className="nav-install-btn-mobile"
-          onClick={handleInstallClick}
-          title="Instalar app"
-          style={{ ...mobileBtnStyle, background: '#017155', border: 'none', color: 'white' }}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        </button>
-      )}
+       {showInstallButton && (
+         <button
+           className="nav-install-btn-mobile"
+           onClick={handleInstallClick}
+           title="Instalar app"
+           style={{ ...mobileBtnStyle, background: '#017155', border: 'none', color: 'white' }}
+         >
+           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+         </button>
+       )}
+       {user && (
+         <div style={{ position: 'relative' }} ref={mobileMenuRef}>
+           <button
+             className="nav-more-menu-btn-mobile"
+             onClick={() => setShowMobileMenu(!showMobileMenu)}
+             title="Mais opcoes"
+             style={{ ...mobileBtnStyle, background: '#017155', border: 'none', color: 'white' }}
+           >
+             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+           </button>
+           {showMobileMenu && (
+             <div style={{
+               position: 'absolute',
+               top: '100%',
+               right: 0,
+               background: 'white',
+               border: '1px solid #e0e0e0',
+               borderRadius: 8,
+               marginTop: 8,
+               minWidth: 200,
+               boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+               zIndex: 1000
+             }}>
+               <button
+                 onClick={() => { setShowUserMenu(true); setShowMobileMenu(false) }}
+                 style={{
+                   width: '100%',
+                   padding: '12px 16px',
+                   border: 'none',
+                   background: 'none',
+                   textAlign: 'left',
+                   cursor: 'pointer',
+                   fontSize: '14px',
+                   color: '#333',
+                   borderBottom: '1px solid #e0e0e0',
+                   display: 'flex',
+                   alignItems: 'center',
+                   gap: '8px'
+                 }}
+               >
+                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                 Meu Perfil
+               </button>
+               {user && userIsAdmin && (
+                 <button
+                   onClick={() => { setShowAddModal(true); setShowMobileMenu(false) }}
+                   style={{
+                     width: '100%',
+                     padding: '12px 16px',
+                     border: 'none',
+                     background: 'none',
+                     textAlign: 'left',
+                     cursor: 'pointer',
+                     fontSize: '14px',
+                     color: '#333',
+                     borderBottom: '1px solid #e0e0e0',
+                     display: 'flex',
+                     alignItems: 'center',
+                     gap: '8px'
+                   }}
+                 >
+                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                   Adicionar
+                 </button>
+               )}
+               <button
+                 onClick={() => { fetchUserLists(user?.email).then(setUserLists); setShowListsModal(true); setShowMobileMenu(false) }}
+                 style={{
+                   width: '100%',
+                   padding: '12px 16px',
+                   border: 'none',
+                   background: 'none',
+                   textAlign: 'left',
+                   cursor: 'pointer',
+                   fontSize: '14px',
+                   color: '#333',
+                   borderBottom: '1px solid #e0e0e0',
+                   display: 'flex',
+                   alignItems: 'center',
+                   gap: '8px'
+                 }}
+               >
+                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/><polyline points="17 7 7 7 7 12 17 12 17 19 7 19"/></svg>
+                 Listas
+               </button>
+               <button
+                 onClick={() => { signOut(); setShowMobileMenu(false) }}
+                 style={{
+                   width: '100%',
+                   padding: '12px 16px',
+                   border: 'none',
+                   background: 'none',
+                   textAlign: 'left',
+                   cursor: 'pointer',
+                   fontSize: '14px',
+                   color: '#d32f2f',
+                   display: 'flex',
+                   alignItems: 'center',
+                   gap: '8px'
+                 }}
+               >
+                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                 Sair
+               </button>
+             </div>
+           )}
+         </div>
+       )}
       <div className="nav-desktop-links">
         <button className="nav-link" onClick={() => { setSongFilter(''); setShowMySongs(true) }}>Louvores</button>
         <button className="nav-link" onClick={() => { fetchUserLists(user?.email).then(setUserLists); setShowListsModal(true) }}>Listas</button>
