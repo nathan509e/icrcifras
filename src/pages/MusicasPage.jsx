@@ -4,6 +4,7 @@ import { fetchSongs, signInWithGoogle, signOut, onAuthChange, getCurrentUser, is
 import Navbar from '../components/Navbar'
 
 const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+const KEYS = NOTES.flatMap(n => [n, n + 'm'])
 
 function parseSongIdItem(item) {
   if (!item) return null
@@ -140,7 +141,7 @@ export default function MusicasPage() {
   }
 
   function detectKey(textContent) {
-    const tomMatch = textContent.match(/^[Tt]om\s*:\s*([A-G][#b]?)/m)
+    const tomMatch = textContent.match(/^[Tt]om\s*:\s*([A-G][#b]?m?)/m)
     if (tomMatch) return tomMatch[1]
     const chordRoots = textContent.match(/\b([A-G][#b]?)(?=\s*[\/\(\)\d]|m(?!\w)|M|dim|aug|sus|add|°|7|$)/g)
     if (!chordRoots || chordRoots.length === 0) return 'G'
@@ -865,7 +866,7 @@ export default function MusicasPage() {
                                   }))
                                 }}
                               >
-                                {NOTES.map(note => <option key={note} value={note}>{note}</option>)}
+                                {KEYS.map(k => <option key={k} value={k}>{k}</option>)}
                               </select>
                             )}
                           </div>

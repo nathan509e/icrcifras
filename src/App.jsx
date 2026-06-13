@@ -5,6 +5,7 @@ import Navbar from './components/Navbar'
 import './App.css'
 
 const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+const KEYS = NOTES.flatMap(n => [n, n + 'm'])
 
 function parseSongIdItem(item) {
   if (!item) return null
@@ -79,7 +80,10 @@ function processChordHtml(html, transposeOffset, simplify, violin) {
 }
 
 function getKeyFromOffset(originalKey, offset) {
-  return transposeNote(originalKey, offset)
+  const isMinor = originalKey.endsWith('m')
+  const root = isMinor ? originalKey.slice(0, -1) : originalKey
+  const transposed = transposeNote(root, offset)
+  return isMinor ? transposed + 'm' : transposed
 }
 
 function getTransposeOffsetFromNotes(originalNote, targetNote) {
@@ -118,11 +122,11 @@ function statusLabel(s) {
 }
 
 function stripTomLine(text) {
-  return text.replace(/^[Tt]om\s*:\s*[A-G][#b]?\s*\n?/m, '')
+  return text.replace(/^[Tt]om\s*:\s*[A-G][#b]?m?\s*\n?/m, '')
 }
 
 function detectKey(textContent) {
-  const tomMatch = textContent.match(/^[Tt]om\s*:\s*([A-G][#b]?)/m)
+  const tomMatch = textContent.match(/^[Tt]om\s*:\s*([A-G][#b]?m?)/m)
   if (tomMatch) return tomMatch[1]
   const chordRoots = textContent.match(/\b([A-G][#b]?)(?=\s*[\/\(\)\d]|m(?!\w)|M|dim|aug|sus|add|°|7|$)/g)
   if (!chordRoots || chordRoots.length === 0) return 'G'
@@ -1394,7 +1398,7 @@ function App() {
                                   }))
                                 }}
                               >
-                                {NOTES.map(note => <option key={note} value={note}>{note}</option>)}
+                                {KEYS.map(k => <option key={k} value={k}>{k}</option>)}
                               </select>
                             )}
                           </div>
