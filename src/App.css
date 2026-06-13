@@ -190,21 +190,21 @@
 }
 
 .dark .playlist-song-item {
-  background: var(--white);
-  border-color: var(--gray-border);
-  color: var(--dark);
+  background: var(--white) !important;
+  border-color: var(--gray-border) !important;
+  color: var(--dark) !important;
 }
 .dark .playlist-song-item:hover {
-  background: var(--gray-bg);
-  border-color: var(--green);
+  background: var(--gray-bg) !important;
+  border-color: var(--green) !important;
 }
 .dark .playlist-song-item.active {
-  background: var(--green);
-  border-color: var(--green);
-  color: white;
+  background: var(--green) !important;
+  border-color: var(--green) !important;
+  color: white !important;
 }
-.dark .playlist-song-number { color: var(--gray-light) }
-.dark .playlist-song-name { color: var(--dark) }
+.dark .playlist-song-number { color: var(--gray-light) !important }
+.dark .playlist-song-name { color: var(--dark) !important }
 .playlist-song-key { color: var(--green); font-weight: 600 }
 
 .dark .suggestion-item {
