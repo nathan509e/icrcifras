@@ -278,7 +278,12 @@ function App() {
       if (searchRef.current && !searchRef.current.contains(e.target)) {
         setShowSearchResults(false)
       }
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+      
+      const clickedDesktopMenu = userMenuRef.current?.contains(e.target)
+      const clickedMobileTrigger = e.target.closest('.nav-mobile-bottom-btn')
+      const clickedMobileMenu = e.target.closest('.nav-mobile-user-menu')
+      
+      if (!clickedDesktopMenu && !clickedMobileTrigger && !clickedMobileMenu) {
         setShowUserMenu(false)
       }
     }
