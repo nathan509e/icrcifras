@@ -54,6 +54,8 @@ main {
   .cifra-col-left { max-width: 100% !important; width: 100% !important }
   .cifra-col-right { width: 100% !important; margin-top: 20px }
   .header { display: none !important }
+  .musicas-page .header { display: block !important }
+  .musicas-page .header .header-inner { display: none !important }
   main { margin-top: 0 }
   .cifra-footer { display: none }
   .cifra-meta { flex-direction: column; align-items: flex-start; gap: 12px }

@@ -39,6 +39,39 @@ button, input { font: inherit; border: 0; background: transparent }
   margin-bottom: 8px;
 }
 .musicas-count { color: #757575; font-size: 14px }
+
+.musicas-mobile-header {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: #fff;
+  border-bottom: 1px solid #e0e0e0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.musicas-mobile-logo {
+  height: 32px;
+  width: auto;
+}
+.musicas-mobile-search-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #059669;
+  color: white;
+  cursor: pointer;
+}
+
+@media (max-width: 767px) {
+  .musicas-mobile-header { display: flex }
+  .musicas-page { padding: 20px 16px 80px }
+  .musicas-header h1 { font-size: 28px }
+}
 .search-section { margin-bottom: 24px }
 .search-section .search-input {
   width: 100%;
