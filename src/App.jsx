@@ -758,20 +758,6 @@ function App() {
                   __html: processedChordHtml
                 }} />
               </div>
-
-              <div className="cifra-footer">
-                <p>
-                  Composicao de Ana Paula Valadao / Leo Brandao / Lucas Wallas / Roger Lima.
-                  <a href="#"> Esta informacao esta errada? Nos avise.</a>
-                </p>
-                <div className="cifra-credits">
-                  <b>Colaboracao e revisao: </b>
-                  <div className="avatar-list">
-                    <a href="#"><img src="https://akamai.sscdn.co/tb/ccid-avatar/0/3/4nzkevufwes_50.jpg" alt="Rafael Reis" /></a>
-                    <a href="#"><img src="https://akamai.sscdn.co/tb/ccid-avatar/0/7/4rus3mjc6hr_50.jpg" alt="Jose Chaves" /></a>
-                  </div>
-                </div>
-              </div>
             </div>
 
             <div className="cifra-col-right">
