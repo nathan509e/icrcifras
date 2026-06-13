@@ -57,12 +57,23 @@ function simplifyChordString(chordStr) {
   return chordStr.replace(/^([A-Ga-g][#b]?)(m?)(.*)$/, '$1$2')
 }
 
-function processChordHtml(html, transposeOffset, simplify) {
-  if (transposeOffset === 0 && !simplify) return html
+function chordToThird(chordStr) {
+  const root = chordStr.match(/^([A-Ga-g][#b]?)/)
+  if (!root) return chordStr
+  const base = normalizeNote(root[1])
+  const rest = chordStr.slice(root[1].length)
+  const isMinor = rest.startsWith('m') || rest.startsWith('dim') || rest.startsWith('°')
+  const offset = isMinor ? 3 : 4
+  return transposeNote(base, offset)
+}
+
+function processChordHtml(html, transposeOffset, simplify, violin) {
+  if (transposeOffset === 0 && !simplify && !violin) return html
   return html.replace(/<b>([^<]+)<\/b>/g, (_, chordText) => {
     let c = chordText.trim()
     if (transposeOffset !== 0) c = transposeChordString(c, transposeOffset)
-    if (simplify) c = simplifyChordString(c)
+    if (violin) c = chordToThird(c)
+    else if (simplify) c = simplifyChordString(c)
     return `<b>${c}</b>`
   })
 }
@@ -140,6 +151,7 @@ function App() {
   const [fontSize, setFontSize] = useState(15)
   const [transposeOffset, setTransposeOffset] = useState(0)
   const [simplifyChords, setSimplifyChords] = useState(false)
+  const [violinMode, setViolinMode] = useState(false)
   const [capo, setCapo] = useState(0)
   const [tuning, setTuning] = useState('standard')
   const [metronomeBpm, setMetronomeBpm] = useState(100)
@@ -399,7 +411,7 @@ function App() {
   const currentRawHtml = currentSong
     ? (currentSong.content.includes('<b>') ? stripTomLine(currentSong.content) : convertPlainTextToHtml(stripTomLine(currentSong.content)))
     : RAW_CHORD_HTML
-  const processedChordHtml = processChordHtml(currentRawHtml, transposeOffset, simplifyChords)
+  const processedChordHtml = processChordHtml(currentRawHtml, transposeOffset, simplifyChords, violinMode)
   const currentKey = getKeyFromOffset(currentSong?.key || ORIGINAL_KEY, transposeOffset)
 
   const sortedSongs = [...songs].sort((a, b) => a.name.localeCompare(b.name, 'pt', { sensitivity: 'base' }))
@@ -625,6 +637,15 @@ function App() {
                   <span className="toggle-track"></span>
                 </label>
                 <span className="tool-hint">{simplifyChords ? 'Ativado' : 'Desativado'}</span>
+              </div>
+
+              <div className="sidebar-section">
+                <h3 className="sidebar-title">Violino</h3>
+                <label className="toggle-switch">
+                  <input type="checkbox" checked={violinMode} onChange={(e) => setViolinMode(e.target.checked)} />
+                  <span className="toggle-track"></span>
+                </label>
+                <span className="tool-hint">{violinMode ? 'Terça' : 'Desativado'}</span>
               </div>
 
               <div className="sidebar-section">
@@ -1567,6 +1588,14 @@ function App() {
                   <span>Simplificar Acordes</span>
                   <label className="toggle-switch">
                     <input type="checkbox" checked={simplifyChords} onChange={(e) => setSimplifyChords(e.target.checked)} />
+                    <span className="toggle-track"></span>
+                  </label>
+                </div>
+
+                <div className="mobile-panel-item">
+                  <span>Violino</span>
+                  <label className="toggle-switch">
+                    <input type="checkbox" checked={violinMode} onChange={(e) => setViolinMode(e.target.checked)} />
                     <span className="toggle-track"></span>
                   </label>
                 </div>
