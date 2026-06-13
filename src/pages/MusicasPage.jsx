@@ -58,6 +58,8 @@ export default function MusicasPage() {
   const [newSongYoutubeUrl, setNewSongYoutubeUrl] = useState('')
   const [importUrl, setImportUrl] = useState('')
   const [importLoading, setImportLoading] = useState(false)
+  const [importHtml, setImportHtml] = useState('')
+  const [showImportHtml, setShowImportHtml] = useState(false)
   const fileInputRef = useRef(null)
   const navigate = useNavigate()
   const userMenuRef = useRef(null)
@@ -168,14 +170,52 @@ export default function MusicasPage() {
       setNewSongFile(null)
       setNewSongYoutubeUrl('')
       setImportUrl('')
+      setImportHtml('')
+      setShowImportHtml(false)
     }
   }
 
   const CORS_PROXIES = [
     (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-    (url) => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
-    (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+    (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+    (url) => `https://corsproxy.org/?${encodeURIComponent(url)}`,
+    (url) => `https://r.jina.ai/${encodeURIComponent(url)}`,
   ]
+
+  const parseCifraHtml = (html) => {
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(html, 'text/html')
+
+    const tomSpan = doc.querySelector('#cifra_tom')
+    const tom = tomSpan ? tomSpan.textContent.trim() : ''
+
+    const pre = doc.querySelector('pre')
+    if (!pre) return null
+
+    let cifraContent = pre.textContent || pre.innerHTML
+    cifraContent = cifraContent.replace(/<br\s*\/?>/gi, '\n').replace(/<\/?[^>]+(>|$)/g, '')
+    cifraContent = cifraContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim()
+    if (tom) cifraContent = `Tom: ${tom}\n\n${cifraContent}`
+
+    const title = doc.title || ''
+    const songName = title
+      .replace(/ - Cifra Club$/, '')
+      .replace(/^Cifra Club - /, '')
+      .replace(/ \(cifra.*\)$/i, '')
+      .trim() || ''
+
+    return { songName, cifraContent }
+  }
+
+  const applyImportResult = (songName, cifraContent) => {
+    const blob = new Blob([cifraContent], { type: 'text/plain' })
+    const file = new File([blob], `${songName || 'musica'}.txt`, { type: 'text/plain' })
+    setNewSongName(songName)
+    setNewSongFile(file)
+    setImportUrl('')
+    setImportHtml('')
+    setShowImportHtml(false)
+  }
 
   const handleImportFromUrl = async () => {
     if (!importUrl.trim()) return
@@ -184,46 +224,48 @@ export default function MusicasPage() {
       let html = ''
       for (const proxy of CORS_PROXIES) {
         try {
-          const res = await fetch(proxy(importUrl), { signal: AbortSignal.timeout(10000) })
-          if (res.ok) { html = await res.text(); break }
+          const proxyUrl = proxy(importUrl)
+          const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(15000) })
+          if (res.ok) {
+            const text = await res.text()
+            if (text.includes('<pre') || text.includes('cifra_tom') || text.includes('cifra_club')) {
+              html = text; break
+            }
+            try {
+              const json = JSON.parse(text)
+              if (json.contents) html = json.contents
+              else html = text; break
+            } catch { html = text; break }
+          }
         } catch { continue }
       }
-      if (!html) { alert('Nao foi possivel acessar a URL. Tente novamente.'); setImportLoading(false); return }
-
-      const parser = new DOMParser()
-      const doc = parser.parseFromString(html, 'text/html')
-
-      const tomSpan = doc.querySelector('#cifra_tom')
-      const tom = tomSpan ? tomSpan.textContent.trim() : ''
-
-      const pre = doc.querySelector('pre')
-      if (!pre) { alert('Nao foi possivel encontrar a cifra na pagina.'); setImportLoading(false); return }
-
-      let cifraContent = pre.textContent || pre.innerHTML
-      cifraContent = cifraContent.replace(/<br\s*\/?>/gi, '\n').replace(/<\/?[^>]+(>|$)/g, '')
-      cifraContent = cifraContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim()
-      if (tom) {
-        cifraContent = `Tom: ${tom}\n\n${cifraContent}`
+      if (html) {
+        const result = parseCifraHtml(html)
+        if (result && result.cifraContent) {
+          applyImportResult(result.songName, result.cifraContent)
+          alert('Cifra importada com sucesso! Preencha o compositor (opcional) e clique em Salvar.')
+          setImportLoading(false)
+          return
+        }
       }
-
-      const title = doc.title || ''
-      const songName = title
-        .replace(/ - Cifra Club$/, '')
-        .replace(/^Cifra Club - /, '')
-        .replace(/ \(cifra.*\)$/i, '')
-        .trim() || importUrl.split('/').filter(Boolean).pop()?.replace(/-/g, ' ') || ''
-
-      const blob = new Blob([cifraContent], { type: 'text/plain' })
-      const file = new File([blob], `${songName}.txt`, { type: 'text/plain' })
-
-      setNewSongName(songName)
-      setNewSongFile(file)
-      setImportUrl('')
-      alert('Cifra importada com sucesso! Preencha o compositor (opcional) e clique em Salvar.')
+      setShowImportHtml(true)
+      alert('Nao foi possivel acessar a URL automaticamente. Cole o codigo fonte da pagina no campo abaixo.')
     } catch (err) {
+      setShowImportHtml(true)
       alert('Erro ao importar: ' + err.message)
     }
     setImportLoading(false)
+  }
+
+  const handleImportFromHtml = () => {
+    if (!importHtml.trim()) return
+    const result = parseCifraHtml(importHtml)
+    if (!result || !result.cifraContent) {
+      alert('Nao foi possivel encontrar a cifra no HTML colado. Certifique-se de copiar o codigo fonte completo da pagina.')
+      return
+    }
+    applyImportResult(result.songName, result.cifraContent)
+    alert('Cifra importada com sucesso! Preencha o compositor (opcional) e clique em Salvar.')
   }
 
   const getYoutubeId = (url) => {
@@ -1036,7 +1078,7 @@ export default function MusicasPage() {
       )}
 
       {showAddModal && (
-        <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
+        <div className="modal-overlay" onClick={() => { setShowAddModal(false); setImportUrl(''); setImportHtml(''); setShowImportHtml(false) }}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <h2 className="modal-title">Adicionar nova musica</h2>
             <div className="modal-body">
@@ -1108,6 +1150,26 @@ export default function MusicasPage() {
                   </div>
                 </div>
               )}
+              {showImportHtml && (
+                <div style={{ marginTop: 8 }}>
+                  <label className="modal-label">OU cole o codigo fonte da pagina do CifraClub</label>
+                  <textarea
+                    className="modal-input"
+                    style={{ height: 120, resize: 'vertical', padding: 8, fontFamily: 'monospace', fontSize: 12, marginBottom: 6 }}
+                    placeholder="Clique com botao direito na pagina > 'Ver codigo fonte da pagina' (Ctrl+U), copie tudo e cole aqui."
+                    value={importHtml}
+                    onChange={e => setImportHtml(e.target.value)}
+                  />
+                  <button
+                    className="modal-btn modal-btn-confirm"
+                    onClick={handleImportFromHtml}
+                    disabled={!importHtml.trim()}
+                    style={{ height: 32, fontSize: 12 }}
+                  >
+                    Processar HTML
+                  </button>
+                </div>
+              )}
               <label className="modal-label" style={{ marginTop: 16 }}>Link do YouTube (opcional)</label>
               <input
                 className="modal-input"
@@ -1118,7 +1180,7 @@ export default function MusicasPage() {
               />
             </div>
             <div className="modal-actions">
-              <button className="modal-btn modal-btn-cancel" onClick={() => setShowAddModal(false)}>Cancelar</button>
+              <button className="modal-btn modal-btn-cancel" onClick={() => { setShowAddModal(false); setImportUrl(''); setImportHtml(''); setShowImportHtml(false) }}>Cancelar</button>
               <button
                 className="modal-btn modal-btn-confirm"
                 onClick={handleAddSong}
