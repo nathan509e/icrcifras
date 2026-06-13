@@ -709,6 +709,7 @@ export default function MusicasPage() {
                             onClick={() => {
                               sessionStorage.setItem('currentPlaylist', JSON.stringify(domingoList))
                               sessionStorage.setItem('currentPlaylistIndex', index.toString())
+                              sessionStorage.setItem('loadPlaylistFromUrl', 'true')
                               navigate(`/${song.id}`)
                               setShowDomingoModal(false)
                             }}

@@ -199,14 +199,14 @@ function App() {
       }
     })
 
-    const storedPlaylist = sessionStorage.getItem('currentPlaylist')
-    const storedIndex = sessionStorage.getItem('currentPlaylistIndex')
-    if (storedPlaylist) {
-      const playlist = JSON.parse(storedPlaylist)
-      setCurrentPlaylist(playlist)
-      if (!params.songId) {
-        setCurrentPlaylistIndex(parseInt(storedIndex) || 0)
-      } else if (storedIndex) {
+    const shouldLoadPlaylist = sessionStorage.getItem('loadPlaylistFromUrl') === 'true'
+    sessionStorage.removeItem('loadPlaylistFromUrl')
+
+    if (!params.songId || shouldLoadPlaylist) {
+      const storedPlaylist = sessionStorage.getItem('currentPlaylist')
+      const storedIndex = sessionStorage.getItem('currentPlaylistIndex')
+      if (storedPlaylist) {
+        setCurrentPlaylist(JSON.parse(storedPlaylist))
         setCurrentPlaylistIndex(parseInt(storedIndex) || 0)
       }
     }
@@ -1299,14 +1299,15 @@ function App() {
                             <button
                               key={song.id}
                               className="playlist-song-item"
-                              onClick={() => {
-                                setCurrentPlaylist(domingoList)
-                                setCurrentPlaylistIndex(index)
-                                sessionStorage.setItem('currentPlaylist', JSON.stringify(domingoList))
-                                sessionStorage.setItem('currentPlaylistIndex', index.toString())
-                                navigate(`/${song.id}`)
-                                setShowDomingoModal(false)
-                              }}
+                            onClick={() => {
+                              setCurrentPlaylist(domingoList)
+                              setCurrentPlaylistIndex(index)
+                              sessionStorage.setItem('currentPlaylist', JSON.stringify(domingoList))
+                              sessionStorage.setItem('currentPlaylistIndex', index.toString())
+                              sessionStorage.setItem('loadPlaylistFromUrl', 'true')
+                              navigate(`/${song.id}`)
+                              setShowDomingoModal(false)
+                            }}
                             >
                               <span className="playlist-song-number">{index + 1}</span>
                               <span className="playlist-song-name">{song.name}</span>
@@ -1399,6 +1400,7 @@ function App() {
                               setCurrentPlaylistIndex(index)
                               sessionStorage.setItem('currentPlaylist', JSON.stringify(domingoList))
                               sessionStorage.setItem('currentPlaylistIndex', index.toString())
+                              sessionStorage.setItem('loadPlaylistFromUrl', 'true')
                               navigate(`/${song.id}`)
                               setShowDomingoModal(false)
                             }}
