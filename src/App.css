@@ -1740,29 +1740,22 @@ main {
   /* Nav header com seta de voltar quando vendo cifra */
   .nav-song-header-mobile {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 56px;
-    background: white;
-    border-bottom: 1px solid #e0e0e0;
-    display: flex;
-    align-items: center;
-    padding: 0 12px;
+    top: 12px;
+    left: 12px;
     z-index: 100;
+    line-height: 0;
   }
-
   .nav-back-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: #333;
-    transition: opacity 0.2s;
+    width: 24px !important;
+    height: 24px !important;
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
+    cursor: pointer !important;
+    color: #333 !important;
+  }
+  .nav-back-btn svg {
+    display: block;
   }
 
   .nav-back-btn:active {
