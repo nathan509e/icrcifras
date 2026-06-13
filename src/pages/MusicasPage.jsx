@@ -832,8 +832,12 @@ export default function MusicasPage() {
         setShowDomingoModal={setShowDomingoModal}
         setShowUserSuggestions={setShowUserSuggestions}
         showUserSuggestions={showUserSuggestions}
+        userSuggestions={userSuggestions}
+        setUserSuggestions={setUserSuggestions}
         setShowSuggestionsList={setShowSuggestionsList}
         showSuggestionsList={showSuggestionsList}
+        suggestions={suggestions}
+        setSuggestions={setSuggestions}
         showUserMenu={showUserMenu}
         setShowUserMenu={setShowUserMenu}
         avatarUrl={avatarUrl}
@@ -842,7 +846,11 @@ export default function MusicasPage() {
         setShowLoginModal={setShowLoginModal}
         setShowMySongs={setShowMySongs}
         setSongFilter={setSongFilter}
+        showListsModal={showListsModal}
         setShowListsModal={setShowListsModal}
+        userLists={userLists}
+        setUserLists={setUserLists}
+        showAddModal={showAddModal}
         setShowAddModal={setShowAddModal}
         isMobileNav={true}
       />
