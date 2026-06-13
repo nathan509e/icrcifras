@@ -150,6 +150,16 @@ export default function Navbar({
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="9" cy="10" r="1"/><circle cx="12" cy="10" r="1"/><circle cx="15" cy="10" r="1"/></svg>
           </button>
         )}
+        {showInstallButton && (
+          <button
+            className="nav-mobile-bottom-btn"
+            onClick={handleInstallClick}
+            title="Instalar app"
+            style={{ ...mobileBtnStyle, background: '#017155', border: 'none', color: 'white' }}
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          </button>
+        )}
         {user && (
           <button
             className="nav-mobile-bottom-btn"
