@@ -2052,6 +2052,10 @@ main {
     right: 0 !important;
     background: white !important;
     z-index: 1000 !important;
+    border: none !important;
+    border-top: none !important;
+    outline: none !important;
+    box-shadow: none !important;
   }
 
   /* Mobile bottom buttons */
