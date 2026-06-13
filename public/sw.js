@@ -1,57 +1,45 @@
-const CACHE_NAME = 'cifras-v2';
-const ASSETS = [
-  '/',
-  '/index.html',
-  '/src/main.jsx',
-  '/manifest.json',
-  '/logo.png',
-  '/apple-touch-icon.png',
-  '/pwa-192x192.png',
-  '/pwa-512x512.png',
-];
+const CACHE_NAME = 'cifras-v3'
 
 self.addEventListener('install', (event) => {
+  self.skipWaiting()
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS);
+      return cache.addAll([
+        '/',
+        '/index.html',
+        '/manifest.json',
+        '/logo.png',
+        '/logob.png',
+        '/pwa-192x192.png',
+        '/pwa-512x512.png',
+      ]).catch(() => {})
     })
-  );
-});
+  )
+})
 
 self.addEventListener('fetch', (event) => {
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      if (response) {
-        return response;
-      }
-      return fetch(event.request).then((response) => {
+    caches.match(event.request).then((cached) => {
+      return cached || fetch(event.request).then((response) => {
         if (!response || response.status !== 200 || response.type !== 'basic') {
-          return response;
+          return response
         }
-        const responseToCache = response.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
-        return response;
-      });
+        const clone = response.clone()
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone))
+        return response
+      })
     }).catch(() => {
       if (event.request.mode === 'navigate') {
-        return caches.match('/index.html');
+        return caches.match('/index.html')
       }
     })
-  );
-});
+  )
+})
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
-  );
-});
+    caches.keys().then((names) => Promise.all(
+      names.filter((n) => n !== CACHE_NAME).map((n) => caches.delete(n))
+    ))
+  )
+})
