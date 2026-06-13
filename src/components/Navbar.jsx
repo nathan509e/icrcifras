@@ -46,22 +46,18 @@ export default function Navbar({
   const [showInstallButton, setShowInstallButton] = useState(false)
   const [deferredPrompt, setDeferredPrompt] = useState(null)
 
-  const handleSignOut = async () => {
+  const handleSignOut = () => {
+    alert('Saindo...')
+    try { signOut() } catch (e) { console.error(e) }
+    const isKey = (k) => k && (k.includes('supabase') || k.startsWith('sb-'))
     try {
-      await signOut()
+      for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (isKey(k)) localStorage.removeItem(k) }
+      for (let i = sessionStorage.length - 1; i >= 0; i--) { const k = sessionStorage.key(i); if (isKey(k)) sessionStorage.removeItem(k) }
+      document.cookie.split(';').forEach(c => { const n = c.split('=')[0].trim(); if (isKey(n)) document.cookie = `${n}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/` })
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()))
+      }
     } catch (e) { console.error(e) }
-    for (let i = localStorage.length - 1; i >= 0; i--) {
-      const key = localStorage.key(i)
-      if (key && key.includes('supabase')) localStorage.removeItem(key)
-    }
-    for (let i = sessionStorage.length - 1; i >= 0; i--) {
-      const key = sessionStorage.key(i)
-      if (key && key.includes('supabase')) sessionStorage.removeItem(key)
-    }
-    if ('serviceWorker' in navigator) {
-      const regs = await navigator.serviceWorker.getRegistrations()
-      for (const reg of regs) await reg.unregister()
-    }
     window.location.reload()
   }
 
