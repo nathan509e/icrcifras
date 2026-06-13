@@ -558,11 +558,6 @@ function App() {
             <h1 className="cifra-title">{currentSong ? currentSong.name : 'Ah, Jesus / Coracao Igual Ao Teu'}</h1>
             <h2 className="cifra-artist">{currentSong ? (currentSong.composer || '') : <a href="/julliany-souza/">Julliany Souza</a>}</h2>
             <div className="cifra-meta">
-              <span className="version-badge">
-                <span className="check"></span>
-                Cifra: Principal <span id="js-c-mode">(violao e guitarra)</span>
-                <span className="arrow"></span>
-              </span>
               {currentPlaylist && (
                 <div className="playlist-inline-controls">
                    <span className="playlist-name">{currentPlaylist.name}</span>
@@ -606,7 +601,6 @@ function App() {
                     </button>
                  </div>
               )}
-              <button className="btn-fav">Favoritar Cifra</button>
             </div>
           </div>
 
