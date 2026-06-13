@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchSongs, signInWithGoogle, signOut, onAuthChange, getCurrentUser, isAdmin, fetchUserLists, createList, updateList, deleteList, saveSuggestion, fetchUserSuggestions, fetchDomingoList, fetchSuggestions } from '../supabase'
+import { fetchSongs, signInWithGoogle, signOut, onAuthChange, getCurrentUser, isAdmin, fetchUserLists, createList, updateList, deleteList, saveSuggestion, fetchUserSuggestions, fetchDomingoList, fetchSuggestions, saveSong, deleteSuggestion, updateSuggestionStatus } from '../supabase'
 import Navbar from '../components/Navbar'
 
 const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
@@ -51,6 +51,11 @@ export default function MusicasPage() {
   const [currentPlaylistIndex, setCurrentPlaylistIndex] = useState(0)
   const [showMySongs, setShowMySongs] = useState(false)
   const [songFilter, setSongFilter] = useState('')
+  const [newSongName, setNewSongName] = useState('')
+  const [newSongComposer, setNewSongComposer] = useState('')
+  const [newSongFile, setNewSongFile] = useState(null)
+  const [newSongYoutubeUrl, setNewSongYoutubeUrl] = useState('')
+  const fileInputRef = useRef(null)
   const navigate = useNavigate()
   const userMenuRef = useRef(null)
 
@@ -121,6 +126,51 @@ export default function MusicasPage() {
     navigate(`/${song.id}`)
   }
 
+  function detectKey(textContent) {
+    const tomMatch = textContent.match(/^[Tt]om\s*:\s*([A-G][#b]?)/m)
+    if (tomMatch) return tomMatch[1]
+    const chordRoots = textContent.match(/\b([A-G][#b]?)(?=\s*[\/\(\)\d]|m(?!\w)|M|dim|aug|sus|add|°|7|$)/g)
+    if (!chordRoots || chordRoots.length === 0) return 'G'
+    const counts = {}
+    const seen = []
+    for (const r of chordRoots) {
+      if (!counts[r]) { counts[r] = 0; seen.push(r) }
+      counts[r]++
+    }
+    let best = seen[0], bestCount = counts[best]
+    for (const r of seen) {
+      if (counts[r] > bestCount) { best = r; bestCount = counts[r] }
+    }
+    return best
+  }
+
+  const handleAddSong = async () => {
+    if (!newSongName.trim() || !newSongFile) return
+    const content = await newSongFile.text()
+    const detectedKey = detectKey(content)
+    const saved = await saveSong(newSongName.trim(), content, newSongYoutubeUrl.trim(), newSongComposer.trim(), detectedKey)
+    if (saved) {
+      setSongs(prev => [saved, ...prev])
+      setShowAddModal(false)
+      setNewSongName('')
+      setNewSongComposer('')
+      setNewSongFile(null)
+      setNewSongYoutubeUrl('')
+    }
+  }
+
+  const getYoutubeId = (url) => {
+    if (!url) return ''
+    const match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/)
+    return match ? match[1] : ''
+  }
+
+  function statusLabel(s) {
+    if (s === 'approved') return { text: 'Aprovado', cls: 'status-approved' }
+    if (s === 'rejected') return { text: 'Reprovado', cls: 'status-rejected' }
+    return { text: 'Em analise', cls: 'status-pending' }
+  }
+
   const handleCreateList = async () => {
     if (!newListName.trim() || !user?.email) return
     await createList(newListName.trim(), user.email, selectedSongs)
@@ -174,12 +224,6 @@ export default function MusicasPage() {
   const avatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || ''
   const displayName = user?.user_metadata?.full_name || user?.email || ''
   const avatarLetter = displayName ? displayName[0].toUpperCase() : '?'
-
-  const getYoutubeId = (url) => {
-    if (!url) return ''
-    const match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/)
-    return match ? match[1] : ''
-  }
 
   const searchResults = searchQuery.trim()
     ? songs.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -831,6 +875,137 @@ export default function MusicasPage() {
             <div className="modal-actions">
               <button className="modal-btn modal-btn-confirm" onClick={() => { setShowUserSuggestions(false); setShowSuggestionModal(true) }}>Adicionar sugestao</button>
               <button className="modal-btn modal-btn-cancel" onClick={() => setShowUserSuggestions(false)}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSuggestionsList && (
+        <div className="modal-overlay" onClick={() => setShowSuggestionsList(false)}>
+          <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
+            <h2 className="modal-title">Sugestoes de louvores</h2>
+            <div className="modal-body">
+              {suggestions.length === 0 ? (
+                <p className="modal-empty">Nenhuma sugestao ainda.</p>
+              ) : (
+                <div className="suggestions-list">
+                  {suggestions.map(s => {
+                    const st = statusLabel(s.status)
+                    return (
+                      <div key={s.id} className="suggestion-item">
+                        <div className="suggestion-info">
+                          <div className="suggestion-song-row">
+                            <span className="suggestion-song">{s.song_name}</span>
+                            <button
+                              className="suggestion-play"
+                              onClick={() => {
+                                const id = getYoutubeId(s.youtube_url)
+                                if (id) window.open(`https://www.youtube.com/watch?v=${id}`, '_blank')
+                              }}
+                              title="Abrir no YouTube"
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                            </button>
+                          </div>
+                          <span className={`suggestion-status ${st.cls}`}>{st.text}</span>
+                        </div>
+                        <div className="suggestion-actions">
+                          {s.status === 'approved' ? (
+                            <span className="suggestion-label suggestion-label--approved">Aprovado</span>
+                          ) : s.status === 'rejected' ? (
+                            <span className="suggestion-label suggestion-label--rejected">Reprovado</span>
+                          ) : (
+                            <>
+                              <button className="suggestion-status-btn suggestion-status-btn--approve" onClick={async () => { await updateSuggestionStatus(s.id, 'approved'); setSuggestions(prev => prev.map(x => x.id === s.id ? { ...x, status: 'approved' } : x)) }} title="Aprovar">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                              </button>
+                              <button className="suggestion-status-btn suggestion-status-btn--reject" onClick={async () => { await updateSuggestionStatus(s.id, 'rejected'); setSuggestions(prev => prev.map(x => x.id === s.id ? { ...x, status: 'rejected' } : x)) }} title="Reprovar">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                              </button>
+                            </>
+                          )}
+                          <button
+                            className="my-song-delete"
+                            onClick={async () => {
+                              await deleteSuggestion(s.id)
+                              setSuggestions(prev => prev.filter(x => x.id !== s.id))
+                            }}
+                            title="Remover sugestao"
+                          >
+                            remover
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+            <div className="modal-actions">
+              <button className="modal-btn modal-btn-cancel" onClick={() => setShowSuggestionsList(false)}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAddModal && (
+        <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h2 className="modal-title">Adicionar nova musica</h2>
+            <div className="modal-body">
+              <label className="modal-label">Nome da musica</label>
+              <input
+                className="modal-input"
+                type="text"
+                placeholder="Digite o nome da musica"
+                value={newSongName}
+                onChange={e => setNewSongName(e.target.value)}
+                autoFocus
+              />
+              <label className="modal-label">Compositor</label>
+              <input
+                className="modal-input"
+                type="text"
+                placeholder="Digite o nome do compositor"
+                value={newSongComposer}
+                onChange={e => setNewSongComposer(e.target.value)}
+              />
+              <label className="modal-label">Arquivo TXT</label>
+              <div className="modal-file-area" onClick={() => fileInputRef.current?.click()}>
+                {newSongFile ? (
+                  <span className="modal-file-name">{newSongFile.name}</span>
+                ) : (
+                  <span className="modal-file-placeholder">Clique para selecionar um arquivo .txt</span>
+                )}
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".txt"
+                style={{ display: 'none' }}
+                onChange={e => {
+                  const file = e.target.files[0]
+                  if (file && file.name.endsWith('.txt')) setNewSongFile(file)
+                }}
+              />
+              <label className="modal-label" style={{ marginTop: 16 }}>Link do YouTube (opcional)</label>
+              <input
+                className="modal-input"
+                type="url"
+                placeholder="https://youtube.com/watch?v=..."
+                value={newSongYoutubeUrl}
+                onChange={e => setNewSongYoutubeUrl(e.target.value)}
+              />
+            </div>
+            <div className="modal-actions">
+              <button className="modal-btn modal-btn-cancel" onClick={() => setShowAddModal(false)}>Cancelar</button>
+              <button
+                className="modal-btn modal-btn-confirm"
+                onClick={handleAddSong}
+                disabled={!newSongName.trim() || !newSongFile}
+              >
+                Salvar
+              </button>
             </div>
           </div>
         </div>

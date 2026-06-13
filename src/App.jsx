@@ -541,6 +541,8 @@ function App() {
         isViewingSong={!!selectedSongId}
         navigate={navigate}
         isMobileNav={true}
+        fetchSuggestions={fetchSuggestions}
+        fetchUserSuggestions={fetchUserSuggestions}
       />
 
       <main>
