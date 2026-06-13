@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { fetchSongs, saveSong, deleteSong, signInWithGoogle, signOut, onAuthChange, getCurrentUser, isAdmin, fetchSuggestions, saveSuggestion, deleteSuggestion, updateSuggestionStatus, fetchUserSuggestions, fetchUserLists, createList, updateList, deleteList, fetchDomingoList } from './supabase'
 import Navbar from './components/Navbar'
 import './App.css'
@@ -96,6 +96,11 @@ function getTransposeOffsetFromNotes(originalNote, targetNote) {
   return (idx2 - idx1 + 12) % 12
 }
 
+function getFormaTomTransposed(originalFormaTom, offset) {
+  if (!originalFormaTom) return null
+  return getKeyFromOffset(originalFormaTom, offset)
+}
+
 function convertPlainTextToHtml(text) {
   const chordPattern = /^[A-G][#b]?(?:m|M|dim|aug|sus|add|°|7M)?[0-9]*(?:\([^)]*\))?(?:\/[A-G][#b]?(?:m|M|dim|aug|sus|add|°|7M)?[0-9]*)?$/
   const sectionPattern = /^\[.*\]$/
@@ -122,7 +127,18 @@ function statusLabel(s) {
 }
 
 function stripTomLine(text) {
-  return text.replace(/^[Tt]om\s*:\s*[A-G][#b]?m?\s*\n?/m, '')
+  return text.replace(/^[Tt]om\s*:\s*[A-G][#b]?m?(?:\s*\([^)]*\))?\s*\n?/m, '')
+}
+
+function extractTomInfo(text) {
+  const match = text.match(/^[Tt]om\s*:\s*([A-G][#b]?m?)(?:\s*\(forma dos acordes no tom de\s+([A-G][#b]?m?)\))?\s*\n?/m)
+  if (match) {
+    return {
+      tom: match[1],
+      formaTom: match[2] || null
+    }
+  }
+  return { tom: null, formaTom: null }
 }
 
 function detectKey(textContent) {
@@ -154,6 +170,7 @@ function App() {
   const [isScrolling, setIsScrolling] = useState(false)
   const [fontSize, setFontSize] = useState(15)
   const [transposeOffset, setTransposeOffset] = useState(0)
+  const [formaTom, setFormaTom] = useState(null)
   const [simplifyChords, setSimplifyChords] = useState(false)
   const [violinMode, setViolinMode] = useState(false)
   const [capo, setCapo] = useState(0)
@@ -259,6 +276,17 @@ function App() {
     }
   }, [currentPlaylist, currentPlaylistIndex, selectedSongId, songs])
 
+  // Extract forma dos acordes from song content
+  useEffect(() => {
+    if (selectedSongId && songs.length > 0) {
+      const song = songs.find(s => s.id === selectedSongId)
+      if (song && song.content) {
+        const { formaTom } = extractTomInfo(song.content)
+        setFormaTom(formaTom)
+      }
+    }
+  }, [selectedSongId, songs])
+
   useEffect(() => {
     getCurrentUser().then(setUser)
     const unsubscribe = onAuthChange(setUser)
@@ -292,6 +320,7 @@ function App() {
     if (!fromPlaylist) {
       setTransposeOffset(0)
     }
+    setFormaTom(null)
     setSimplifyChords(false)
     setCapo(0)
     setIsScrolling(false)
@@ -417,6 +446,7 @@ function App() {
     : RAW_CHORD_HTML
   const processedChordHtml = processChordHtml(currentRawHtml, transposeOffset, simplifyChords, violinMode)
   const currentKey = getKeyFromOffset(currentSong?.key || ORIGINAL_KEY, transposeOffset)
+  const currentFormaTom = getFormaTomTransposed(formaTom, transposeOffset)
 
   const sortedSongs = [...songs].sort((a, b) => a.name.localeCompare(b.name, 'pt', { sensitivity: 'base' }))
   const filteredSongs = songFilter.trim()
@@ -433,7 +463,7 @@ function App() {
     <div className="page-wrapper">
       <header className="header">
         <div className="container header-inner">
-          <h1 className="header-logo"><a href="/">Cifra Club</a></h1>
+          <h1 className="header-logo"><Link to="/">Cifra Club</Link></h1>
           <div className="search-wrapper" ref={searchRef}>
             <form className="search-form" action="/" onSubmit={e => e.preventDefault()}>
               <label htmlFor="search" className="hidden-text">O que voce quer tocar hoje?</label>
@@ -631,6 +661,7 @@ function App() {
                 </div>
                 <div className="tool-hint">
                   {transposeOffset !== 0 && <span>({transposeOffset > 0 ? '+' : ''}{transposeOffset} semitons)</span>}
+                  {currentFormaTom && <span> - forma dos acordes no tom de {currentFormaTom}</span>}
                 </div>
               </div>
 
@@ -753,6 +784,9 @@ function App() {
               <div className="cifra-content" style={{ fontSize: `${fontSize}px` }}>
                 <div className="cifra-tom">
                   tom: <a href="#" title="alterar o tom da cifra">{currentKey}</a>
+                  {currentFormaTom && (
+                    <span title="forma dos acordes"> (forma dos acordes no tom de {currentFormaTom})</span>
+                  )}
                 </div>
                 <pre onClick={handleChordClick} dangerouslySetInnerHTML={{
                   __html: processedChordHtml
@@ -1520,6 +1554,9 @@ function App() {
                   <span className="mobile-tool-value">{currentKey}</span>
                   <button className="mobile-tool-btn" onClick={() => setTransposeOffset(t => Math.min(6, t + 1))}>+</button>
                 </div>
+                {currentFormaTom && (
+                  <div className="mobile-panel-hint" style={{ marginTop: '8px' }}>forma dos acordes no tom de {currentFormaTom}</div>
+                )}
                 {transposeOffset !== 0 && (
                   <div className="mobile-panel-hint">({transposeOffset > 0 ? '+' : ''}{transposeOffset} semitons)</div>
                 )}

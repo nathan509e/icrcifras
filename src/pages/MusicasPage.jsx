@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { fetchSongs, signInWithGoogle, signOut, onAuthChange, getCurrentUser, isAdmin, fetchUserLists, createList, updateList, deleteList, saveSuggestion, fetchUserSuggestions, fetchDomingoList, fetchSuggestions, saveSong, deleteSuggestion, updateSuggestionStatus } from '../supabase'
 import Navbar from '../components/Navbar'
 
@@ -355,7 +355,7 @@ export default function MusicasPage() {
       <div className="page-wrapper">
         <header className="header">
           <div className="container header-inner">
-            <h1 className="header-logo"><a href="/">Cifra Club</a></h1>
+            <h1 className="header-logo"><Link to="/">Cifra Club</Link></h1>
              <nav className="nav-links">
                <button className="nav-link" onClick={() => navigate('/')}>Louvores</button>
                <button className="nav-link" onClick={() => setShowLoginModal(true)}>Entrar</button>
@@ -375,7 +375,7 @@ export default function MusicasPage() {
     <div className="page-wrapper">
       <header className="header">
         <div className="container header-inner">
-          <h1 className="header-logo"><a href="/">Cifra Club</a></h1>
+          <h1 className="header-logo"><Link to="/">Cifra Club</Link></h1>
           <div className="search-wrapper" style={{ flex: 1, maxWidth: 490 }}>
             <form className="search-form" onSubmit={e => e.preventDefault()}>
               <input
