@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { fetchSongs, saveSong, deleteSong, signInWithGoogle, signOut, onAuthChange, getCurrentUser, isAdmin, fetchSuggestions, saveSuggestion, deleteSuggestion, updateSuggestionStatus, fetchUserSuggestions, fetchUserLists, createList, updateList, deleteList, fetchDomingoList } from './supabase'
+import { fetchSongs, saveSong, deleteSong, signInWithGoogle, signOut, fetchSuggestions, saveSuggestion, deleteSuggestion, updateSuggestionStatus, fetchUserSuggestions, fetchUserLists, createList, updateList, deleteList, fetchDomingoList } from './supabase'
+import { useAuth } from './AuthContext'
 import Navbar from './components/Navbar'
 import './App.css'
 
@@ -192,10 +193,9 @@ function App() {
   const [songFilter, setSongFilter] = useState('')
   const [deleteConfirmId, setDeleteConfirmId] = useState(null)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
-  const [user, setUser] = useState(null)
+  const { user, setUser, userIsAdmin, setUserIsAdmin, userLists, setUserLists } = useAuth()
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
-  const [userIsAdmin, setUserIsAdmin] = useState(false)
   const [showSuggestionModal, setShowSuggestionModal] = useState(false)
   const [suggSong, setSuggSong] = useState('')
   const [suggUrl, setSuggUrl] = useState('')
@@ -211,7 +211,6 @@ function App() {
   const [domingoList, setDomingoList] = useState(null)
   const [isEditingDomingo, setIsEditingDomingo] = useState(false)
   const [activeMobilePanel, setActiveMobilePanel] = useState(null)
-  const [userLists, setUserLists] = useState([])
   const [newListName, setNewListName] = useState('')
   const [selectedSongs, setSelectedSongs] = useState([])
   const [editingList, setEditingList] = useState(null)
@@ -286,22 +285,6 @@ function App() {
       }
     }
   }, [selectedSongId, songs])
-
-  useEffect(() => {
-    getCurrentUser().then(setUser)
-    const unsubscribe = onAuthChange(setUser)
-    return unsubscribe
-  }, [])
-
-  useEffect(() => {
-    if (user?.email) {
-      isAdmin(user.email).then(setUserIsAdmin)
-      fetchUserLists(user.email).then(setUserLists)
-    } else {
-      setUserIsAdmin(false)
-      setUserLists([])
-    }
-  }, [user])
 
   const searchResults = searchQuery.trim()
     ? songs.filter(s =>

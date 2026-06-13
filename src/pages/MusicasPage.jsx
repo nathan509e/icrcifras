@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { fetchSongs, signInWithGoogle, signOut, onAuthChange, getCurrentUser, isAdmin, fetchUserLists, createList, updateList, deleteList, saveSuggestion, fetchUserSuggestions, fetchDomingoList, fetchSuggestions, saveSong, deleteSuggestion, updateSuggestionStatus } from '../supabase'
+import { fetchSongs, signInWithGoogle, signOut, fetchUserLists, createList, updateList, deleteList, saveSuggestion, fetchUserSuggestions, fetchDomingoList, fetchSuggestions, saveSong, deleteSuggestion, updateSuggestionStatus } from '../supabase'
+import { useAuth } from '../AuthContext'
 import Navbar from '../components/Navbar'
 
 const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
@@ -42,9 +43,7 @@ export default function MusicasPage() {
   const [suggestions, setSuggestions] = useState([])
   const [suggSong, setSuggSong] = useState('')
   const [suggUrl, setSuggUrl] = useState('')
-  const [user, setUser] = useState(null)
-  const [userIsAdmin, setUserIsAdmin] = useState(false)
-  const [userLists, setUserLists] = useState([])
+  const { user, setUser, userIsAdmin, setUserIsAdmin, userLists, setUserLists } = useAuth()
   const [newListName, setNewListName] = useState('')
   const [selectedSongs, setSelectedSongs] = useState([])
   const [editingList, setEditingList] = useState(null)
@@ -101,22 +100,6 @@ export default function MusicasPage() {
       document.documentElement.classList.remove('dark')
     }
   }, [darkMode])
-
-  useEffect(() => {
-    getCurrentUser().then(setUser)
-    const unsubscribe = onAuthChange(setUser)
-    return unsubscribe
-  }, [])
-
-  useEffect(() => {
-    if (user?.email) {
-      isAdmin(user.email).then(setUserIsAdmin)
-      fetchUserLists(user.email).then(setUserLists)
-    } else {
-      setUserIsAdmin(false)
-      setUserLists([])
-    }
-  }, [user])
 
   useEffect(() => {
     function handleClickOutside(e) {
