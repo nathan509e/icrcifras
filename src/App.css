@@ -190,12 +190,12 @@
 }
 
 .dark .playlist-song-item {
-  background: var(--white) !important;
+  background: var(--gray-bg) !important;
   border-color: var(--gray-border) !important;
   color: var(--dark) !important;
 }
 .dark .playlist-song-item:hover {
-  background: var(--gray-bg) !important;
+  background: var(--white) !important;
   border-color: var(--green) !important;
 }
 .dark .playlist-song-item.active {
@@ -205,7 +205,8 @@
 }
 .dark .playlist-song-number { color: var(--gray-light) !important }
 .dark .playlist-song-name { color: var(--dark) !important }
-.playlist-song-key { color: var(--green); font-weight: 600 }
+.playlist-song-key { color: var(--green); font-weight: 600; font-size: 12px }
+.dark .playlist-song-key { color: var(--green) !important }
 
 .dark .suggestion-item {
   border-bottom-color: var(--gray-border);
@@ -459,7 +460,7 @@ html, body { background: var(--white) }
 }
 
 .nav-links { display: flex; align-items: center; height: 100%; gap: 4px; flex-shrink: 0 }
-.nav-home-mobile { display: none }
+.nav-home-mobile { display: none; border-top: none !important; border: none !important; outline: none !important; box-shadow: none !important }
 .nav-link {
   font: 400 14px var(--font-roboto);
   color: var(--dark);
@@ -2048,11 +2049,13 @@ html, body { background: var(--white) }
     display: flex !important;
     gap: 8px !important;
     padding: 12px !important;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom)) !important;
     margin: 0 !important;
     align-items: center !important;
     justify-content: center !important;
     flex-direction: row !important;
-    height: 60px !important;
+    height: auto !important;
+    min-height: 60px !important;
     position: fixed !important;
     bottom: 0 !important;
     left: 0 !important;
@@ -2061,8 +2064,10 @@ html, body { background: var(--white) }
     z-index: 1000 !important;
     border: none !important;
     border-top: none !important;
+    border-bottom: none !important;
     outline: none !important;
     box-shadow: none !important;
+    -webkit-box-shadow: none !important;
     transform: translateZ(0);
     -webkit-transform: translateZ(0);
   }

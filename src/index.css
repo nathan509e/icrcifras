@@ -220,6 +220,7 @@ button, input { font: inherit; border: 0; background: transparent }
 .playlist-song-item.active { background: #e8f5e9; border-color: #059669 }
 .playlist-song-number { color: #757575; min-width: 24px }
 .playlist-song-name { font-weight: 500; color: #1b1b1b }
+.playlist-song-key { font-weight: 600; font-size: 12px }
 
 .playlist-inline-controls {
   display: flex;
