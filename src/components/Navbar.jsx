@@ -279,14 +279,6 @@ export default function Navbar({
       {user && (
         <button className="nav-assine" onClick={() => setShowDomingoModal(true)}>Esse Domingo</button>
       )}
-      <button
-        className="nav-search-btn-mobile"
-        onClick={() => { setSongFilter(''); setShowMySongs(true) }}
-        title="Buscar musicas"
-        style={{ ...mobileBtnStyle, background: '#017155', border: 'none', color: 'white' }}
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-      </button>
       <div className="nav-desktop-links">
         <button className="nav-link" onClick={() => { setSongFilter(''); setShowMySongs(true) }}>Louvores</button>
         <button className="nav-link" onClick={() => { fetchUserLists(user?.email).then(setUserLists); setShowListsModal(true) }}>Listas</button>
