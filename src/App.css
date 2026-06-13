@@ -389,6 +389,8 @@ main {
   }
 }
 
+html, body { background: var(--white) }
+
 /* HEADER */
 .header {
   position: sticky;
