@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react'
-import { signOut, fetchUserLists, fetchSuggestions, fetchUserSuggestions } from '../supabase'
+import { signOut, fetchUserLists, fetchSuggestions as fetchSuggestionsFn, fetchUserSuggestions as fetchUserSuggestionsFn } from '../supabase'
 
 export default function Navbar({
   user,
@@ -42,7 +42,11 @@ export default function Navbar({
   isViewingSong,
   navigate,
   isMobileNav = false,
+  fetchSuggestions: fetchSuggestionsProp,
+  fetchUserSuggestions: fetchUserSuggestionsProp,
 }) {
+  const fetchSuggestions = fetchSuggestionsProp || fetchSuggestionsFn
+  const fetchUserSuggestions = fetchUserSuggestionsProp || fetchUserSuggestionsFn
   const [showInstallButton, setShowInstallButton] = useState(false)
   const [deferredPrompt, setDeferredPrompt] = useState(null)
 

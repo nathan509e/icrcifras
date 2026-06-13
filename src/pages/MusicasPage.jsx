@@ -863,6 +863,8 @@ export default function MusicasPage() {
         showAddModal={showAddModal}
         setShowAddModal={setShowAddModal}
         isMobileNav={true}
+        fetchSuggestions={fetchSuggestions}
+        fetchUserSuggestions={fetchUserSuggestions}
       />
     </div>
   )
