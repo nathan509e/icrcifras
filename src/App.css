@@ -190,12 +190,12 @@
 }
 
 .dark .playlist-song-item {
-  background: var(--gray-bg) !important;
+  background: var(--white) !important;
   border-color: var(--gray-border) !important;
   color: var(--dark) !important;
 }
 .dark .playlist-song-item:hover {
-  background: var(--white) !important;
+  background: var(--gray-bg) !important;
   border-color: var(--green) !important;
 }
 .dark .playlist-song-item.active {
