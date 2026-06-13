@@ -181,6 +181,7 @@ main {
 }
 
 .nav-links { display: flex; align-items: center; height: 100%; gap: 4px; flex-shrink: 0 }
+.nav-home-mobile { display: none }
 .nav-link {
   font: 400 14px var(--font-roboto);
   color: var(--dark);
