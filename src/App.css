@@ -413,6 +413,9 @@ main {
   background: url("/logo.png") no-repeat center/contain;
   font-size: 0;
 }
+.dark .header-logo a {
+  background-image: url("/logob.png");
+}
 .search-wrapper { flex: 1; min-width: 0 }
 .search-form {
   position: relative;

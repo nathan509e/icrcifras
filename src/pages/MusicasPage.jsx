@@ -329,7 +329,7 @@ export default function MusicasPage() {
       </header>
 
       <div className="musicas-mobile-header">
-        <img src="/logo.png" alt="Cifra Club" className="musicas-mobile-logo" />
+        <img src={darkMode ? "/logob.png" : "/logo.png"} alt="Cifra Club" className="musicas-mobile-logo" />
         <div className="musicas-mobile-actions">
           <button
             className="musicas-mobile-theme-btn"
