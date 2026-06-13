@@ -101,7 +101,11 @@ export default function MusicasPage() {
 
   useEffect(() => {
     function handleClickOutside(e) {
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+      const clickedDesktopMenu = userMenuRef.current?.contains(e.target)
+      const clickedMobileTrigger = e.target.closest('.nav-mobile-bottom-btn')
+      const clickedMobileMenu = e.target.closest('.nav-mobile-user-menu')
+      
+      if (!clickedDesktopMenu && !clickedMobileTrigger && !clickedMobileMenu) {
         setShowUserMenu(false)
       }
     }
