@@ -73,6 +73,22 @@ button, input { font: inherit; border: 0; background: transparent }
   color: white;
   cursor: pointer;
 }
+.musicas-mobile-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.musicas-mobile-theme-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #059669;
+  color: white;
+  cursor: pointer;
+}
 
 @media (max-width: 767px) {
   .musicas-mobile-header { display: flex }

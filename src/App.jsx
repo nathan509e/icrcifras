@@ -193,6 +193,12 @@ function App() {
   const userMenuRef = useRef(null)
 
   useEffect(() => {
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.classList.add('dark')
+    }
+  }, [])
+
+  useEffect(() => {
     fetchSongs().then(data => {
       if (data && data.length > 0) {
         setSongs(data)
