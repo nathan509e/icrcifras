@@ -153,7 +153,6 @@
 
 .dark .nav-home-mobile {
   background: var(--white) !important;
-  border-top-color: var(--gray-border) !important;
 }
 
 .dark .nav-mobile-user-menu {
@@ -2051,9 +2050,8 @@ main {
     bottom: 0 !important;
     left: 0 !important;
     right: 0 !important;
-    background: white !important; /* Reverted to white */
-    border-top: 1px solid #e0e0e0 !important;
-    z-index: 1000 !important; /* Increased z-index */
+    background: white !important;
+    z-index: 1000 !important;
   }
 
   /* Mobile bottom buttons */
