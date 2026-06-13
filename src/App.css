@@ -7,9 +7,261 @@
   --gray-bg: #f5f5f5;
   --white: #fff;
   --green: #017155;
+  --green-hover: #015a44;
   --font-mont: 'Montserrat', sans-serif;
   --font-roboto: 'Roboto', -apple-system, Helvetica, Arial, sans-serif;
   --font-mono: 'Roboto Mono', 'Courier New', Courier, monospace;
+}
+
+.dark {
+  --dark: #e0e0e0;
+  --gray: #bdbdbd;
+  --gray-light: #9e9e9e;
+  --gray-border: #424242;
+  --gray-bg: #1e1e1e;
+  --white: #121212;
+  --green: #02a87c;
+  --green-hover: #028c67;
+}
+
+.dark body,
+.dark .page-wrapper,
+.dark .musicas-page,
+.dark .cifra-page {
+  background: var(--white);
+}
+
+.dark .header {
+  background: var(--white);
+  border-bottom-color: var(--gray-border);
+}
+
+.dark .search-input {
+  background: var(--gray-bg);
+  color: var(--dark);
+}
+
+.dark .musica-item {
+  border-bottom-color: var(--gray-border);
+}
+
+.dark .musica-item:hover {
+  background: var(--gray-bg);
+}
+
+.dark .musicas-header h1,
+.dark .cifra-title {
+  color: var(--dark);
+}
+
+.dark .cifra-content {
+  color: var(--dark);
+}
+
+.dark .sidebar-section {
+  background: var(--gray-bg);
+}
+
+.dark .sidebar-title {
+  color: var(--gray-light);
+}
+
+.dark .tool-btn {
+  background: var(--gray-border);
+  color: var(--dark);
+}
+
+.dark .tool-value,
+.dark .tool-label {
+  color: var(--dark);
+}
+
+.dark .tool-select {
+  background: var(--gray-bg);
+  color: var(--dark);
+  border-color: var(--gray-border);
+}
+
+.dark .modal-overlay {
+  background: rgba(0,0,0,0.7);
+}
+
+.dark .modal {
+  background: var(--gray-bg);
+}
+
+.dark .modal-title {
+  color: var(--dark);
+}
+
+.dark .modal-input {
+  background: var(--white);
+  color: var(--dark);
+  border-color: var(--gray-border);
+}
+
+.dark .modal-file-area {
+  background: var(--white);
+  border-color: var(--gray-border);
+  color: var(--gray);
+}
+
+.dark .modal-text,
+.dark .modal-label,
+.dark .modal-login-desc {
+  color: var(--gray);
+}
+
+.dark .modal-btn-cancel {
+  background: var(--gray-border);
+  color: var(--dark);
+}
+
+.dark .btn-google {
+  background: var(--white);
+  color: var(--dark);
+  border-color: var(--gray-border);
+}
+
+.dark .tom-select {
+  background: var(--white);
+  color: var(--dark);
+  border-color: var(--gray-border);
+}
+
+.dark .musicas-mobile-header {
+  background: var(--white);
+  border-bottom-color: var(--gray-border);
+}
+
+.dark .nav-home-mobile {
+  background: var(--white) !important;
+  border-top-color: var(--gray-border) !important;
+}
+
+.dark .nav-mobile-user-menu {
+  background: var(--gray-bg);
+  border: 1px solid var(--gray-border);
+}
+
+.dark .nav-mobile-menu-item {
+  color: var(--dark);
+}
+
+.dark .nav-desktop-links .nav-link {
+  color: var(--dark);
+}
+
+.dark .nav-username {
+  color: var(--dark);
+}
+
+.dark .nav-user-card {
+  background: var(--gray-bg);
+  border: 1px solid var(--gray-border);
+}
+
+.dark .nav-user-card-item {
+  color: var(--dark);
+}
+
+.dark .list-item {
+  border-bottom-color: var(--gray-border);
+}
+
+.dark .list-item-name {
+  color: var(--dark);
+}
+
+.dark .playlist-song-item {
+  color: var(--dark);
+}
+
+.dark .playlist-song-item:hover {
+  background: var(--gray-border);
+}
+
+.dark .playlist-song-item.active {
+  background: var(--green);
+  color: white;
+}
+
+.dark .suggestion-item {
+  border-bottom-color: var(--gray-border);
+}
+
+.dark .suggestion-song {
+  color: var(--dark);
+}
+
+.dark .suggestion-user {
+  color: var(--gray-light);
+}
+
+.dark .musicas-mobile-search-btn {
+  background: var(--green);
+}
+
+.dark .search-input::placeholder {
+  color: var(--gray-light);
+}
+
+.dark .song-select-item {
+  color: var(--dark);
+}
+
+.dark .my-song-item {
+  border-bottom-color: var(--gray-border);
+}
+
+.dark .my-song-title {
+  color: var(--dark);
+}
+
+.dark .my-song-composer {
+  color: var(--gray-light);
+}
+
+.dark .loading-spinner {
+  color: var(--gray-light);
+}
+
+.dark .empty-state p {
+  color: var(--gray-light);
+}
+
+.dark .btn-clear {
+  color: var(--green);
+}
+
+.dark .breadcrumb {
+  color: var(--gray-light);
+}
+
+.dark .breadcrumb a {
+  color: var(--gray-light);
+}
+
+.dark .cifra-artist {
+  color: var(--gray);
+}
+
+.dark .playlist-name {
+  color: var(--dark);
+}
+
+.dark .version-badge {
+  background: var(--gray-bg);
+  color: var(--dark);
+  border-color: var(--gray-border);
+}
+
+.dark .cifra-footer {
+  color: var(--gray-light);
+}
+
+.dark .suggestion-status-btn svg {
+  stroke: var(--dark);
 }
 
 .page-wrapper {
