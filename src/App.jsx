@@ -199,12 +199,14 @@ function App() {
       }
     })
 
-    // Only load playlist from sessionStorage if no songId in URL
-    if (!params.songId) {
-      const storedPlaylist = sessionStorage.getItem('currentPlaylist')
-      const storedIndex = sessionStorage.getItem('currentPlaylistIndex')
-      if (storedPlaylist) {
-        setCurrentPlaylist(JSON.parse(storedPlaylist))
+    const storedPlaylist = sessionStorage.getItem('currentPlaylist')
+    const storedIndex = sessionStorage.getItem('currentPlaylistIndex')
+    if (storedPlaylist) {
+      const playlist = JSON.parse(storedPlaylist)
+      setCurrentPlaylist(playlist)
+      if (!params.songId) {
+        setCurrentPlaylistIndex(parseInt(storedIndex) || 0)
+      } else if (storedIndex) {
         setCurrentPlaylistIndex(parseInt(storedIndex) || 0)
       }
     }
@@ -1302,7 +1304,7 @@ function App() {
                                 setCurrentPlaylistIndex(index)
                                 sessionStorage.setItem('currentPlaylist', JSON.stringify(domingoList))
                                 sessionStorage.setItem('currentPlaylistIndex', index.toString())
-                                setSelectedSongId(song.id)
+                                navigate(`/${song.id}`)
                                 setShowDomingoModal(false)
                               }}
                             >
@@ -1397,7 +1399,7 @@ function App() {
                               setCurrentPlaylistIndex(index)
                               sessionStorage.setItem('currentPlaylist', JSON.stringify(domingoList))
                               sessionStorage.setItem('currentPlaylistIndex', index.toString())
-                              setSelectedSongId(song.id)
+                              navigate(`/${song.id}`)
                               setShowDomingoModal(false)
                             }}
                           >
