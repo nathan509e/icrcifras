@@ -42,11 +42,29 @@
 }
 
 .dark .musica-item {
-  border-bottom-color: var(--gray-border);
+  background: var(--white);
+  border-color: var(--gray-border);
 }
 
 .dark .musica-item:hover {
   background: var(--gray-bg);
+  border-color: var(--green);
+}
+
+.dark .musica-name {
+  color: var(--dark);
+}
+
+.dark .musica-composer {
+  color: var(--gray-light);
+}
+
+.dark .musica-key {
+  color: var(--green);
+}
+
+.dark .musica-arrow {
+  color: var(--green);
 }
 
 .dark .musicas-header h1,
