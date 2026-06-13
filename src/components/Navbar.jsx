@@ -50,21 +50,6 @@ export default function Navbar({
   const [showInstallButton, setShowInstallButton] = useState(false)
   const [deferredPrompt, setDeferredPrompt] = useState(null)
 
-  const handleSignOut = () => {
-    alert('Saindo...')
-    try { signOut() } catch (e) { console.error(e) }
-    const isKey = (k) => k && (k.includes('supabase') || k.startsWith('sb-'))
-    try {
-      for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (isKey(k)) localStorage.removeItem(k) }
-      for (let i = sessionStorage.length - 1; i >= 0; i--) { const k = sessionStorage.key(i); if (isKey(k)) sessionStorage.removeItem(k) }
-      document.cookie.split(';').forEach(c => { const n = c.split('=')[0].trim(); if (isKey(n)) document.cookie = `${n}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/` })
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()))
-      }
-    } catch (e) { console.error(e) }
-    window.location.reload()
-  }
-
   useEffect(() => {
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault()
@@ -174,13 +159,13 @@ export default function Navbar({
           </button>
         )}
         {!user && (
-          <button
+           <button
             className="nav-mobile-bottom-btn"
             onClick={() => setShowLoginModal(true)}
             title="Entrar"
-            style={{ ...mobileBtnStyle, background: '#017155', border: 'none', color: 'white', width: 'auto', padding: '0 16px', fontSize: 14, fontWeight: 600 }}
+            style={{ ...mobileBtnStyle, background: '#017155', border: 'none', color: 'white' }}
           >
-            Entrar
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
           </button>
         )}
         
@@ -204,7 +189,7 @@ export default function Navbar({
               </button>
             )}
             <button
-              onClick={handleSignOut}
+              onClick={() => { signOut(); setShowUserMenu(false) }}
               className="nav-mobile-menu-item nav-mobile-menu-item--danger"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -252,7 +237,7 @@ export default function Navbar({
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
                     Minhas musicas
                   </button>
-                  <button className="nav-user-card-item nav-user-card-item--danger" onClick={handleSignOut}>
+                  <button className="nav-user-card-item nav-user-card-item--danger" onClick={() => { signOut(); setShowUserMenu(false) }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                     Sair
                   </button>
@@ -312,7 +297,7 @@ export default function Navbar({
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
                   Minhas musicas
                 </button>
-                <button className="nav-user-card-item nav-user-card-item--danger" onClick={handleSignOut}>
+                <button className="nav-user-card-item nav-user-card-item--danger" onClick={() => { signOut(); setShowUserMenu(false) }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                   Sair
                 </button>
