@@ -1,4 +1,4 @@
-package com.cifras.app;
+package cifrasicr.app;
 
 import com.getcapacitor.BridgeActivity;
 
