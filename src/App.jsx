@@ -33,6 +33,7 @@ const TUNINGS = {
 }
 
 function normalizeNote(note) {
+  if (!note) return ''
   if (note.length === 1) return note.toUpperCase()
   const first = note[0].toUpperCase()
   const second = note[1]
@@ -80,9 +81,10 @@ function processChordHtml(html, transposeOffset, simplify, violin) {
   })
 }
 
-function getKeyFromOffset(originalKey, offset) {
-  const isMinor = originalKey.endsWith('m')
-  const root = isMinor ? originalKey.slice(0, -1) : originalKey
+function getKeyFromOffset(originalKey, offset, forceMinor) {
+  if (!originalKey) return originalKey || ''
+  const isMinor = forceMinor !== undefined ? forceMinor : originalKey.endsWith('m')
+  const root = isMinor && originalKey.endsWith('m') ? originalKey.slice(0, -1) : originalKey
   const transposed = transposeNote(root, offset)
   return isMinor ? transposed + 'm' : transposed
 }
@@ -179,6 +181,7 @@ function App() {
   const [metronomeBpm, setMetronomeBpm] = useState(100)
   const [isMetronomePlaying, setIsMetronomePlaying] = useState(false)
   const [selectedChord, setSelectedChord] = useState('')
+  const [tomIsMinor, setTomIsMinor] = useState(false)
 
   const [songs, setSongs] = useState([])
   const [showAddModal, setShowAddModal] = useState(false)
@@ -262,7 +265,15 @@ function App() {
       const song = songs.find(s => s.id.toString() === params.songId)
       if (song) setSelectedSongId(song.id)
     }
-  }, [params.songId, songs])
+    if (!currentPlaylist) {
+      const storedPlaylist = sessionStorage.getItem('currentPlaylist')
+      if (storedPlaylist) {
+        setCurrentPlaylist(JSON.parse(storedPlaylist))
+        const storedIndex = sessionStorage.getItem('currentPlaylistIndex')
+        if (storedIndex) setCurrentPlaylistIndex(parseInt(storedIndex))
+      }
+    }
+  }, [params.songId, songs, currentPlaylist])
 
   // Apply tone from playlist when playing a song from the playlist
   useEffect(() => {
@@ -275,6 +286,7 @@ function App() {
           const songKey = currentSongData.key || ORIGINAL_KEY
           const offset = getTransposeOffsetFromNotes(songKey, parsed.tom)
           setTransposeOffset(offset)
+          setTomIsMinor(parsed.tom.endsWith('m'))
         }
       }
     }
@@ -307,6 +319,7 @@ function App() {
     setSearchQuery('')
     if (!fromPlaylist) {
       setTransposeOffset(0)
+      setTomIsMinor(false)
     }
     setFormaTom(null)
     setSimplifyChords(false)
@@ -433,7 +446,7 @@ function App() {
     ? (currentSong.content.includes('<b>') ? stripTomLine(currentSong.content) : convertPlainTextToHtml(stripTomLine(currentSong.content)))
     : RAW_CHORD_HTML
   const processedChordHtml = processChordHtml(currentRawHtml, transposeOffset, simplifyChords, violinMode)
-  const currentKey = getKeyFromOffset(currentSong?.key || ORIGINAL_KEY, transposeOffset)
+  const currentKey = getKeyFromOffset(currentSong?.key || ORIGINAL_KEY, transposeOffset, tomIsMinor || undefined)
   const currentFormaTom = getFormaTomTransposed(formaTom, transposeOffset)
 
   const sortedSongs = [...songs].sort((a, b) => a.name.localeCompare(b.name, 'pt', { sensitivity: 'base' }))
@@ -1278,14 +1291,59 @@ function App() {
               <label className="modal-label">Selecione as musicas</label>
               <div className="song-select-list">
                 {songs.map(song => (
-                  <label key={song.id} className="song-select-item">
-                    <input
-                      type="checkbox"
-                      checked={selectedSongs.includes(song.id)}
-                      onChange={() => setSelectedSongs(prev => prev.includes(song.id) ? prev.filter(id => id !== song.id) : [...prev, song.id])}
-                    />
-                    <span>{song.name}</span>
-                  </label>
+                  <div key={song.id} className="song-select-item-wrap">
+                    <label className="song-select-item">
+                      <input
+                        type="checkbox"
+                        checked={selectedSongs.some(s => {
+                          const parsed = parseSongIdItem(s)
+                          return parsed && parsed.songId === song.id
+                        })}
+                        onChange={() => setSelectedSongs(prev => {
+                          const exists = prev.some(s => {
+                            const parsed = parseSongIdItem(s)
+                            return parsed && parsed.songId === song.id
+                          })
+                          if (exists) {
+                            return prev.filter(s => {
+                              const parsed = parseSongIdItem(s)
+                              return parsed && parsed.songId !== song.id
+                            })
+                          } else {
+                            return [...prev, JSON.stringify({ songId: song.id, tom: song.key || 'G' })]
+                          }
+                        })}
+                      />
+                      <span>{song.name}</span>
+                    </label>
+                    {selectedSongs.some(s => {
+                      const parsed = parseSongIdItem(s)
+                      return parsed && parsed.songId === song.id
+                    }) && (
+                      <select
+                        className="tom-select"
+                        value={(() => {
+                          const found = selectedSongs.find(s => {
+                            const parsed = parseSongIdItem(s)
+                            return parsed && parsed.songId === song.id
+                          })
+                          const parsed = parseSongIdItem(found)
+                          return (parsed && parsed.tom) || song.key || 'G'
+                        })()}
+                        onChange={(e) => {
+                          setSelectedSongs(prev => prev.map(s => {
+                            const parsed = parseSongIdItem(s)
+                            if (parsed && parsed.songId === song.id) {
+                              return JSON.stringify({ songId: song.id, tom: e.target.value })
+                            }
+                            return s
+                          }))
+                        }}
+                      >
+                        {KEYS.map(k => <option key={k} value={k}>{k}</option>)}
+                      </select>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
@@ -1326,14 +1384,59 @@ function App() {
               <label className="modal-label">Selecione as musicas</label>
               <div className="song-select-list">
                 {songs.map(song => (
-                  <label key={song.id} className="song-select-item">
-                    <input
-                      type="checkbox"
-                      checked={selectedSongs.includes(song.id)}
-                      onChange={() => setSelectedSongs(prev => prev.includes(song.id) ? prev.filter(id => id !== song.id) : [...prev, song.id])}
-                    />
-                    <span>{song.name}</span>
-                  </label>
+                  <div key={song.id} className="song-select-item-wrap">
+                    <label className="song-select-item">
+                      <input
+                        type="checkbox"
+                        checked={selectedSongs.some(s => {
+                          const parsed = parseSongIdItem(s)
+                          return parsed && parsed.songId === song.id
+                        })}
+                        onChange={() => setSelectedSongs(prev => {
+                          const exists = prev.some(s => {
+                            const parsed = parseSongIdItem(s)
+                            return parsed && parsed.songId === song.id
+                          })
+                          if (exists) {
+                            return prev.filter(s => {
+                              const parsed = parseSongIdItem(s)
+                              return parsed && parsed.songId !== song.id
+                            })
+                          } else {
+                            return [...prev, JSON.stringify({ songId: song.id, tom: song.key || 'G' })]
+                          }
+                        })}
+                      />
+                      <span>{song.name}</span>
+                    </label>
+                    {selectedSongs.some(s => {
+                      const parsed = parseSongIdItem(s)
+                      return parsed && parsed.songId === song.id
+                    }) && (
+                      <select
+                        className="tom-select"
+                        value={(() => {
+                          const found = selectedSongs.find(s => {
+                            const parsed = parseSongIdItem(s)
+                            return parsed && parsed.songId === song.id
+                          })
+                          const parsed = parseSongIdItem(found)
+                          return (parsed && parsed.tom) || song.key || 'G'
+                        })()}
+                        onChange={(e) => {
+                          setSelectedSongs(prev => prev.map(s => {
+                            const parsed = parseSongIdItem(s)
+                            if (parsed && parsed.songId === song.id) {
+                              return JSON.stringify({ songId: song.id, tom: e.target.value })
+                            }
+                            return s
+                          }))
+                        }}
+                      >
+                        {KEYS.map(k => <option key={k} value={k}>{k}</option>)}
+                      </select>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
@@ -1365,7 +1468,10 @@ function App() {
             <h2 className="modal-title">{currentPlaylist.name}</h2>
             <div className="modal-body">
               <div className="playlist-songs">
-                {currentPlaylist.song_ids?.map((songId, index) => {
+                {currentPlaylist.song_ids?.map((item, index) => {
+                  const parsed = parseSongIdItem(item)
+                  if (!parsed) return null
+                  const { songId, tom } = parsed
                   const song = songs.find(s => s.id === songId)
                   if (!song) return null
                   return (
@@ -1382,6 +1488,7 @@ function App() {
                     >
                       <span className="playlist-song-number">{index + 1}</span>
                       <span className="playlist-song-name">{song.name}</span>
+                      {tom && <span className="playlist-song-key">Tom: {tom}</span>}
                     </button>
                   )
                 })}
@@ -1574,6 +1681,7 @@ function App() {
                               if (window.confirm('Tem certeza que deseja excluir a lista atual?')) {
                                 await deleteList(domingoList.id)
                                 setDomingoList(null)
+                                setSelectedSongs([])
                               }
                             }}
                           >
