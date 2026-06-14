@@ -36,6 +36,9 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
+      - name: Patch Capacitor Java version
+        run: node scripts/patch-capacitor-java.mjs
+
       - name: Build debug APK
         run: |
           cd android
