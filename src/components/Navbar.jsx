@@ -246,9 +246,11 @@ export default function Navbar({
               )}
             </div>
           ) : (
-            <button className="nav-link" onClick={() => setShowLoginModal(true)}>Entrar</button>
+            <>
+              <button className="nav-link" onClick={() => setShowLoginModal(true)}>Entrar</button>
+              <Link to="/privacidade" className="nav-link">Privacidade</Link>
+            </>
           )}
-          <Link to="/privacidade" className="nav-link">Privacidade</Link>
         </div>
       </nav>
     )
@@ -307,7 +309,10 @@ export default function Navbar({
             )}
           </div>
         ) : (
-          <button className="nav-link" onClick={() => setShowLoginModal(true)}>Entrar</button>
+          <>
+            <button className="nav-link" onClick={() => setShowLoginModal(true)}>Entrar</button>
+            <Link to="/privacidade" className="nav-link">Privacidade</Link>
+          </>
         )}
       </div>
     </nav>
