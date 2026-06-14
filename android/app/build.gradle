@@ -7,10 +7,10 @@ def releaseKeyPassword = System.getenv("KEY_PASSWORD")
 def hasReleaseSigning = releaseKeystoreFile.exists() && releaseKeystorePassword && releaseKeyAlias && releaseKeyPassword
 
 android {
-    namespace = "com.cifras.app"
+    namespace = "cifrasicr.app"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.cifras.app"
+        applicationId "cifrasicr.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
