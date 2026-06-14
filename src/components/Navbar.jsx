@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { signOut, fetchUserLists, fetchSuggestions as fetchSuggestionsFn, fetchUserSuggestions as fetchUserSuggestionsFn } from '../supabase'
 
 export default function Navbar({
@@ -247,6 +248,7 @@ export default function Navbar({
           ) : (
             <button className="nav-link" onClick={() => setShowLoginModal(true)}>Entrar</button>
           )}
+          <Link to="/privacidade" className="nav-link">Privacidade</Link>
         </div>
       </nav>
     )

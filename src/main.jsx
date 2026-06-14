@@ -5,6 +5,7 @@ import './index.css'
 import { AuthProvider } from './AuthContext'
 import App from './App.jsx'
 import MusicasPage from './pages/MusicasPage'
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 
 if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
   window.addEventListener('load', () => {
@@ -24,6 +25,7 @@ createRoot(document.getElementById('root')).render(
       <AuthProvider>
         <Routes>
           <Route path="/" element={<MusicasPage />} />
+          <Route path="/privacidade" element={<PrivacyPolicyPage />} />
           <Route path="/:songId" element={<App />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
