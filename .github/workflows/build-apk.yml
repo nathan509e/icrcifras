@@ -49,6 +49,19 @@ jobs:
             chmod 600 android/release.keystore
           fi
 
+      - name: Validate release keystore alias
+        shell: bash
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          if [ -f android/release.keystore ]; then
+            if ! keytool -list -keystore android/release.keystore -storepass "$KEYSTORE_PASSWORD" | grep -q "$KEY_ALIAS"; then
+              echo "Configured ANDROID_KEY_ALIAS does not exist in android/release.keystore"
+              exit 1
+            fi
+          fi
+
       - name: Sync Capacitor
         run: npx cap sync android
 
