@@ -1,5 +1,11 @@
 apply plugin: 'com.android.application'
 
+def releaseKeystoreFile = rootProject.file("release.keystore")
+def releaseKeystorePassword = System.getenv("KEYSTORE_PASSWORD")
+def releaseKeyAlias = System.getenv("KEY_ALIAS")
+def releaseKeyPassword = System.getenv("KEY_PASSWORD")
+def hasReleaseSigning = releaseKeystoreFile.exists() && releaseKeystorePassword && releaseKeyAlias && releaseKeyPassword
+
 android {
     namespace = "com.cifras.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,10 +22,23 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (hasReleaseSigning) {
+                storeFile releaseKeystoreFile
+                storePassword releaseKeystorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }
