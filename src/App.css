@@ -1321,6 +1321,39 @@ html, body { background: var(--white) }
   background: var(--gray-bg);
 }
 
+.btn-signup {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 24px;
+  border: 1px solid var(--green);
+  border-radius: 8px;
+  background: var(--green);
+  font: 600 14px var(--font-roboto);
+  color: white;
+  cursor: pointer;
+  transition: background 0.15s;
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.btn-signup:hover {
+  background: var(--green-hover);
+}
+
+.modal-error {
+  color: #dc2626;
+  font-size: 14px;
+  margin-top: 8px;
+  text-align: center;
+}
+
+.dark .modal-error {
+  color: #f87171;
+}
+
 /* NAV USER */
 .nav-user {
   position: relative;

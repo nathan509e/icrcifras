@@ -6,6 +6,12 @@ import { useState, useEffect, useRef } from 'react'
 export default function PrivacyPolicyPage() {
   const { user, userIsAdmin } = useAuth()
   const [showLoginModal, setShowLoginModal] = useState(false)
+  const [showSignupForm, setShowSignupForm] = useState(false)
+  const [signupEmail, setSignupEmail] = useState('')
+  const [signupPassword, setSignupPassword] = useState('')
+  const [signupName, setSignupName] = useState('')
+  const [signupError, setSignupError] = useState('')
+  const [signupLoading, setSignupLoading] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const userMenuRef = useRef(null)
   const avatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || ''

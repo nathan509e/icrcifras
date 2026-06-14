@@ -69,6 +69,29 @@ export async function signInWithGoogle() {
   if (error) console.error('Error signing in:', error)
 }
 
+export async function createUser(email, password, name) {
+  if (!supabase) return { data: null, error: { message: 'Supabase not configured' } }
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        full_name: name,
+      },
+    },
+  })
+  return { data, error }
+}
+
+export async function signInWithEmail(email, password) {
+  if (!supabase) return { data: null, error: { message: 'Supabase not configured' } }
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  })
+  return { data, error }
+}
+
 export async function signOut() {
   if (!supabase) return
   const { error } = await supabase.auth.signOut()
