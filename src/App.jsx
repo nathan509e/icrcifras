@@ -282,7 +282,7 @@ function App() {
     let unsub
     import('@capacitor/app').then(({ App }) => {
       App.addListener('appUrlOpen', async (event) => {
-        if (event.url.startsWith('cifrasicr.app://callback')) {
+        if (event.url.startsWith('cifrasicr.app://auth/callback')) {
           await supabase.auth.exchangeCodeForSession(event.url)
         }
       }).then(listener => { unsub = listener })

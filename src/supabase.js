@@ -63,7 +63,7 @@ export async function signInWithGoogle() {
   
   if (isNative) {
     const { Browser } = await import('@capacitor/browser')
-    const redirectUrl = 'cifrasicr.app://callback'
+    const redirectUrl = 'cifrasicr.app://auth/callback'
     
     const { data: { url }, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -78,7 +78,7 @@ export async function signInWithGoogle() {
       return
     }
     
-    await Browser.open({ url: url + '&redirect_uri=' + encodeURIComponent(redirectUrl) })
+    await Browser.open({ url })
   } else {
     const redirectTo = window.location.origin
     const { error } = await supabase.auth.signInWithOAuth({
