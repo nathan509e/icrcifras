@@ -73,7 +73,7 @@ export async function signInWithGoogle() {
     return new Promise(async (resolve) => {
       authResolve = resolve
       const { Browser } = await import('@capacitor/browser')
-      const redirectUrl = 'https://cifrasicr.app/auth/callback'
+      const redirectUrl = 'cifrasicr.app://auth/callback'
       
       const { data: { url }, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
