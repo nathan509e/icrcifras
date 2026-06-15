@@ -10,8 +10,11 @@
     "preview": "vite preview",
     "cap:sync": "npx cap sync",
     "cap:open:android": "npx cap open android",
-    "cap:build:android": "npm run build && npx cap sync android && cd android && ./gradlew assembleDebug",
-    "cap:bundle:android": "npm run build && npx cap sync android && cd android && ./gradlew bundleRelease"
+    "cap:build:android": "npm run build && npx cap sync android && cd android && powershell -NoProfile -ExecutionPolicy Bypass -Command \"& '.\\gradlew' assembleDebug\"",
+    "cap:bundle:android": "npm run build && npx cap sync android && cd android && powershell -NoProfile -ExecutionPolicy Bypass -Command \"& '.\\gradlew' bundleRelease\"",
+    "android:bundletool:bundle": "npm run cap:bundle:android",
+    "android:bundletool:build": "npm run android:bundletool:bundle && powershell -NoProfile -ExecutionPolicy Bypass -Command \"$bundleToolJar = $env:BUNDLETOOL_JAR; if (-not $bundleToolJar) { $bundleToolJar = 'C:\\\\tmp\\\\bundletool.jar' }; if (-not (Test-Path $bundleToolJar)) { throw 'Bundletool nao encontrado. Defina BUNDLETOOL_JAR ou coloque o jar em C:\\tmp\\bundletool.jar' }; if (-not (Test-Path 'android\\\\app\\\\build\\\\outputs\\\\bundle\\\\release\\\\app-release.aab')) { throw 'AAB nao encontrado. Rode npm run cap:bundle:android antes.' }; java -jar $bundleToolJar build-apks --bundle='android\\\\app\\\\build\\\\outputs\\\\bundle\\\\release\\\\app-release.aab' --output='C:\\\\tmp\\\\cifras.apks' --mode=universal\"",
+    "android:bundletool:install": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$bundleToolJar = $env:BUNDLETOOL_JAR; if (-not $bundleToolJar) { $bundleToolJar = 'C:\\\\tmp\\\\bundletool.jar' }; if (-not (Test-Path $bundleToolJar)) { throw 'Bundletool nao encontrado. Defina BUNDLETOOL_JAR ou coloque o jar em C:\\tmp\\bundletool.jar' }; if (-not (Test-Path 'C:\\\\tmp\\\\cifras.apks')) { throw 'APKs nao encontrados. Rode npm run android:bundletool:build antes.' }; java -jar $bundleToolJar install-apks --apks='C:\\\\tmp\\\\cifras.apks'\""
   },
   "dependencies": {
     "@capacitor/android": "^8.4.0",

@@ -1,4 +1,4 @@
-name: Build AAB
+name: Build Android Release Artifacts
 
 on:
   push:
@@ -68,7 +68,7 @@ jobs:
       - name: Patch Capacitor Java version
         run: node scripts/patch-capacitor-java.mjs
 
-      - name: Build release bundle
+      - name: Build release bundle and apk
         env:
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
@@ -77,9 +77,16 @@ jobs:
           cd android
           chmod +x gradlew
           ./gradlew bundleRelease
+          ./gradlew assembleRelease
 
       - name: Upload release bundle
         uses: actions/upload-artifact@v4
         with:
           name: cifras-release-aab
           path: android/app/build/outputs/bundle/release/*.aab
+
+      - name: Upload release apk
+        uses: actions/upload-artifact@v4
+        with:
+          name: cifras-release-apk
+          path: android/app/build/outputs/apk/release/*.apk
