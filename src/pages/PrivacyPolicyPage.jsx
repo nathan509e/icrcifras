@@ -2,15 +2,21 @@ import { Link } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import { useAuth } from '../AuthContext'
 import { useState, useEffect, useRef } from 'react'
-import { signInWithGoogle } from '../supabase'
+import { signInWithGoogle, createUser, signInWithEmail } from '../supabase'
 
 export default function PrivacyPolicyPage() {
   const { user, userIsAdmin } = useAuth()
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [showEmailForm, setShowEmailForm] = useState(false)
+  const [showSignupForm, setShowSignupForm] = useState(false)
   const [loginEmail, setLoginEmail] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
+  const [signupEmail, setSignupEmail] = useState('')
+  const [signupPassword, setSignupPassword] = useState('')
+  const [signupName, setSignupName] = useState('')
   const [loginError, setLoginError] = useState('')
+  const [signupError, setSignupError] = useState('')
+  const [signupLoading, setSignupLoading] = useState(false)
   const [loginLoading, setLoginLoading] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const userMenuRef = useRef(null)
@@ -172,7 +178,7 @@ export default function PrivacyPolicyPage() {
       </main>
 
       {showLoginModal && (
-        <div className="modal-overlay" onClick={() => { setShowLoginModal(false); setShowEmailForm(false) }}>
+        <div className="modal-overlay" onClick={() => { setShowLoginModal(false); setShowEmailForm(false); setShowSignupForm(false) }}>
           <div className="modal modal-login" onClick={e => e.stopPropagation()}>
             {!showEmailForm ? (
               <>
@@ -188,11 +194,91 @@ export default function PrivacyPolicyPage() {
                   <svg viewBox="0 0 24 24" width="20" height="20"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
                   Entrar com Google
                 </button>
+                <div className="modal-login-divider"><span>ou</span></div>
                 <button className="btn-signup" onClick={() => setShowEmailForm(true)}>
-                  Entrar com email
+                  Entrar
+                </button>
+                <button className="btn-signup btn-signup-secondary" onClick={() => { setShowEmailForm(true); setShowSignupForm(true) }}>
+                  Criar conta
                 </button>
                 <div className="modal-actions">
                   <button className="modal-btn modal-btn-cancel" onClick={() => setShowLoginModal(false)}>Cancelar</button>
+                </div>
+              </>
+            ) : showSignupForm ? (
+              <>
+                <div className="modal-login-icon">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="1.5"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+                </div>
+                <h2 className="modal-title">Criar conta</h2>
+                <div className="modal-body">
+                  <label className="modal-label">Nome</label>
+                  <input
+                    className="modal-input"
+                    type="text"
+                    placeholder="Seu nome"
+                    value={signupName}
+                    onChange={e => setSignupName(e.target.value)}
+                    autoFocus
+                  />
+                  <label className="modal-label">Email</label>
+                  <input
+                    className="modal-input"
+                    type="email"
+                    placeholder="seu@email.com"
+                    value={signupEmail}
+                    onChange={e => setSignupEmail(e.target.value)}
+                  />
+                  <label className="modal-label">Senha</label>
+                  <input
+                    className="modal-input"
+                    type="password"
+                    placeholder="********"
+                    value={signupPassword}
+                    onChange={e => setSignupPassword(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') document.getElementById('btn-criar-pp').click() }}
+                  />
+                  {signupError && <p className="modal-error">{signupError}</p>}
+                </div>
+                <div className="modal-actions">
+                  <button className="modal-btn modal-btn-cancel" onClick={() => { setShowSignupForm(false); setSignupError(''); setSignupEmail(''); setSignupPassword(''); setSignupName('') }}>Voltar</button>
+                  <button
+                    id="btn-criar-pp"
+                    className="modal-btn modal-btn-confirm"
+                    disabled={!signupEmail.trim() || !signupPassword || !signupName.trim() || signupLoading}
+                    onClick={async () => {
+                      setSignupLoading(true)
+                      setSignupError('')
+                      try {
+                        const { data, error } = await createUser(signupEmail.trim(), signupPassword, signupName.trim())
+                        if (error) {
+                          if (error.message?.includes('User already registered')) {
+                            throw new Error('Email ja cadastrado. Use outro email ou faca login.')
+                          }
+                          throw error
+                        }
+                        if (data?.session) {
+                          setShowLoginModal(false)
+                          setShowEmailForm(false)
+                          setShowSignupForm(false)
+                          setSignupEmail('')
+                          setSignupPassword('')
+                          setSignupName('')
+                        } else {
+                          setSignupError('Conta criada! Verifique seu email para confirmar o cadastro.')
+                          setTimeout(() => {
+                            setShowSignupForm(false)
+                          }, 2000)
+                        }
+                      } catch (err) {
+                        setSignupError(err.message || 'Erro ao criar conta')
+                      } finally {
+                        setSignupLoading(false)
+                      }
+                    }}
+                  >
+                    {signupLoading ? 'Criando...' : 'Criar conta'}
+                  </button>
                 </div>
               </>
             ) : (
