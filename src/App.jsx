@@ -311,6 +311,9 @@ function App() {
           console.log('[Auth] Session exchanged successfully')
           const { data: { session } } = await supabase.auth.getSession()
           console.log('[Auth] Session after exchange:', session ? 'active' : 'none')
+          if (data?.user) {
+            setUser(data.user)
+          }
         }
       } catch (err) {
         console.error('[Auth] Exchange code exception:', err.message)
