@@ -74,11 +74,23 @@ export async function signInWithGoogle() {
     })
     
     if (error) {
-      console.error('Error signing in:', error)
+      console.error('[Auth] Error getting OAuth URL:', error)
       return
     }
     
+    console.log('[Auth] Opening OAuth URL:', url)
     await Browser.open({ url })
+    
+    // Monitor when the browser is closed
+    import('@capacitor/browser').then(({ Browser: BrowserEvents }) => {
+      BrowserEvents.addListener('browserFinished', async () => {
+        console.log('[Auth] Browser closed, checking session...')
+        if (supabase) {
+          const { data: { session } } = await supabase.auth.getSession()
+          console.log('[Auth] Session after browser close:', session ? 'active' : 'none')
+        }
+      })
+    })
   } else {
     const redirectTo = window.location.origin
     const { error } = await supabase.auth.signInWithOAuth({
