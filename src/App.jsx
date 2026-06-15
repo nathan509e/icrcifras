@@ -285,13 +285,21 @@ function App() {
         console.log('[Auth] Deep link received:', event.url)
         if (event.url.startsWith('cifrasicr.app://auth/callback')) {
           console.log('[Auth] Processing auth callback...')
+          const callbackUrl = new URL(event.url)
+          const authCode = callbackUrl.searchParams.get('code')
+
+          if (!authCode) {
+            console.error('[Auth] Missing auth code in callback URL')
+            return
+          }
+
           // Fechar o navegador se ainda estiver aberto
           try {
             const { Browser } = await import('@capacitor/browser')
             await Browser.close()
           } catch {}
           try {
-            const { data, error } = await supabase.auth.exchangeCodeForSession(event.url)
+            const { data, error } = await supabase.auth.exchangeCodeForSession(authCode)
             if (error) {
               console.error('[Auth] Exchange code error:', error.message)
             } else {
