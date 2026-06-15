@@ -63,38 +63,51 @@ export async function deleteSong(id) {
 
 // ---- AUTH ----
 
+let authResolve = null
+
 export async function signInWithGoogle() {
   if (!supabase) return
   const isNative = typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.()
   
   if (isNative) {
-    const { Browser } = await import('@capacitor/browser')
-    const redirectUrl = 'cifrasicr.app://auth/callback'
-    
-    const { data: { url }, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { 
-        redirectTo: redirectUrl,
-        skipBrowserRedirect: true,
-      }
-    })
-    
-    if (error) {
-      console.error('[Auth] Error getting OAuth URL:', error)
-      return
-    }
-    
-    console.log('[Auth] Opening OAuth URL:', url)
-    await Browser.open({ url })
-    
-    // Monitor when the browser is closed
-    import('@capacitor/browser').then(({ Browser: BrowserEvents }) => {
-      BrowserEvents.addListener('browserFinished', async () => {
-        console.log('[Auth] Browser closed, checking session...')
-        if (supabase) {
-          const { data: { session } } = await supabase.auth.getSession()
-          console.log('[Auth] Session after browser close:', session ? 'active' : 'none')
+    return new Promise(async (resolve) => {
+      authResolve = resolve
+      const { Browser } = await import('@capacitor/browser')
+      const redirectUrl = 'https://cifrasicr.app/auth/callback'
+      
+      const { data: { url }, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { 
+          redirectTo: redirectUrl,
+          skipBrowserRedirect: true,
         }
+      })
+      
+      if (error) {
+        console.error('[Auth] Error getting OAuth URL:', error)
+        authResolve?.(null)
+        return
+      }
+      
+      console.log('[Auth] OAuth redirectTo:', redirectUrl)
+      console.log('[Auth] Opening OAuth URL:', url)
+      await Browser.open({ url })
+      
+      import('@capacitor/browser').then(({ Browser: BrowserEvents }) => {
+        BrowserEvents.addListener('browserFinished', async () => {
+          console.log('[Auth] Browser closed, checking session...')
+          if (supabase) {
+            const { data: { session } } = await supabase.auth.getSession()
+            console.log('[Auth] Session after browser close:', session ? 'active' : 'none')
+            if (session?.user) {
+              authResolve?.(session.user)
+            } else {
+              authResolve?.(null)
+            }
+          } else {
+            authResolve?.(null)
+          }
+        })
       })
     })
   } else {

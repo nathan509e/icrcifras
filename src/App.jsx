@@ -284,7 +284,11 @@ function App() {
 
     const handleAuthUrl = async (url) => {
       if (!url || handledAuthUrl) return
-      if (!url.startsWith('cifrasicr.app://auth/callback')) return
+      const isAuthCallback = url.includes('auth/callback') && (url.startsWith('cifrasicr.app://') || url.startsWith('https://cifrasicr.app/'))
+      if (!isAuthCallback) {
+        console.log('[Auth] Ignoring non-auth URL:', url)
+        return
+      }
 
       handledAuthUrl = true
       console.log('[Auth] Deep link received:', url)
@@ -307,16 +311,20 @@ function App() {
         const { data, error } = await supabase.auth.exchangeCodeForSession(authCode)
         if (error) {
           console.error('[Auth] Exchange code error:', error.message)
+          alert('Erro no login: ' + error.message)
         } else {
-          console.log('[Auth] Session exchanged successfully')
+          console.log('[Auth] Session exchanged successfully, user:', data?.user?.email)
           const { data: { session } } = await supabase.auth.getSession()
           console.log('[Auth] Session after exchange:', session ? 'active' : 'none')
-          if (data?.user) {
+          if (session?.user) {
+            setUser(session.user)
+          } else if (data?.user) {
             setUser(data.user)
           }
         }
       } catch (err) {
-        console.error('[Auth] Exchange code exception:', err.message)
+        console.error('[Auth] Exchange code exception:', err)
+        alert('Erro exception: ' + err.message)
       }
     }
 
