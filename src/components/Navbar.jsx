@@ -61,9 +61,9 @@ export default function Navbar({
               onClick={() => navigate('/')}
               className="nav-back-btn"
               title="Voltar"
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, background: 'none', border: 'none', cursor: 'pointer', color: '#333' }}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, marginTop: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#333' }}
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 19l-7-7 7-7"/></svg>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 19l-7-7 7-7"/></svg>
             </button>
           </div>
         </>

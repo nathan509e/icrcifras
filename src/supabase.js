@@ -10,7 +10,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const supabase = supabaseUrl && supabaseAnonKey
-  ? createClient(supabaseUrl, supabaseAnonKey)
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        flowType: 'pkce',
+        detectSessionInUrl: false,
+        persistSession: true,
+      },
+    })
   : null
 
 // ---- SONGS ----
@@ -69,7 +75,7 @@ export async function signInWithGoogle() {
       provider: 'google',
       options: { 
         redirectTo: redirectUrl,
-        skipBrowserRedirect: true
+        skipBrowserRedirect: true,
       }
     })
     
