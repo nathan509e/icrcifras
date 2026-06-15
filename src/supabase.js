@@ -1,19 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
 
-const FALLBACK_SUPABASE_URL = 'https://fwnikwwvprngswbbxjrk.supabase.co'
-const FALLBACK_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ3bmlrd3d2cHJuZ3N3YmJ4anJrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTA0ODY5MSwiZXhwIjoyMDk2NjI0NjkxfQ.I3hhxvympsBgvYB8BAWcIWT4_U6bJ6Xyn24vTZlHmP4'
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || FALLBACK_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || FALLBACK_SUPABASE_ANON_KEY
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || __SUPABASE_URL__
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || __SUPABASE_ANON_KEY__
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn(
-    'Supabase credentials not found. Create a .env file based on .env.example.\n' +
-    'The app will work with local songs only.'
-  )
-} else if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-  console.warn(
-    'Supabase env vars were not injected at build time. Falling back to the bundled project credentials so the song list keeps working in production.'
+    'Supabase credentials not found. Check your .env file and build pipeline.'
   )
 }
 
@@ -67,11 +59,11 @@ export async function deleteSong(id) {
 
 export async function signInWithGoogle() {
   if (!supabase) return
+  const isNative = typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.()
+  const redirectTo = isNative ? 'https://localhost' : window.location.origin
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
-    options: {
-      redirectTo: window.location.origin,
-    },
+    options: { redirectTo },
   })
   if (error) console.error('Error signing in:', error)
 }

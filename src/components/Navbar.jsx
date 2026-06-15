@@ -48,43 +48,6 @@ export default function Navbar({
 }) {
   const fetchSuggestions = fetchSuggestionsProp || fetchSuggestionsFn
   const fetchUserSuggestions = fetchUserSuggestionsProp || fetchUserSuggestionsFn
-  const [showInstallButton, setShowInstallButton] = useState(false)
-  const [deferredPrompt, setDeferredPrompt] = useState(null)
-
-  useEffect(() => {
-    const handleBeforeInstallPrompt = (e) => {
-      e.preventDefault()
-      setDeferredPrompt(e)
-      setShowInstallButton(true)
-    }
-
-    const handleAppInstalled = () => {
-      setShowInstallButton(false)
-      setDeferredPrompt(null)
-    }
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
-    window.addEventListener('appinstalled', handleAppInstalled)
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
-      window.removeEventListener('appinstalled', handleAppInstalled)
-    }
-  }, [])
-
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) return
-    deferredPrompt.prompt()
-    const { outcome } = await deferredPrompt.userChoice
-    if (outcome === 'accepted') {
-      console.log('User accepted the install prompt')
-    } else {
-      console.log('User dismissed the install prompt')
-    }
-    setDeferredPrompt(null)
-    setShowInstallButton(false)
-  }
-
   const mobileBtnStyle = { display: 'flex', alignItems: 'center', justifyContent: 'center', width: 48, height: 48, borderRadius: 12, cursor: 'pointer', flexShrink: 0 }
 
   // Se for a instância mobile nav, renderiza apenas o mobile nav
@@ -140,15 +103,6 @@ export default function Navbar({
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="9" cy="10" r="1"/><circle cx="12" cy="10" r="1"/><circle cx="15" cy="10" r="1"/></svg>
           </button>
         )}
-        <button
-          className="nav-mobile-bottom-btn"
-          onClick={() => { if (deferredPrompt) handleInstallClick(); else alert('Para instalar, abra no navegador e selecione "Adicionar à tela inicial" ou "Instalar app" no menu.') }}
-          title="Instalar app"
-          style={{ ...mobileBtnStyle, background: '#017155', border: 'none', color: 'white' }}
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        </button>
-
         {user && (
           <button
             className="nav-mobile-bottom-btn"

@@ -113,6 +113,7 @@ export default function MusicasPage() {
     } else {
       document.documentElement.classList.remove('dark')
     }
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', darkMode ? '#111827' : '#059669')
   }, [darkMode])
 
   useEffect(() => {
