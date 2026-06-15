@@ -83,26 +83,6 @@ export default function Navbar({
             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
           </button>
         )}
-        {user && !userIsAdmin && (
-          <button
-            className="nav-mobile-bottom-btn"
-            onClick={() => { fetchUserSuggestions(user.email).then(setUserSuggestions); setShowUserSuggestions(true) }}
-            title="Minhas sugestoes"
-            style={{ ...mobileBtnStyle, background: '#017155', border: 'none', color: 'white' }}
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          </button>
-        )}
-        {user && userIsAdmin && (
-          <button
-            className="nav-mobile-bottom-btn"
-            onClick={() => { fetchSuggestions().then(setSuggestions); setShowSuggestionsList(true) }}
-            title="Sugestoes"
-            style={{ ...mobileBtnStyle, background: '#017155', border: 'none', color: 'white' }}
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="9" cy="10" r="1"/><circle cx="12" cy="10" r="1"/><circle cx="15" cy="10" r="1"/></svg>
-          </button>
-        )}
         {user && (
           <button
             className="nav-mobile-bottom-btn"
@@ -143,6 +123,24 @@ export default function Navbar({
                 Adicionar
               </button>
             )}
+            {user && !userIsAdmin && (
+              <button
+                onClick={() => { fetchUserSuggestions(user.email).then(setUserSuggestions); setShowUserSuggestions(true); setShowUserMenu(false) }}
+                className="nav-mobile-menu-item"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                Minhas sugestoes
+              </button>
+            )}
+            {user && userIsAdmin && (
+              <button
+                onClick={() => { fetchSuggestions().then(setSuggestions); setShowSuggestionsList(true); setShowUserMenu(false) }}
+                className="nav-mobile-menu-item"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="9" cy="10" r="1"/><circle cx="12" cy="10" r="1"/><circle cx="15" cy="10" r="1"/></svg>
+                Sugestoes
+              </button>
+            )}
             <button
               onClick={() => { signOut(); setShowUserMenu(false) }}
               className="nav-mobile-menu-item nav-mobile-menu-item--danger"
@@ -156,14 +154,8 @@ export default function Navbar({
         <div className="nav-desktop-links">
           <button className="nav-link" onClick={() => { setSongFilter(''); setShowMySongs(true) }}>Louvores</button>
           <button className="nav-link" onClick={() => { fetchUserLists(user?.email).then(setUserLists); setShowListsModal(true) }}>Listas</button>
-          {user && !userIsAdmin && (
-            <button className="nav-link" onClick={() => { fetchUserSuggestions(user.email).then(setUserSuggestions); setShowUserSuggestions(true) }}>Minhas sugestoes</button>
-          )}
           {user && userIsAdmin && (
-            <>
-              <button className="nav-link" onClick={() => { fetchSuggestions().then(setSuggestions); setShowSuggestionsList(true) }}>Sugestoes</button>
-              <button className="nav-link" onClick={() => setShowAddModal(true)}>Adicionar</button>
-            </>
+            <button className="nav-link" onClick={() => setShowAddModal(true)}>Adicionar</button>
           )}
           {user ? (
             <div className="nav-user" ref={userMenuRef}>
@@ -219,14 +211,8 @@ export default function Navbar({
       <div className="nav-desktop-links">
         <button className="nav-link" onClick={() => { setSongFilter(''); setShowMySongs(true) }}>Louvores</button>
         <button className="nav-link" onClick={() => { fetchUserLists(user?.email).then(setUserLists); setShowListsModal(true) }}>Listas</button>
-        {user && !userIsAdmin && (
-          <button className="nav-link" onClick={() => { fetchUserSuggestions(user.email).then(setUserSuggestions); setShowUserSuggestions(true) }}>Minhas sugestoes</button>
-        )}
         {user && userIsAdmin && (
-          <>
-            <button className="nav-link" onClick={() => { fetchSuggestions().then(setSuggestions); setShowSuggestionsList(true) }}>Sugestoes</button>
-            <button className="nav-link" onClick={() => setShowAddModal(true)}>Adicionar</button>
-          </>
+          <button className="nav-link" onClick={() => setShowAddModal(true)}>Adicionar</button>
         )}
         {user ? (
           <div className="nav-user" ref={userMenuRef}>
@@ -255,6 +241,18 @@ export default function Navbar({
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
                   Minhas musicas
                 </button>
+                {user && !userIsAdmin && (
+                  <button className="nav-user-card-item" onClick={() => { fetchUserSuggestions(user.email).then(setUserSuggestions); setShowUserSuggestions(true); setShowUserMenu(false) }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    Minhas sugestoes
+                  </button>
+                )}
+                {user && userIsAdmin && (
+                  <button className="nav-user-card-item" onClick={() => { fetchSuggestions().then(setSuggestions); setShowSuggestionsList(true); setShowUserMenu(false) }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="9" cy="10" r="1"/><circle cx="12" cy="10" r="1"/><circle cx="15" cy="10" r="1"/></svg>
+                    Sugestoes
+                  </button>
+                )}
                 <button className="nav-user-card-item nav-user-card-item--danger" onClick={() => { signOut(); setShowUserMenu(false) }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                   Sair

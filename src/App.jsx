@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { fetchSongs, saveSong, deleteSong, signInWithGoogle, signOut, fetchSuggestions, saveSuggestion, deleteSuggestion, updateSuggestionStatus, fetchUserSuggestions, fetchUserLists, createList, updateList, deleteList, fetchDomingoList } from './supabase'
+import { fetchSongs, saveSong, deleteSong, signInWithGoogle, signOut, fetchSuggestions, saveSuggestion, deleteSuggestion, updateSuggestionStatus, fetchUserSuggestions, fetchUserLists, createList, updateList, deleteList, fetchDomingoList, supabase } from './supabase'
 import { useAuth } from './AuthContext'
 import Navbar from './components/Navbar'
 import './App.css'
@@ -173,7 +173,6 @@ function detectKey(textContent) {
 
 const ORIGINAL_KEY = 'G'
 
-const RAW_CHORD_HTML = `[Intro]\n<b>C7M</b>  <b>G/B</b>  <b>Am7</b>  <b>A7(2)</b>  <b>Am7</b>\n\n[Primeira Parte]\n\n<b>G</b>\nQuem foi muito perdoado\n<b>G9</b>                      <b>Em7</b>\nDeveria saber o valor de ser amado\n\nMas por outro lado\n\nO bem que eu quero fazer\n                <b>Am7</b>\nDe fato eu nao faco\n                    <b>G/B</b>\nE, dependendo do pecado\n                       <b>C</b>\nEu nem me sinto incomodado\n                        <b>Cm/Eb</b>\nEntao esbarro na Tua palavra\n\nE sou confrontado\n\n[Pre-Refrao]\n\n<b>C9</b>                  <b>D</b>                 <b>Em7</b>\n   Nao adianta fingir que esta tudo bem\n                        <b>Bm</b>\nSe de Ti eu recebi perdao\n\nMas nao consigo perdoar ninguem\n\n<b>C9</b>                      <b>D</b>\n   A outra face eu nao dei\n                  <b>Em7</b>\nSo o meu ego escutei\n                   <b>Bm</b>\nAte amei os meus amigos\n             <b>Bm7</b>\nMas meus inimigos odiei\n\n    <b>C</b>\nNa minha hipocrisia\n      <b>D</b>\nMe achei melhor que o outro\n     <b>Bm7</b>\nSem perceber a trave\n       <b>Em7</b>\nQue estava no meu olho\n\n    <b>C</b>\nEm pele de ovelha\n  <b>D</b>\nAgindo como um lobo\n   <b>Bm7</b>\nMe esqueci do reino\n    <b>Em7</b>\nJuntando os meus tesouros\n\n[Refrao 1]\n\n<b>C7M</b>\nAh, Jesus\n\nQuebra o meu orgulho\n            <b>Bm7</b>\nE faz-me olhar pra cruz\n                      <b>Am7</b>\nTira a dureza do meu coracao\n\n                          <b>C7M</b>\nDe joelhos, eu imploro o Teu perdao\n\nPois Tua graca\n              <b>Bm7</b>\nJoga a minha carne ao chao\n                        <b>Am7</b>\nE me ensina o valor da comunhao\n                     <b>G/B</b>   <b>C7M</b>\nDo beber do vinho e partilhar do pao\n\n[Solo 1] <b>C7M</b>  <b>G/B</b>  <b>Am7</b>\n\n[Segunda Parte]\n\n<b>C7M</b>               <b>Bm</b>\nEu sou o vaso, Tu es o oleiro\n  <b>Am7</b>                  <b>G/B</b>\nQuebra minha vida, me refaz por inteiro\n <b>C7M</b>                 <b>Bm</b>\nTomo a minha cruz e nego a mim mesmo\n <b>Am7</b>                    <b>G/B</b>\nPois do pecado nao sou mais prisioneiro\n\n<b>C7M</b>               <b>Bm</b>\nEu sou o vaso, Tu es o oleiro\n  <b>Am7</b>                  <b>G/B</b>\nQuebra minha vida, me refaz por inteiro\n <b>C7M</b>                 <b>Bm</b>\nTomo a minha cruz e nego a mim mesmo\n <b>Am7</b>                    <b>G/B</b>\nPois do pecado nao sou mais prisioneiro\n\n[Pre-Refrao 2]\n\n <b>C7M</b>                   <b>G/B</b>\nMesmo com falhas, esse e o meu desejo\n <b>Am7</b>      <b>G/B</b>  <b>C</b>     <b>D</b>      <b>G</b>\nDa-me um coracao igual ao Teu\n\n[Refrao 2]\n\n <b>G</b>                  <b>G/B</b>    <b>C</b>\nDa-me um coracao igual ao Teu\n     <b>D</b>\nMeu Mestre\n <b>G</b>                  <b>G/B</b>    <b>C</b>\nDa-me um coracao igual ao Teu\n     <b>D</b>               <b>G/B</b>  <b>Em7</b>\nCoracao disposto a obedecer\n     <b>G/B</b>               <b>Em7</b>\nCumprir todo o Teu querer\n <b>Am7</b>      <b>G/B</b>  <b>C</b>     <b>D</b>      <b>G</b>\nDa-me um coracao igual ao Teu\n\n                   <b>G/B</b>   <b>C</b>\nDa-me um coracao igual ao Teu\n     <b>D</b>\nMeu Mestre\n <b>G</b>                  <b>G/B</b>    <b>C</b>\nDa-me um coracao igual ao Teu\n     <b>D</b>               <b>G/B</b>  <b>Em7</b>\nCoracao disposto a obedecer\n     <b>G/B</b>               <b>Em7</b>\nCumprir todo o Teu querer\n <b>Am7</b>      <b>G/B</b>  <b>C</b>     <b>D</b>      <b>C7M</b>\nDa-me um coracao igual ao Teu\n\n[Refrao 1]\n\nJesus\n\nQuebra o meu orgulho\n            <b>G/B</b>\nE faz-me olhar pra cruz\n                      <b>Am7</b>\nTira a dureza do meu coracao\n\n                          <b>C7M</b>\nDe joelhos, eu imploro o Teu perdao\n\nPois Tua graca\n              <b>G/B</b>\nJoga a minha carne ao chao\n                        <b>Am7</b>\nE me ensina o valor da comunhao\n                            <b>C7M</b>\nDo beber do vinho e partilhar do pao\n\n[Ponte]\n\n       <b>C7M</b>\nJudas veio ao Teu encontro\n        <b>G/B</b>\nCom a traicao pesando\n        <b>Am7</b>\nMas Te vejo se inclinando\n              <b>G/B</b>\nE os pes do traidor lavando\n\n      <b>C7M</b>\nVejo Pedro Te negando\n     <b>G/B</b>\nE o galo entao cantando\n         <b>Am7</b>\nMesmo assim, Tu dizes:\n           <b>G/B</b>\nPedro, apascenta o meu rebanho\n\n[Pre-Refrao 3]\n\n        <b>C7M</b>\nQuebrantado, estou chorando\n      <b>G/B</b>\nMinha alma esta clamando\n<b>Am7</b>      <b>G/B</b>  <b>C</b>     <b>D</b>      <b>G</b>\nDa-me um coracao igual ao Teu\n\n[Refrao 2]\n\n <b>G</b>                  <b>G/B</b>    <b>C</b>\nDa-me um coracao igual ao Teu\n     <b>D</b>\nMeu Mestre\n <b>G</b>                  <b>G/B</b>    <b>C</b>\nDa-me um coracao igual ao Teu\n     <b>D</b>               <b>G/B</b>  <b>Em7</b>\nCoracao disposto a obedecer\n     <b>G/B</b>               <b>Em7</b>\nCumprir todo o Teu querer\n <b>Am7</b>      <b>G/B</b>  <b>C</b>     <b>D</b>      <b>G</b>\nDa-me um coracao igual ao Teu\n\n[Refrao Final]\n\nJesus\n\nQuebra o meu orgulho\n            <b>G/B</b>\nE faz-me olhar pra cruz\n                      <b>Am7</b>\nTira a dureza do meu coracao\n                  <b>G/B</b>  <b>C7M</b>\nDe joelhos, eu imploro o Teu perdao\n\nPois Tua graca\n              <b>G/B</b>\nJoga a minha carne ao chao\n                        <b>Am7</b>\nE me ensina o valor da comunhao\n                            <b>G/B</b>\nDo beber do vinho e partilhar do pao\n\n[Final] <b>C7M</b>  <b>G/B</b>  <b>Em7</b>  <b>C7M</b>`
 
 function App() {
   const params = useParams()
@@ -257,16 +256,32 @@ function App() {
     const shouldLoadPlaylist = sessionStorage.getItem('loadPlaylistFromUrl') === 'true'
     sessionStorage.removeItem('loadPlaylistFromUrl')
 
-    if (!params.songId || shouldLoadPlaylist) {
+    if (shouldLoadPlaylist) {
       const storedPlaylist = sessionStorage.getItem('currentPlaylist')
       const storedIndex = sessionStorage.getItem('currentPlaylistIndex')
       if (storedPlaylist) {
         setCurrentPlaylist(safeParseJson(storedPlaylist))
         setCurrentPlaylistIndex(parseInt(storedIndex) || 0)
       }
+    } else {
+      sessionStorage.removeItem('currentPlaylist')
+      sessionStorage.removeItem('currentPlaylistIndex')
     }
 
     fetchDomingoList().then(data => setDomingoList(data))
+  }, [])
+
+  // Handle OAuth callback via deep link
+  useEffect(() => {
+    let unsub
+    import('@capacitor/app').then(({ App }) => {
+      App.addListener('appUrlOpen', async (event) => {
+        if (event.url.startsWith('cifrasicr.app://callback')) {
+          await supabase.auth.exchangeCodeForSession(event.url)
+        }
+      }).then(listener => { unsub = listener })
+    })
+    return () => { unsub?.remove() }
   }, [])
 
   useEffect(() => {
@@ -329,6 +344,10 @@ function App() {
     if (!fromPlaylist) {
       setTransposeOffset(0)
       setTomIsMinor(false)
+      setCurrentPlaylist(null)
+      setCurrentPlaylistIndex(0)
+      sessionStorage.removeItem('currentPlaylist')
+      sessionStorage.removeItem('currentPlaylistIndex')
     }
     setFormaTom(null)
     setSimplifyChords(false)
@@ -453,7 +472,7 @@ function App() {
 
   const currentRawHtml = currentSong
     ? (currentSong.content.includes('<b>') ? stripTomLine(currentSong.content) : convertPlainTextToHtml(stripTomLine(currentSong.content)))
-    : RAW_CHORD_HTML
+    : ''
   const processedChordHtml = processChordHtml(currentRawHtml, transposeOffset, simplifyChords, violinMode)
   const currentKey = getKeyFromOffset(currentSong?.key || ORIGINAL_KEY, transposeOffset, tomIsMinor || undefined)
   const currentFormaTom = getFormaTomTransposed(formaTom, transposeOffset)
@@ -609,10 +628,11 @@ function App() {
 
       <main>
 
+        {currentSong && (
         <div className="container cifra-page">
           <div className="cifra-header">
-            <h1 className="cifra-title">{currentSong ? currentSong.name : 'Ah, Jesus / Coracao Igual Ao Teu'}</h1>
-            <h2 className="cifra-artist">{currentSong ? (currentSong.composer || '') : <a href="/julliany-souza/">Julliany Souza</a>}</h2>
+            <h1 className="cifra-title">{currentSong.name}</h1>
+            <h2 className="cifra-artist">{currentSong.composer || ''}</h2>
             <div className="cifra-meta">
               {currentPlaylist && (
                 <div className="playlist-inline-controls">
@@ -831,6 +851,7 @@ function App() {
             </div>
           </div>
         </div>
+        )}
       </main>
 
       {showAddModal && (
@@ -1944,3 +1965,4 @@ function App() {
 }
 
 export default App
+

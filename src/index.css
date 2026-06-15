@@ -127,7 +127,7 @@ button, input { font: inherit; border: 0; background: transparent }
 .musica-item:hover { border-color: #059669; background: #f8faf9 }
 .musica-info { display: flex; flex-direction: column; gap: 4px }
 .musica-name { font-size: 16px; font-weight: 600; color: #1b1b1b }
-.musica-composer { font-size: 13px; color: #757575 }
+.musica-composer { font-size: 13px; color: #059669 }
 .musica-key { font-size: 12px; color: #059669 }
 .musica-arrow { color: #757575; flex-shrink: 0 }
 

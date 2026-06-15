@@ -113,7 +113,7 @@ export default function MusicasPage() {
     } else {
       document.documentElement.classList.remove('dark')
     }
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', darkMode ? '#111827' : '#059669')
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', darkMode ? '#000000' : '#059669')
   }, [darkMode])
 
   useEffect(() => {
@@ -471,7 +471,6 @@ export default function MusicasPage() {
                     <div className="musica-info">
                       <h3 className="musica-name">{song.name}</h3>
                       {song.composer && <span className="musica-composer">{song.composer}</span>}
-                      {song.key && <span className="musica-key">Tom: {song.key}</span>}
                     </div>
                     <svg className="musica-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -693,6 +692,7 @@ export default function MusicasPage() {
                         onClick={() => {
                           sessionStorage.setItem('currentPlaylist', JSON.stringify(list))
                           sessionStorage.setItem('currentPlaylistIndex', '0')
+                          sessionStorage.setItem('loadPlaylistFromUrl', 'true')
                           const firstSongItem = list.song_ids?.[0]
                           if (firstSongItem) {
                             const parsed = parseSongIdItem(firstSongItem)

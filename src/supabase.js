@@ -60,7 +60,7 @@ export async function deleteSong(id) {
 export async function signInWithGoogle() {
   if (!supabase) return
   const isNative = typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.()
-  const redirectTo = isNative ? 'https://localhost' : window.location.origin
+  const redirectTo = isNative ? 'cifrasicr.app://callback' : window.location.origin
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: { redirectTo },

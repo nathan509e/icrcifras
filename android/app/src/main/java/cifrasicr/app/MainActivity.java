@@ -11,8 +11,8 @@ public class MainActivity extends BridgeActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            getWindow().setNavigationBarColor(Color.parseColor("#111827"));
-            getWindow().setNavigationBarDividerColor(Color.parseColor("#111827"));
+            getWindow().setNavigationBarColor(Color.parseColor("#000000"));
+            getWindow().setNavigationBarDividerColor(Color.parseColor("#000000"));
             getWindow().getDecorView().setSystemUiVisibility(
                 getWindow().getDecorView().getSystemUiVisibility()
                     & ~View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
