@@ -280,39 +280,52 @@ function App() {
   // Handle OAuth callback via deep link
   useEffect(() => {
     let unsub
-    import('@capacitor/app').then(({ App }) => {
-      App.addListener('appUrlOpen', async (event) => {
-        console.log('[Auth] Deep link received:', event.url)
-        if (event.url.startsWith('cifrasicr.app://auth/callback')) {
-          console.log('[Auth] Processing auth callback...')
-          const callbackUrl = new URL(event.url)
-          const authCode = callbackUrl.searchParams.get('code')
+    let handledAuthUrl = false
 
-          if (!authCode) {
-            console.error('[Auth] Missing auth code in callback URL')
-            return
-          }
+    const handleAuthUrl = async (url) => {
+      if (!url || handledAuthUrl) return
+      if (!url.startsWith('cifrasicr.app://auth/callback')) return
 
-          // Fechar o navegador se ainda estiver aberto
-          try {
-            const { Browser } = await import('@capacitor/browser')
-            await Browser.close()
-          } catch {}
-          try {
-            const { data, error } = await supabase.auth.exchangeCodeForSession(authCode)
-            if (error) {
-              console.error('[Auth] Exchange code error:', error.message)
-            } else {
-              console.log('[Auth] Session exchanged successfully')
-              const { data: { session } } = await supabase.auth.getSession()
-              console.log('[Auth] Session after exchange:', session ? 'active' : 'none')
-            }
-          } catch (err) {
-            console.error('[Auth] Exchange code exception:', err.message)
-          }
-        } else if (event.url.startsWith('cifrasicr.app://callback')) {
-          console.warn('[Auth] Old callback URL format detected, ignoring')
+      handledAuthUrl = true
+      console.log('[Auth] Deep link received:', url)
+      console.log('[Auth] Processing auth callback...')
+
+      const callbackUrl = new URL(url)
+      const authCode = callbackUrl.searchParams.get('code')
+
+      if (!authCode) {
+        console.error('[Auth] Missing auth code in callback URL')
+        return
+      }
+
+      try {
+        const { Browser } = await import('@capacitor/browser')
+        await Browser.close()
+      } catch {}
+
+      try {
+        const { data, error } = await supabase.auth.exchangeCodeForSession(authCode)
+        if (error) {
+          console.error('[Auth] Exchange code error:', error.message)
+        } else {
+          console.log('[Auth] Session exchanged successfully')
+          const { data: { session } } = await supabase.auth.getSession()
+          console.log('[Auth] Session after exchange:', session ? 'active' : 'none')
         }
+      } catch (err) {
+        console.error('[Auth] Exchange code exception:', err.message)
+      }
+    }
+
+    import('@capacitor/app').then(({ App }) => {
+      App.getLaunchUrl().then(({ url }) => {
+        if (url) {
+          handleAuthUrl(url)
+        }
+      })
+
+      App.addListener('appUrlOpen', (event) => {
+        handleAuthUrl(event.url)
       }).then(listener => { unsub = listener })
     })
     return () => { unsub?.remove() }
