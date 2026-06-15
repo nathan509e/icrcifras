@@ -22,6 +22,15 @@ function parseSongIdItem(item) {
   return { songId: item, tom: null }
 }
 
+function safeParseJson(value, fallback = null) {
+  if (!value) return fallback
+  try {
+    return JSON.parse(value)
+  } catch (error) {
+    return fallback
+  }
+}
+
 const FLAT_TO_SHARP = { 'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#', 'Cb': 'B' }
 const TUNINGS = {
   'standard': 'E A D G B e',
@@ -252,7 +261,7 @@ function App() {
       const storedPlaylist = sessionStorage.getItem('currentPlaylist')
       const storedIndex = sessionStorage.getItem('currentPlaylistIndex')
       if (storedPlaylist) {
-        setCurrentPlaylist(JSON.parse(storedPlaylist))
+        setCurrentPlaylist(safeParseJson(storedPlaylist))
         setCurrentPlaylistIndex(parseInt(storedIndex) || 0)
       }
     }
@@ -268,7 +277,7 @@ function App() {
     if (!currentPlaylist) {
       const storedPlaylist = sessionStorage.getItem('currentPlaylist')
       if (storedPlaylist) {
-        setCurrentPlaylist(JSON.parse(storedPlaylist))
+        setCurrentPlaylist(safeParseJson(storedPlaylist))
         const storedIndex = sessionStorage.getItem('currentPlaylistIndex')
         if (storedIndex) setCurrentPlaylistIndex(parseInt(storedIndex))
       }

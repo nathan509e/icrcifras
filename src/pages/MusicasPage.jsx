@@ -21,6 +21,15 @@ function parseSongIdItem(item) {
   return { songId: item, tom: null }
 }
 
+function safeParseJson(value, fallback = null) {
+  if (!value) return fallback
+  try {
+    return JSON.parse(value)
+  } catch (error) {
+    return fallback
+  }
+}
+
 export default function MusicasPage() {
   const [songs, setSongs] = useState([])
   const [loading, setLoading] = useState(true)
@@ -78,7 +87,7 @@ export default function MusicasPage() {
     const storedPlaylist = sessionStorage.getItem('currentPlaylist')
     const storedIndex = sessionStorage.getItem('currentPlaylistIndex')
     if (storedPlaylist) {
-      setCurrentPlaylist(JSON.parse(storedPlaylist))
+      setCurrentPlaylist(safeParseJson(storedPlaylist))
       setCurrentPlaylistIndex(parseInt(storedIndex) || 0)
     }
 
