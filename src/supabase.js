@@ -60,12 +60,33 @@ export async function deleteSong(id) {
 export async function signInWithGoogle() {
   if (!supabase) return
   const isNative = typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.()
-  const redirectTo = isNative ? 'cifrasicr.app://callback' : window.location.origin
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: { redirectTo },
-  })
-  if (error) console.error('Error signing in:', error)
+  
+  if (isNative) {
+    const { Browser } = await import('@capacitor/browser')
+    const redirectUrl = 'cifrasicr.app://callback'
+    
+    const { data: { url }, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { 
+        redirectTo: redirectUrl,
+        skipBrowserRedirect: true
+      }
+    })
+    
+    if (error) {
+      console.error('Error signing in:', error)
+      return
+    }
+    
+    await Browser.open({ url: url + '&redirect_uri=' + encodeURIComponent(redirectUrl) })
+  } else {
+    const redirectTo = window.location.origin
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo },
+    })
+    if (error) console.error('Error signing in:', error)
+  }
 }
 
 export async function createUser(email, password, name) {

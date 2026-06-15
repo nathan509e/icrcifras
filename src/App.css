@@ -2066,6 +2066,7 @@ html, body { background: var(--white) }
     background: none !important;
     border: none !important;
     padding: 0 !important;
+    margin-top: 8px !important;
     cursor: pointer !important;
     color: #333 !important;
   }
