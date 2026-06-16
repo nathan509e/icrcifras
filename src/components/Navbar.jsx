@@ -61,9 +61,9 @@ export default function Navbar({
               onClick={() => navigate('/')}
               className="nav-back-btn"
               title="Voltar"
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, marginTop: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#333' }}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: '#333' }}
             >
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 19l-7-7 7-7"/></svg>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 19l-7-7 7-7"/></svg>
             </button>
           </div>
         </>
@@ -73,16 +73,14 @@ export default function Navbar({
     // Renderizar nav mobile em baixo quando está na tela inicial
     return (
       <nav className="nav-links nav-home-mobile">
-        {user && (
-          <button
-            className="nav-mobile-bottom-btn"
-            onClick={() => setShowDomingoModal(true)}
-            title="Esse Domingo"
-            style={{ ...mobileBtnStyle, background: '#017155', border: 'none', color: 'white' }}
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-          </button>
-        )}
+        <button
+          className="nav-mobile-bottom-btn"
+          onClick={() => setShowDomingoModal(true)}
+          title="Esse Domingo"
+          style={{ ...mobileBtnStyle, background: '#017155', border: 'none', color: 'white' }}
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        </button>
         {user && (
           <button
             className="nav-mobile-bottom-btn"
