@@ -461,11 +461,11 @@ html, body { background: var(--white) }
   display: block;
   width: 80px;
   height: 40px;
-  background: url("/logo.png") no-repeat center/contain;
+  background: url("/pwa-512x512.png") no-repeat center/contain;
   font-size: 0;
 }
 .dark .header-logo a {
-  background-image: url("/logob.png");
+  background-image: url("/logowhite.png");
 }
 .search-wrapper { flex: 1; min-width: 0 }
 .search-form {
@@ -2425,4 +2425,10 @@ html, body { background: var(--white) }
 
 .btn-voltar:hover {
   background: var(--green-hover);
+}
+
+/* Hide mobile navs when keyboard is open */
+html.keyboard-open .nav-home-mobile,
+html.keyboard-open .nav-song-header-mobile {
+  display: none !important;
 }
