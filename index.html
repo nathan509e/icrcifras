@@ -19,7 +19,7 @@
   </head>
   <body>
     <div id="root"></div>
-    <script>if(localStorage.getItem('theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]')?.setAttribute('content','#000000')}</script>
+    <script>if(localStorage.getItem('theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]')?.setAttribute('content','#000000')}var _ac=localStorage.getItem('accent-color');if(_ac){document.documentElement.style.setProperty('--accent-color',_ac)}</script>
     <script>window.addEventListener('error',function(e){console.error('Global error:',e.error||e.message)})</script>
     <script>window.addEventListener('unhandledrejection',function(e){console.error('Unhandled rejection:',e.reason)})</script>
   <script type="module" src="/src/main.jsx"></script>

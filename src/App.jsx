@@ -238,6 +238,65 @@ function App() {
   const [editingList, setEditingList] = useState(null)
   const [currentPlaylist, setCurrentPlaylist] = useState(null)
   const [currentPlaylistIndex, setCurrentPlaylistIndex] = useState(0)
+  const [showColorPicker, setShowColorPicker] = useState(false)
+  const [pickerHue, setPickerHue] = useState(() => {
+    const saved = localStorage.getItem('accent-color') || '#059669'
+    const r = parseInt(saved.slice(1, 3), 16) / 255
+    const g = parseInt(saved.slice(3, 5), 16) / 255
+    const b = parseInt(saved.slice(5, 7), 16) / 255
+    const max = Math.max(r, g, b), min = Math.min(r, g, b)
+    if (max === min) return 0
+    const d = max - min
+    let h = 0
+    if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6
+    else if (max === g) h = ((b - r) / d + 2) / 6
+    else h = ((r - g) / d + 4) / 6
+    return Math.round(h * 360)
+  })
+
+  function hexToHue(hex) {
+    const r = parseInt(hex.slice(1, 3), 16) / 255
+    const g = parseInt(hex.slice(3, 5), 16) / 255
+    const b = parseInt(hex.slice(5, 7), 16) / 255
+    const max = Math.max(r, g, b), min = Math.min(r, g, b)
+    let h = 0
+    if (max !== min) {
+      const d = max - min
+      switch (max) {
+        case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break
+        case g: h = ((b - r) / d + 2) / 6; break
+        case b: h = ((r - g) / d + 4) / 6; break
+      }
+    }
+    return Math.round(h * 360)
+  }
+
+  function hslToHex(h, s, l) {
+    const k = n => (n + h / 30) % 12
+    const a = s * Math.min(l, 1 - l)
+    const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)))
+    const toHex = x => Math.round(f(x) * 255).toString(16).padStart(2, '0')
+    return `#${toHex(0)}${toHex(8)}${toHex(4)}`
+  }
+
+  function handlePickerHueChange(e) {
+    const h = Number(e.target.value)
+    setPickerHue(h)
+    const hex = hslToHex(h, 0.85, 0.55)
+    document.documentElement.style.setProperty('--accent-color', hex)
+  }
+
+  function applyAccentColor() {
+    const hex = getComputedStyle(document.documentElement).getPropertyValue('--accent-color').trim() || '#059669'
+    localStorage.setItem('accent-color', hex)
+    setShowColorPicker(false)
+  }
+
+  function resetAccentColor() {
+    document.documentElement.style.setProperty('--accent-color', '#059669')
+    localStorage.removeItem('accent-color')
+    setShowColorPicker(false)
+  }
 
   const scrollRef = useRef(null)
   const metronomeRef = useRef(null)
@@ -251,6 +310,13 @@ function App() {
       document.documentElement.classList.add('dark')
     }
   }, [])
+
+  useEffect(() => {
+    if (showColorPicker) {
+      const hex = getComputedStyle(document.documentElement).getPropertyValue('--accent-color').trim() || '#059669'
+      setPickerHue(hexToHue(hex))
+    }
+  }, [showColorPicker])
 
   useEffect(() => {
     fetchSongs().then(data => {
@@ -533,6 +599,7 @@ function App() {
   }
 
   return (
+    <>
     <div className="page-wrapper">
       <header className="header">
         <div className="container header-inner">
@@ -614,61 +681,65 @@ function App() {
              setShowLoginModal={setShowLoginModal}
              userMenuRef={userMenuRef}
              showUserMenu={showUserMenu}
-             setShowUserMenu={setShowUserMenu}
-             avatarUrl={avatarUrl}
-             displayName={displayName}
-             avatarLetter={avatarLetter}
-             isViewingSong={!!selectedSongId}
-             navigate={navigate}
-           />
-        </div>
-      </header>
+              setShowUserMenu={setShowUserMenu}
+              avatarUrl={avatarUrl}
+              displayName={displayName}
+              avatarLetter={avatarLetter}
+              isViewingSong={!!selectedSongId}
+              navigate={navigate}
+              showColorPicker={showColorPicker}
+              setShowColorPicker={setShowColorPicker}
+            />
+         </div>
+       </header>
 
       {/* Mobile Nav - renderiza fora do header no mobile */}
       <Navbar
-        user={user}
-        userIsAdmin={userIsAdmin}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        showSearchResults={showSearchResults}
-        setShowSearchResults={setShowSearchResults}
-        searchResults={searchResults}
-        loadSongContent={loadSongContent}
-        requestDelete={requestDelete}
-        showDomingoModal={showDomingoModal}
-        setShowDomingoModal={setShowDomingoModal}
-        showMySongs={showMySongs}
-        setShowMySongs={setShowMySongs}
-        songFilter={songFilter}
-        setSongFilter={setSongFilter}
-        showListsModal={showListsModal}
-        setShowListsModal={setShowListsModal}
-        userLists={userLists}
-        setUserLists={setUserLists}
-        showUserSuggestions={showUserSuggestions}
-        setShowUserSuggestions={setShowUserSuggestions}
-        userSuggestions={userSuggestions}
-        setUserSuggestions={setUserSuggestions}
-        showSuggestionsList={showSuggestionsList}
-        setShowSuggestionsList={setShowSuggestionsList}
-        suggestions={suggestions}
-        setSuggestions={setSuggestions}
-        showAddModal={showAddModal}
-        setShowAddModal={setShowAddModal}
-        showLoginModal={showLoginModal}
-        setShowLoginModal={setShowLoginModal}
-        userMenuRef={userMenuRef}
-        showUserMenu={showUserMenu}
-        setShowUserMenu={setShowUserMenu}
-        avatarUrl={avatarUrl}
-        displayName={displayName}
-        avatarLetter={avatarLetter}
-        isViewingSong={!!selectedSongId}
-        navigate={navigate}
-        isMobileNav={true}
-        fetchSuggestions={fetchSuggestions}
-        fetchUserSuggestions={fetchUserSuggestions}
-      />
+         user={user}
+         userIsAdmin={userIsAdmin}
+         searchQuery={searchQuery}
+         setSearchQuery={setSearchQuery}
+         showSearchResults={showSearchResults}
+         setShowSearchResults={setShowSearchResults}
+         searchResults={searchResults}
+         loadSongContent={loadSongContent}
+         requestDelete={requestDelete}
+         showDomingoModal={showDomingoModal}
+         setShowDomingoModal={setShowDomingoModal}
+         showMySongs={showMySongs}
+         setShowMySongs={setShowMySongs}
+         songFilter={songFilter}
+         setSongFilter={setSongFilter}
+         showListsModal={showListsModal}
+         setShowListsModal={setShowListsModal}
+         userLists={userLists}
+         setUserLists={setUserLists}
+         showUserSuggestions={showUserSuggestions}
+         setShowUserSuggestions={setShowUserSuggestions}
+         userSuggestions={userSuggestions}
+         setUserSuggestions={setUserSuggestions}
+         showSuggestionsList={showSuggestionsList}
+         setShowSuggestionsList={setShowSuggestionsList}
+         suggestions={suggestions}
+         setSuggestions={setSuggestions}
+         showAddModal={showAddModal}
+         setShowAddModal={setShowAddModal}
+         showLoginModal={showLoginModal}
+         setShowLoginModal={setShowLoginModal}
+         userMenuRef={userMenuRef}
+         showUserMenu={showUserMenu}
+         setShowUserMenu={setShowUserMenu}
+         avatarUrl={avatarUrl}
+         displayName={displayName}
+         avatarLetter={avatarLetter}
+         isViewingSong={!!selectedSongId}
+         navigate={navigate}
+         isMobileNav={true}
+         fetchSuggestions={fetchSuggestions}
+         fetchUserSuggestions={fetchUserSuggestions}
+         showColorPicker={showColorPicker}
+         setShowColorPicker={setShowColorPicker}
+       />
 
       <main>
 
@@ -1999,6 +2070,16 @@ function App() {
                     ))}
                   </select>
                 </div>
+
+                <div className="mobile-panel-item">
+                  <span>Personalizar Cor</span>
+                  <button
+                    className="mobile-tool-btn-small"
+                    onClick={() => setShowColorPicker(true)}
+                    style={{ background: 'var(--accent-color)', width: 32, height: 32, borderRadius: 8, border: '2px solid var(--gray-border)' }}
+                    title="Personalizar cor dos destaques"
+                  />
+                </div>
               </div>
             )}
           </div>
@@ -2080,6 +2161,72 @@ function App() {
         </button>
       </div>
     </div>
+
+      {showColorPicker && (
+        <div className="color-picker-overlay" onClick={() => {
+          const saved = localStorage.getItem('accent-color')
+          document.documentElement.style.setProperty('--accent-color', saved || '#059669')
+          setShowColorPicker(false)
+        }}>
+          <div className="color-picker-modal" onClick={e => e.stopPropagation()}>
+            <div className="color-picker-header">
+              <h3 className="color-picker-title">Personalizar cor</h3>
+              <button className="color-picker-close" onClick={() => {
+                const saved = localStorage.getItem('accent-color')
+                document.documentElement.style.setProperty('--accent-color', saved || '#059669')
+                setShowColorPicker(false)
+              }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+
+            <div className="color-picker-preview">
+              <div className="color-picker-swatch" style={{ background: hslToHex(pickerHue, 0.85, 0.55) }} />
+              <div>
+                <div className="color-picker-hex">
+                  {hslToHex(pickerHue, 0.85, 0.55)}
+                </div>
+                <div className="color-picker-label" style={{ marginBottom: 0 }}>Cor dos destaques</div>
+              </div>
+            </div>
+
+            <label className="color-picker-label">Matiz</label>
+            <input
+              type="range"
+              className="color-picker-slider"
+              min="0"
+              max="360"
+              value={pickerHue}
+              onChange={handlePickerHueChange}
+            />
+
+            <label className="color-picker-label">Sugestoes</label>
+            <div className="color-picker-presets">
+              {['#059669', '#f97316', '#ef4444', '#ec4899', '#a855f7', '#6366f1', '#3b82f6', '#06b6d4', '#14b8a6', '#84cc16'].map(c => (
+                <button
+                  key={c}
+                  className={`color-picker-preset${hslToHex(pickerHue, 0.85, 0.55) === c ? ' active' : ''}`}
+                  style={{ background: c }}
+                  onClick={() => {
+                    const hue = hexToHue(c)
+                    handlePickerHueChange({ target: { value: hue } })
+                  }}
+                />
+              ))}
+            </div>
+
+            <div className="color-picker-actions">
+              <button className="color-picker-btn color-picker-btn-reset" onClick={resetAccentColor}>
+                Restaurar padrao
+              </button>
+              <button className="color-picker-btn color-picker-btn-apply" onClick={applyAccentColor}>
+                Aplicar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 
