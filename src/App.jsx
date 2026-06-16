@@ -280,25 +280,15 @@ function App() {
   // Handle OAuth callback via deep link
   useEffect(() => {
     let unsub
-    let handledAuthUrl = false
+    const isNative = window.Capacitor?.isNativePlatform?.()
+    
+    if (!isNative) return
 
     const handleAuthUrl = async (url) => {
-      if (!url || handledAuthUrl) return
-      const isAuthCallback = url.includes('auth/callback') && (url.startsWith('cifrasicr.app://') || url.startsWith('https://cifrasicr.app/'))
-      if (!isAuthCallback) {
-        console.log('[Auth] Ignoring non-auth URL:', url)
-        return
-      }
-
-      handledAuthUrl = true
       console.log('[Auth] Deep link received:', url)
-      console.log('[Auth] Processing auth callback...')
-
-      const callbackUrl = new URL(url)
-      const authCode = callbackUrl.searchParams.get('code')
-
-      if (!authCode) {
-        console.error('[Auth] Missing auth code in callback URL')
+      
+      if (!url || !url.includes('auth/callback')) {
+        console.log('[Auth] Ignoring non-auth URL:', url)
         return
       }
 
@@ -307,35 +297,31 @@ function App() {
         await Browser.close()
       } catch {}
 
-      try {
-        const { data, error } = await supabase.auth.exchangeCodeForSession(authCode)
-        if (error) {
-          console.error('[Auth] Exchange code error:', error.message)
-          alert('Erro no login: ' + error.message)
-        } else {
-          console.log('[Auth] Session exchanged successfully, user:', data?.user?.email)
-          const { data: { session } } = await supabase.auth.getSession()
-          console.log('[Auth] Session after exchange:', session ? 'active' : 'none')
-          if (session?.user) {
-            setUser(session.user)
-          } else if (data?.user) {
-            setUser(data.user)
-          }
+      // Supabase will auto-detect and exchange code when URL has ?code=
+      console.log('[Auth] Waiting for Supabase to detect session...')
+      
+      setTimeout(async () => {
+        const { data: { session } } = await supabase.auth.getSession()
+        console.log('[Auth] Session after timeout:', session ? 'active' : 'none')
+        if (session?.user) {
+          setUser(session.user)
         }
-      } catch (err) {
-        console.error('[Auth] Exchange code exception:', err)
-        alert('Erro exception: ' + err.message)
-      }
+      }, 2000)
     }
 
     import('@capacitor/app').then(({ App }) => {
+      console.log('[Auth] Initial URL:', window.location.href)
+      handleAuthUrl(window.location.href)
+
       App.getLaunchUrl().then(({ url }) => {
+        console.log('[Auth] Launch URL:', url)
         if (url) {
           handleAuthUrl(url)
         }
       })
 
       App.addListener('appUrlOpen', (event) => {
+        console.log('[Auth] appUrlOpen event:', event.url)
         handleAuthUrl(event.url)
       }).then(listener => { unsub = listener })
     })

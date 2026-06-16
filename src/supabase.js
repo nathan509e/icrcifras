@@ -9,12 +9,15 @@ if (!supabaseUrl || !supabaseAnonKey) {
   )
 }
 
+const isNative = typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.()
+
 export const supabase = supabaseUrl && supabaseAnonKey
   ? createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         flowType: 'pkce',
-        detectSessionInUrl: false,
+        detectSessionInUrl: !isNative,
         persistSession: true,
+        autoRefreshToken: true,
       },
     })
   : null
@@ -68,12 +71,14 @@ let authResolve = null
 export async function signInWithGoogle() {
   if (!supabase) return
   const isNative = typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.()
+  const redirectUrl = isNative
+    ? 'cifrasicr.app://auth/callback'
+    : `${window.location.origin}/auth/callback`
   
   if (isNative) {
     return new Promise(async (resolve) => {
       authResolve = resolve
       const { Browser } = await import('@capacitor/browser')
-      const redirectUrl = 'cifrasicr.app://auth/callback'
       
       const { data: { url }, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -89,7 +94,6 @@ export async function signInWithGoogle() {
         return
       }
       
-      console.log('[Auth] OAuth redirectTo:', redirectUrl)
       console.log('[Auth] Opening OAuth URL:', url)
       await Browser.open({ url })
       
@@ -111,10 +115,9 @@ export async function signInWithGoogle() {
       })
     })
   } else {
-    const redirectTo = window.location.origin
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo },
+      options: { redirectTo: redirectUrl },
     })
     if (error) console.error('Error signing in:', error)
   }
