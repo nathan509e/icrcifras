@@ -223,8 +223,9 @@
 }
 
 .dark .nav-user-card-item--danger svg {
-  color: #f87171;
+  fill: none;
 }
+.dark .nav-back-btn { color: #f5f5f5 !important }
 
 .dark .list-item {
   border-bottom-color: var(--gray-border);
@@ -371,7 +372,7 @@ main {
   body, html { overflow-x: hidden !important; max-width: 100vw }
   .cifra-body { flex-direction: column !important }
   .cifra-col-left { max-width: 100% !important; width: 100% !important }
-  .cifra-col-right { width: 100% !important; margin-top: 20px }
+  .cifra-col-right { display: none !important }
   .header { display: none !important }
   .musicas-page .header { display: block !important }
   .musicas-page .header .header-inner { display: none !important }
@@ -889,6 +890,13 @@ html, body { background: var(--white) }
 }
 
 .tool-btn.play-btn.active {
+  background: var(--orange);
+  border-color: var(--orange);
+  color: var(--white);
+  box-shadow: 0 4px 16px rgba(255, 153, 0, 0.35);
+}
+
+.tool-btn--quality.active {
   background: var(--orange);
   border-color: var(--orange);
   color: var(--white);
@@ -1991,6 +1999,12 @@ html, body { background: var(--white) }
     background: rgba(255, 255, 255, 0.15);
   }
 
+  .mobile-tool-btn.active {
+    background: rgba(234, 179, 8, 0.3);
+    border-color: rgba(234, 179, 8, 0.6);
+    color: #fbbf24;
+  }
+
   .mobile-tool-value {
     font: 700 24px var(--font-mont);
     color: #10b981;
@@ -2664,4 +2678,215 @@ html.keyboard-open .nav-song-header-mobile {
     width: 40px;
     height: 40px;
   }
+}
+
+/* === CHORD EDITOR === */
+.modal--wide { max-width: 700px !important }
+.modal-textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  resize: vertical;
+  outline: none;
+  box-sizing: border-box;
+}
+.modal-textarea:focus { border-color: var(--orange) }
+.modal-btn-default {
+  background: transparent;
+  border: 1px solid #ccc;
+  color: inherit;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font: 500 13px var(--font-roboto);
+  transition: background 0.2s;
+}
+.modal-btn-default:hover { background: rgba(0,0,0,0.05) }
+.dark .modal-btn-default:hover { background: rgba(255,255,255,0.1) }
+
+.chord-editor {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.5;
+  background: #fafafa;
+}
+.dark .chord-editor { background: #1e1e1e; border-color: #333 }
+.chord-editor-section-label {
+  font-weight: 700;
+  color: #666;
+  margin: 8px 0 4px;
+  font-family: var(--font-mont);
+  font-size: 12px;
+}
+.chord-editor-pair { margin-bottom: 4px }
+.chord-editor-chord-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  min-height: 22px;
+  padding: 2px 0;
+}
+.chord-editor-chord {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--orange);
+  color: #fff;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.15s;
+}
+.chord-editor-chord:hover { opacity: 0.8 }
+.chord-editor-chord.pending {
+  background: transparent;
+  border: 1px dashed #999;
+  color: #999;
+  min-width: 20px;
+  text-align: center;
+}
+.chord-editor-add-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px dashed #aaa;
+  color: #aaa;
+  font-size: 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.chord-editor-annotation {
+  opacity: 0.5;
+  font-size: 11px;
+  font-style: italic;
+  user-select: none;
+}
+.chord-editor-paren {
+  opacity: 0.35;
+  user-select: none;
+}
+.chord-editor-add-trigger:hover {
+  border-color: var(--orange);
+  color: var(--orange);
+}
+.chord-editor-lyric {
+  white-space: pre-wrap;
+  padding-left: 2px;
+  margin-bottom: 6px;
+  border-radius: 3px;
+  cursor: text;
+  padding: 2px 4px;
+  transition: background 0.15s;
+}
+.chord-editor-lyric:hover {
+  background: rgba(255,255,255,0.05);
+}
+.dark .chord-editor-lyric:hover {
+  background: rgba(255,255,255,0.08);
+}
+.chord-editor-lyric-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 3px;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  padding: 3px 4px;
+  margin-bottom: 6px;
+  outline: none;
+}
+.dark .chord-editor-lyric-input {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.15);
+}
+.chord-editor-picker-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.4);
+}
+.chord-editor-picker {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.dark .chord-editor-picker { background: #2a2a2a }
+.chord-editor-picker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-family: var(--font-roboto);
+  font-size: 14px;
+}
+.chord-editor-picker-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: inherit;
+  line-height: 1;
+}
+.chord-editor-picker-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chord-editor-picker-btn {
+  padding: 6px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #f5f5f5;
+  cursor: pointer;
+  font: 700 13px var(--font-mono);
+  color: inherit;
+  transition: background 0.15s;
+}
+.chord-editor-picker-btn:hover {
+  background: var(--orange);
+  color: #fff;
+  border-color: var(--orange);
+}
+.dark .chord-editor-picker-btn { background: #333; border-color: #555 }
+.dark .chord-editor-picker-btn:hover { background: var(--orange); border-color: var(--orange); }
+.chord-editor-picker-btn.selected {
+  background: var(--orange);
+  color: #fff;
+  border-color: var(--orange);
+  box-shadow: 0 0 0 2px rgba(255, 153, 0, 0.3);
+}
+.chord-editor-btn-remove {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #e74c3c;
+  border-radius: 6px;
+  background: transparent;
+  color: #e74c3c;
+  font: 500 13px var(--font-roboto);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.chord-editor-btn-remove:hover {
+  background: #e74c3c;
+  color: #fff;
 }

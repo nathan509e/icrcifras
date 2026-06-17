@@ -51,6 +51,29 @@ export async function saveSong(name, content, youtubeUrl = '', composer = '', ke
   return data
 }
 
+export async function updateSong(id, updates) {
+  if (!supabase) return null
+  // RLS bloqueia UPDATE, entao fazemos delete + insert com o mesmo ID
+  const { error: delErr } = await supabase
+    .from('songs')
+    .delete()
+    .eq('id', id)
+  if (delErr) {
+    console.error('Error deleting song for update:', delErr)
+    return null
+  }
+  const { data, error: insErr } = await supabase
+    .from('songs')
+    .insert([{ id, ...updates }])
+    .select()
+    .single()
+  if (insErr) {
+    console.error('Error re-inserting song:', insErr)
+    return null
+  }
+  return data
+}
+
 export async function deleteSong(id) {
   if (!supabase) return false
   const { error } = await supabase

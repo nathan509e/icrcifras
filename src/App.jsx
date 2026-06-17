@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useState, useRef, useEffect, useCallback, Fragment } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { fetchSongs, saveSong, deleteSong, signOut, fetchSuggestions, saveSuggestion, deleteSuggestion, updateSuggestionStatus, fetchUserSuggestions, fetchUserLists, createList, updateList, deleteList, fetchDomingoList, supabase, createUser, signInWithEmail } from './supabase'
+import { fetchSongs, saveSong, updateSong, deleteSong, signOut, fetchSuggestions, saveSuggestion, deleteSuggestion, updateSuggestionStatus, fetchUserSuggestions, fetchUserLists, createList, updateList, deleteList, fetchDomingoList, supabase, createUser, signInWithEmail } from './supabase'
 import { useAuth } from './AuthContext'
 import Navbar from './components/Navbar'
 import './App.css'
@@ -69,6 +69,24 @@ function simplifyChordString(chordStr) {
   return chordStr.replace(/^([A-Ga-g][#b]?)(m?)(.*)$/, '$1$2')
 }
 
+function flipChordQuality(chordStr) {
+  const m = chordStr.match(/^([A-Ga-g][#b]?)(.*)$/)
+  if (!m) return chordStr
+  const root = m[1]
+  const suffix = m[2]
+  const isMinor = /^m(?!aj)/i.test(suffix)
+  if (isMinor) {
+    return root + suffix.replace(/^m/, '')
+  }
+  if (/^maj\d*$/i.test(suffix)) {
+    return root + 'm' + suffix.replace(/^maj/i, '')
+  }
+  if (/^M\d*$/i.test(suffix)) {
+    return root + 'm' + suffix.replace(/^M/, '')
+  }
+  return root + 'm' + suffix
+}
+
 function chordToThird(chordStr) {
   const root = chordStr.match(/^([A-Ga-g][#b]?)/)
   if (!root) return chordStr
@@ -79,11 +97,12 @@ function chordToThird(chordStr) {
   return transposeNote(base, offset)
 }
 
-function processChordHtml(html, transposeOffset, simplify, violin) {
-  if (transposeOffset === 0 && !simplify && !violin) return html
+function processChordHtml(html, transposeOffset, simplify, violin, flipQuality) {
+  if (transposeOffset === 0 && !simplify && !violin && !flipQuality) return html
   return html.replace(/<b>([^<]+)<\/b>/g, (_, chordText) => {
     let c = chordText.trim()
     if (transposeOffset !== 0) c = transposeChordString(c, transposeOffset)
+    if (flipQuality) c = flipChordQuality(c)
     if (violin) c = chordToThird(c)
     else if (simplify) c = simplifyChordString(c)
     return `<b>${c}</b>`
@@ -93,7 +112,7 @@ function processChordHtml(html, transposeOffset, simplify, violin) {
 function getKeyFromOffset(originalKey, offset, forceMinor) {
   if (!originalKey) return originalKey || ''
   const isMinor = forceMinor !== undefined ? forceMinor : originalKey.endsWith('m')
-  const root = isMinor && originalKey.endsWith('m') ? originalKey.slice(0, -1) : originalKey
+  const root = originalKey.endsWith('m') ? originalKey.slice(0, -1) : originalKey
   const transposed = transposeNote(root, offset)
   return isMinor ? transposed + 'm' : transposed
 }
@@ -114,15 +133,15 @@ function getFormaTomTransposed(originalFormaTom, offset) {
 }
 
 function convertPlainTextToHtml(text) {
-  const chordPattern = /^[A-G][#b]?(?:m|M|dim|aug|sus|add|°|7M)?[0-9]*(?:\([^)]*\))?(?:\/[A-G][#b]?(?:m|M|dim|aug|sus|add|°|7M)?[0-9]*)?$/
+  const chordPattern = /^\(?[A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*(?:\([^)]*\))*(?:\/[A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*)*\)?$/
   const sectionPattern = /^\[.*\]$/
   return text.split('\n').map(line => {
     const trimmed = line.trim()
     if (!trimmed) return line
     const tokens = trimmed.split(/\s+/)
-    const isChordLine = tokens.every(t => chordPattern.test(t) || sectionPattern.test(t))
+    const isChordLine = tokens.every(t => chordPattern.test(t) || sectionPattern.test(t) || /^\d+x?$|^[\|:]+$|^(?:Riff|Solo|Fine|Coda|D\.?[CS]\.?)$|[\[\]]/i.test(t))
     if (!isChordLine) return line
-    return line.replace(/\b([A-G][#b]?(?:m|M|dim|aug|sus|add|°|7M)?[0-9]*(?:\([^)]*\))?(?:\/[A-G][#b]?(?:m|M|dim|aug|sus|add|°|7M)?[0-9]*)?)(?=\s|$)/g, '<b>$1</b>')
+    return line.replace(/\b(\(?)([A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*(?:\([^)]*\))?(?:\/[A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*)?)(\)?)(?=\s|$)/g, '$1<b>$2</b>$3')
   }).join('\n')
 }
 
@@ -177,19 +196,22 @@ const ORIGINAL_KEY = 'G'
 function App() {
   const params = useParams()
   const navigate = useNavigate()
-  const [autoScrollSpeed, setAutoScrollSpeed] = useState(5)
+  const [autoScrollSpeed, setAutoScrollSpeed] = useState(1)
   const [isScrolling, setIsScrolling] = useState(false)
   const [fontSize, setFontSize] = useState(15)
   const [transposeOffset, setTransposeOffset] = useState(0)
   const [formaTom, setFormaTom] = useState(null)
   const [simplifyChords, setSimplifyChords] = useState(false)
   const [violinMode, setViolinMode] = useState(false)
-  const [capo, setCapo] = useState(0)
   const [tuning, setTuning] = useState('standard')
   const [metronomeBpm, setMetronomeBpm] = useState(100)
   const [isMetronomePlaying, setIsMetronomePlaying] = useState(false)
   const [selectedChord, setSelectedChord] = useState('')
   const [tomIsMinor, setTomIsMinor] = useState(false)
+  const [chordQualityFlip, setChordQualityFlip] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editSongContent, setEditSongContent] = useState('')
+  const [editSongName, setEditSongName] = useState('')
 
   const [songs, setSongs] = useState([])
   const [showAddModal, setShowAddModal] = useState(false)
@@ -421,6 +443,9 @@ function App() {
           const offset = getTransposeOffsetFromNotes(songKey, parsed.tom)
           setTransposeOffset(offset)
           setTomIsMinor(parsed.tom.endsWith('m'))
+          const originalIsMinor = songKey.endsWith('m')
+          const targetIsMinor = parsed.tom.endsWith('m')
+          setChordQualityFlip(originalIsMinor !== targetIsMinor)
         }
       }
     }
@@ -576,6 +601,32 @@ function App() {
     }
   }
 
+  const openEditModal = () => {
+    if (!currentSong) return
+    setEditSongContent(currentSong.content || '')
+    setEditSongName(currentSong.name || '')
+    setShowEditModal(true)
+  }
+
+  const handleSaveEdit = async () => {
+    if (!currentSong || !editSongContent.trim() || !editSongName.trim()) return
+    const cleaned = editSongContent.replace(/\b__CHORD__\s*/g, '').trim()
+    const key = detectKey(cleaned)
+    const result = await updateSong(currentSong.id, {
+      name: editSongName.trim(),
+      content: cleaned,
+      key,
+      composer: currentSong.composer || '',
+      youtube_url: currentSong.youtube_url || '',
+    })
+    if (result) {
+      setSongs(prev => prev.map(s => s.id === currentSong.id ? { ...s, ...result } : s))
+      setShowEditModal(false)
+    } else {
+      alert('Erro ao salvar. Verifique o console para mais detalhes.')
+    }
+  }
+
   const currentSong = selectedSongId
     ? songs.find(s => s.id === selectedSongId)
     : null
@@ -583,8 +634,8 @@ function App() {
   const currentRawHtml = currentSong
     ? (currentSong.content.includes('<b>') ? stripTomLine(currentSong.content) : convertPlainTextToHtml(stripTomLine(currentSong.content)))
     : ''
-  const processedChordHtml = processChordHtml(currentRawHtml, transposeOffset, simplifyChords, violinMode)
-  const currentKey = getKeyFromOffset(currentSong?.key || ORIGINAL_KEY, transposeOffset, tomIsMinor || undefined)
+  const processedChordHtml = processChordHtml(currentRawHtml, transposeOffset, simplifyChords, violinMode, chordQualityFlip)
+  const currentKey = getKeyFromOffset(currentSong?.key || ORIGINAL_KEY, transposeOffset, chordQualityFlip ? !(currentSong?.key || ORIGINAL_KEY).endsWith('m') : (tomIsMinor || undefined))
   const currentFormaTom = getFormaTomTransposed(formaTom, transposeOffset)
 
   const sortedSongs = [...songs].sort((a, b) => a.name.localeCompare(b.name, 'pt', { sensitivity: 'base' }))
@@ -803,6 +854,11 @@ function App() {
                   <button className="tool-btn" onClick={() => setTransposeOffset(t => Math.max(-6, t - 1))} title="Diminuir tom">−</button>
                   <span className="tool-value">{currentKey}</span>
                   <button className="tool-btn" onClick={() => setTransposeOffset(t => Math.min(6, t + 1))} title="Aumentar tom">+</button>
+                  <button className={`tool-btn tool-btn--quality${chordQualityFlip ? ' active' : ''}`} onClick={() => setChordQualityFlip(v => !v)} title="Alternar maior/menor">
+                    <span style={{ fontFamily: 'serif', fontWeight: 700, fontSize: 13 }}>M</span>
+                    <span style={{ fontSize: 10, opacity: 0.5 }}>/</span>
+                    <span style={{ fontFamily: 'serif', fontWeight: 700, fontSize: 11 }}>m</span>
+                  </button>
                 </div>
                 <div className="tool-hint">
                   {transposeOffset !== 0 && <span>({transposeOffset > 0 ? '+' : ''}{transposeOffset} semitons)</span>}
@@ -826,18 +882,6 @@ function App() {
                   <span className="toggle-track"></span>
                 </label>
                 <span className="tool-hint">{violinMode ? 'Terça' : 'Desativado'}</span>
-              </div>
-
-              <div className="sidebar-section">
-                <h3 className="sidebar-title">Capotraste</h3>
-                <div className="tool-row">
-                  <button className="tool-btn" onClick={() => setCapo(c => Math.max(0, c - 1))} title="Diminuir casa">−</button>
-                  <span className="tool-value">{capo}ª</span>
-                  <button className="tool-btn" onClick={() => setCapo(c => Math.min(12, c + 1))} title="Aumentar casa">+</button>
-                </div>
-                <div className="tool-hint">
-                  {capo > 0 && <span>Tom real: {getKeyFromOffset(currentSong?.key || ORIGINAL_KEY, transposeOffset - capo)}</span>}
-                </div>
               </div>
 
               <div className="sidebar-section">
@@ -923,6 +967,17 @@ function App() {
                   </div>
                 </div>
               )}
+
+              {userIsAdmin && currentSong && (
+                <div className="sidebar-section">
+                  <h3 className="sidebar-title">Admin</h3>
+                  <div className="tool-row" style={{ flexDirection: 'column', gap: 6, alignItems: 'stretch' }}>
+                    <button className="tool-btn" style={{ width: '100%', borderRadius: 8, fontSize: 13, padding: '8px 12px' }} onClick={openEditModal}>
+                      Alterar notas
+                    </button>
+                  </div>
+                </div>
+              )}
             </aside>
 
             <div className="cifra-col-left">
@@ -964,9 +1019,22 @@ function App() {
               </section>
 
             </div>
-          </div>
-        </div>
-        )}
+                </div>
+
+              {userIsAdmin && currentSong && (
+                <div style={{ marginTop: 16, borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 0.5, marginBottom: 8 }}>Admin</div>
+                  <button
+                    className="mobile-tool-btn-small"
+                    style={{ width: '100%', borderRadius: 8, fontSize: 13, padding: '8px 12px', display: 'flex', gap: 6 }}
+                    onClick={openEditModal}
+                  >
+                    Alterar notas
+                  </button>
+                </div>
+              )}
+              </div>
+            )}
       </main>
 
       {showAddModal && (
@@ -1027,6 +1095,38 @@ function App() {
               >
                 Salvar
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEditModal && (
+        <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
+          <div className="modal modal--wide" onClick={e => e.stopPropagation()} style={{ maxWidth: 700 }}>
+            <h2 className="modal-title">Alterar notas</h2>
+            <div className="modal-body">
+              <label className="modal-label">Nome da música</label>
+              <input
+                className="modal-input"
+                value={editSongName}
+                onChange={e => setEditSongName(e.target.value)}
+                placeholder="Nome da música"
+              />
+              <label className="modal-label" style={{ marginTop: 12 }}>Conteúdo da cifra</label>
+              <ChordEditor
+                content={editSongContent}
+                onChange={setEditSongContent}
+              />
+            </div>
+            <div className="modal-actions" style={{ justifyContent: 'flex-end' }}>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="modal-btn modal-btn-cancel" onClick={() => setShowEditModal(false)}>
+                  Cancelar
+                </button>
+                <button className="modal-btn modal-btn-confirm" onClick={handleSaveEdit} disabled={!editSongName.trim() || !editSongContent.trim()}>
+                  Salvar
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1476,8 +1576,17 @@ function App() {
                       <div className="list-item-actions">
                         <button className="list-edit-btn" onClick={() => { setEditingList(list); setNewListName(list.name); setSelectedSongs(list.song_ids || []); setShowEditListModal(true) }}>Editar</button>
                         <button className="list-delete-btn" onClick={async () => { await deleteList(list.id); setUserLists(prev => prev.filter(l => l.id !== list.id)) }}>Excluir</button>
-                      </div>
-                    </div>
+                </div>
+
+              {userIsAdmin && currentSong && (
+                <div className="mobile-panel-item" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 6, padding: '12px 0 0', borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: 8 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 0.5 }}>Admin</span>
+                  <button className="mobile-tool-btn-small" style={{ width: '100%', borderRadius: 8, fontSize: 13, padding: '8px 12px' }} onClick={openEditModal}>
+                    Alterar notas
+                  </button>
+                </div>
+              )}
+              </div>
                   ))}
                 </div>
               )}
@@ -1950,6 +2059,11 @@ function App() {
                   <button className="mobile-tool-btn" onClick={() => setTransposeOffset(t => Math.max(-6, t - 1))}>−</button>
                   <span className="mobile-tool-value">{currentKey}</span>
                   <button className="mobile-tool-btn" onClick={() => setTransposeOffset(t => Math.min(6, t + 1))}>+</button>
+                  <button className={`mobile-tool-btn${chordQualityFlip ? ' active' : ''}`} onClick={() => setChordQualityFlip(v => !v)} title="Alternar maior/menor" style={{ fontFamily: 'serif', fontWeight: 700, fontSize: 15 }}>
+                    <span style={{ fontFamily: 'serif', fontWeight: 700, fontSize: 16 }}>M</span>
+                    <span style={{ fontSize: 11, opacity: 0.5 }}>/</span>
+                    <span style={{ fontFamily: 'serif', fontWeight: 700, fontSize: 14 }}>m</span>
+                  </button>
                 </div>
                 {currentFormaTom && (
                   <div className="mobile-panel-hint" style={{ marginTop: '8px' }}>forma dos acordes no tom de {currentFormaTom}</div>
@@ -2025,15 +2139,6 @@ function App() {
                 </div>
 
                 <div className="mobile-panel-item">
-                  <span>Capotraste</span>
-                  <div className="mobile-tool-row-small">
-                    <button className="mobile-tool-btn-small" onClick={() => setCapo(c => Math.max(0, c - 1))}>−</button>
-                    <span className="mobile-tool-value-small">{capo}ª</span>
-                    <button className="mobile-tool-btn-small" onClick={() => setCapo(c => Math.min(12, c + 1))}>+</button>
-                  </div>
-                </div>
-
-                <div className="mobile-panel-item">
                   <span>Metrônomo ({metronomeBpm} BPM)</span>
                   <div className="mobile-tool-row-small">
                     <button className={`mobile-tool-btn-small ${isMetronomePlaying ? 'active' : ''}`} onClick={() => setIsMetronomePlaying(s => !s)}>
@@ -2080,6 +2185,15 @@ function App() {
                     title="Personalizar cor dos destaques"
                   />
                 </div>
+
+               {userIsAdmin && currentSong && (
+                <div className="mobile-panel-item" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 6, padding: '12px 0 0', borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: 8 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 0.5 }}>Admin</span>
+                  <button className="mobile-tool-btn-small" style={{ width: '100%', borderRadius: 8, fontSize: 13, padding: '8px 12px' }} onClick={() => { openEditModal(); setActiveMobilePanel(null) }}>
+                    Alterar notas
+                  </button>
+                </div>
+              )}
               </div>
             )}
           </div>
@@ -2227,6 +2341,295 @@ function App() {
         </div>
       )}
     </>
+  )
+}
+
+// Chord editor component for admin "Alterar notas"
+const COMMON_CHORDS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B', 'Cm', 'C#m', 'Dm', 'D#m', 'Em', 'Fm', 'F#m', 'Gm', 'G#m', 'Am', 'A#m', 'Bm', 'C7', 'D7', 'E7', 'F7', 'G7', 'A7', 'B7', 'Cm7', 'Dm7', 'Gm7', 'Am7', 'Em7', 'Dm9', 'Am9', 'G9', 'Cº', 'C°', 'Cdim', 'Caug', 'C+', 'Csus4', 'Csus2', 'Cadd9']
+
+function ChordEditor({ content, onChange }) {
+  const lines = content.split('\n')
+
+  const chordPattern = /^\(?[A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*(?:\([^)]*\))*(?:\/[A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*)*\)?$/
+  const sectionPattern = /^\[.*\]$/
+
+  function isChordLine(line) {
+    const trimmed = line.trim()
+    if (!trimmed) return false
+    const tokens = trimmed.split(/\s+/)
+    return tokens.every(t => chordPattern.test(t) || t === '__CHORD__' || /^\[.*\]$/.test(t) || /^\d+x?$|^[\|:]+$|^(?:Riff|Solo|Fine|Coda|D\.?[CS]\.?)$|[\[\]]/i.test(t))
+  }
+
+  function toggleChordAt(lineIdx, tokenIdx) {
+    const newLines = [...lines]
+    const tokens = newLines[lineIdx].trim().split(/\s+/)
+    const existing = tokens[tokenIdx]
+    if (existing && chordPattern.test(existing.trim())) {
+      tokens.splice(tokenIdx, 1)
+    } else {
+      tokens.splice(tokenIdx, 0, '__CHORD__')
+    }
+    newLines[lineIdx] = tokens.join(' ')
+    onChange(newLines.join('\n'))
+  }
+
+  function handleChordPick(lineIdx, tokenIdx, chord) {
+    const newLines = [...lines]
+    const tokens = newLines[lineIdx].trim().split(/\s+/)
+    const existing = tokens[tokenIdx]
+    if (existing && existing.trim() === '__CHORD__') {
+      tokens[tokenIdx] = chord
+    } else if (existing) {
+      tokens[tokenIdx] = chord
+    } else {
+      tokens.splice(tokenIdx, 0, chord)
+    }
+    newLines[lineIdx] = tokens.join(' ')
+    onChange(newLines.join('\n'))
+  }
+
+  function removeChordAt(lineIdx, tokenIdx) {
+    const newLines = [...lines]
+    const tokens = newLines[lineIdx].trim().split(/\s+/)
+    tokens.splice(tokenIdx, 1)
+    newLines[lineIdx] = tokens.join(' ')
+    onChange(newLines.join('\n'))
+  }
+
+  // Build sections: pair chord lines with their following lyric lines
+  const sections = []
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    const trimmed = line.trimEnd()
+    if (!trimmed) {
+      sections.push({ type: 'empty' })
+      continue
+    }
+    if (sectionPattern.test(trimmed)) {
+      sections.push({ type: 'section', text: trimmed })
+      continue
+    }
+    if (isChordLine(line)) {
+      const chordTokens = trimmed.split(/\s+/)
+      const hasNext = i + 1 < lines.length
+      const nextLine = hasNext ? lines[i + 1] : ''
+      const nextTrimmed = nextLine.trimEnd()
+      const nextIsChord = hasNext && nextTrimmed && isChordLine(nextLine)
+      sections.push({ type: 'pair', chordTokens, lyricText: nextIsChord ? '' : nextTrimmed, chordLineIdx: i })
+      if (hasNext && !nextIsChord) i++
+      continue
+    }
+    sections.push({ type: 'lyric', text: trimmed, lineIdx: i })
+  }
+
+  const [pendingChord, setPendingChord] = useState(null)
+  const [showPicker, setShowPicker] = useState(null)
+  const [editingLyric, setEditingLyric] = useState(null)
+  const [editLyricValue, setEditLyricValue] = useState('')
+
+  return (
+    <div className="chord-editor">
+      <div className="chord-editor-lines">
+        {sections.map((section, si) => {
+          if (section.type === 'empty') {
+            return <div key={si} style={{ height: 12 }} />
+          }
+          if (section.type === 'section') {
+            return <div key={si} className="chord-editor-section-label">{section.text}</div>
+          }
+          if (section.type === 'lyric') {
+            if (editingLyric === si) {
+              return (
+                <input
+                  key={si}
+                  className="chord-editor-lyric-input"
+                  value={editLyricValue}
+                  onChange={e => setEditLyricValue(e.target.value)}
+                  onBlur={() => {
+                    const newLines = content.split('\n')
+                    newLines[section.lineIdx] = editLyricValue
+                    onChange(newLines.join('\n'))
+                    setEditingLyric(null)
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') e.target.blur()
+                  }}
+                  autoFocus
+                />
+              )
+            }
+            return (
+              <div
+                key={si}
+                className="chord-editor-lyric"
+                onClick={() => {
+                  setEditingLyric(si)
+                  setEditLyricValue(section.text)
+                }}
+              >{section.text}</div>
+            )
+          }
+          if (section.type === 'pair') {
+            return (
+              <div key={si} className="chord-editor-pair">
+                <div className="chord-editor-chord-row">
+                  {section.chordTokens.map((token, ci) => {
+                    const parenMatch = typeof token === 'string' && token !== '__CHORD__' ? token.match(/^(\(?)(.*?)(\)?)$/) : null
+                    const parenPrefix = parenMatch && parenMatch[1] ? parenMatch[1] : ''
+                    const parenSuffix = parenMatch && parenMatch[3] ? parenMatch[3] : ''
+                    const cleanChord = parenMatch ? parenMatch[2] : token
+                    const isChord = token === '__CHORD__' || chordPattern.test(cleanChord)
+                    return (
+                      <React.Fragment key={ci}>
+                        {parenPrefix && <span className="chord-editor-paren">{parenPrefix}</span>}
+                        {isChord ? (
+                          <span
+                            className={`chord-editor-chord${cleanChord === '__CHORD__' ? ' pending' : ''}`}
+                            draggable={cleanChord !== '__CHORD__'}
+                            onClick={() => {
+                              setShowPicker({ si, ci, lineIdx: section.chordLineIdx, currentChord: cleanChord === '__CHORD__' ? null : cleanChord, parenPrefix, parenSuffix })
+                            }}
+                            onDragStart={(e) => {
+                              if (cleanChord !== '__CHORD__') {
+                                e.dataTransfer.setData('text/plain', JSON.stringify({ lineIdx: section.chordLineIdx, ci, chord: cleanChord, parenPrefix, parenSuffix }))
+                              }
+                            }}
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={(e) => {
+                              e.preventDefault()
+                              try {
+                                const data = JSON.parse(e.dataTransfer.getData('text/plain'))
+                                if (data.chord) {
+                                  const oldLines = content.split('\n')
+                                  const oldTokens = oldLines[data.lineIdx].trim().split(/\s+/)
+                                  oldTokens[data.ci] = (data.parenPrefix || '') + data.chord + (data.parenSuffix || '')
+                                  oldLines[data.lineIdx] = oldTokens.join(' ')
+                                  const newTokens = oldLines[section.chordLineIdx].trim().split(/\s+/)
+                                  newTokens[ci] = (data.parenPrefix || '') + data.chord + (data.parenSuffix || '')
+                                  oldLines[section.chordLineIdx] = newTokens.join(' ')
+                                  onChange(oldLines.join('\n'))
+                                }
+                              } catch {}
+                            }}
+                            title={cleanChord === '__CHORD__' ? 'Clique para escolher um acorde' : `Clique para alterar ou remover ${cleanChord}`}
+                          >
+                            {cleanChord === '__CHORD__' ? (
+                              <span style={{ opacity: 0.3, fontSize: 11 }}>+</span>
+                            ) : cleanChord}
+                          </span>
+                        ) : (
+                          <span className="chord-editor-chord" style={{ cursor: 'default', opacity: 1 }}>
+                            {cleanChord}
+                          </span>
+                        )}
+                        {parenSuffix && <span className="chord-editor-paren">{parenSuffix}</span>}
+                        {' '}
+                      </React.Fragment>
+                    )
+                  })}
+                  <span
+                    className="chord-editor-add-trigger"
+                    onClick={() => {
+                      const newLines = [...content.split('\n')]
+                      const tokens = newLines[section.chordLineIdx].trim().split(/\s+/)
+                      tokens.push('__CHORD__')
+                      newLines[section.chordLineIdx] = tokens.join(' ')
+                      onChange(newLines.join('\n'))
+                    }}
+                  >
+                    +
+                  </span>
+                </div>
+                {editingLyric === si ? (
+                  <input
+                    className="chord-editor-lyric-input"
+                    value={editLyricValue}
+                    onChange={e => setEditLyricValue(e.target.value)}
+                    onBlur={() => {
+                      const newLines = content.split('\n')
+                      newLines[section.chordLineIdx + 1] = editLyricValue
+                      onChange(newLines.join('\n'))
+                      setEditingLyric(null)
+                    }}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.target.blur()
+                      }
+                    }}
+                    autoFocus
+                  />
+                ) : (
+                  <div
+                    className="chord-editor-lyric"
+                    onClick={() => {
+                      setEditingLyric(si)
+                      setEditLyricValue(section.lyricText)
+                    }}
+                  >{section.lyricText}</div>
+                )}
+              </div>
+            )
+          }
+          return null
+        })}
+      </div>
+
+      {showPicker && (
+        <div className="chord-editor-picker-overlay" onClick={() => setShowPicker(null)}>
+          <div className="chord-editor-picker" onClick={e => e.stopPropagation()}>
+            <div className="chord-editor-picker-header">
+              <strong>{showPicker?.currentChord ? `Alterar ${showPicker.currentChord}` : 'Escolha o acorde'}</strong>
+              <button className="chord-editor-picker-close" onClick={() => setShowPicker(null)}>×</button>
+            </div>
+            {showPicker?.currentChord && (
+              <div style={{ marginBottom: 10 }}>
+                <button
+                  className="chord-editor-btn-remove"
+                  onClick={() => {
+                    const section = sections[showPicker.si]
+                    if (section && section.type === 'pair') {
+                      const targetChord = (showPicker.parenPrefix || '') + showPicker.currentChord + (showPicker.parenSuffix || '')
+                      // Find the actual token index with parens stripped for matching
+                      const tokens = content.split('\n')[section.chordLineIdx].trim().split(/\s+/)
+                      const actualIdx = tokens.findIndex((t, i) => {
+                        const m = t.match(/^(\(?)(.*?)(\)?)$/)
+                        return m && m[2] === showPicker.currentChord
+                      })
+                      if (actualIdx >= 0) {
+                        removeChordAt(section.chordLineIdx, actualIdx)
+                      } else {
+                        removeChordAt(section.chordLineIdx, showPicker.ci)
+                      }
+                    }
+                    setShowPicker(null)
+                  }}
+                >
+                  Remover {showPicker.currentChord}
+                </button>
+              </div>
+            )}
+            <div className="chord-editor-picker-grid">
+              {COMMON_CHORDS.map(chord => (
+                <button
+                  key={chord}
+                  className={`chord-editor-picker-btn${chord === showPicker?.currentChord ? ' selected' : ''}`}
+                  onClick={() => {
+                    const section = sections[showPicker.si]
+                    if (section && section.type === 'pair') {
+                      const wrappedChord = (showPicker.parenPrefix || '') + chord + (showPicker.parenSuffix || '')
+                      handleChordPick(section.chordLineIdx, showPicker.ci, wrappedChord)
+                    }
+                    setShowPicker(null)
+                  }}
+                >
+                  {chord}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
