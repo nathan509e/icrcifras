@@ -2200,7 +2200,7 @@ function App() {
         </div>
       )}
 
-      <div className="mobile-bottom-bar">
+      <div className="mobile-bottom-bar" style={{ display: showEditModal ? 'none' : undefined }}>
         <button
           className={`mobile-menu-item ${showPlaylistModal ? 'active' : ''}`}
           onClick={() => {
