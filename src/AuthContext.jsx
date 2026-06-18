@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useRef } from 'react'
 import { getCurrentUser, onAuthChange, isAdmin, fetchUserLists } from './supabase'
 
 const AuthContext = createContext(null)
@@ -7,6 +7,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [userIsAdmin, setUserIsAdmin] = useState(false)
   const [userLists, setUserLists] = useState([])
+  const lastEmailRef = useRef(null)
 
   useEffect(() => {
     getCurrentUser().then(setUser)
@@ -15,9 +16,12 @@ export function AuthProvider({ children }) {
   }, [])
 
   useEffect(() => {
-    if (user?.email) {
-      isAdmin(user.email).then(setUserIsAdmin)
-      fetchUserLists(user.email).then(setUserLists)
+    const email = user?.email || null
+    if (email === lastEmailRef.current) return
+    lastEmailRef.current = email
+    if (email) {
+      isAdmin(email).then(setUserIsAdmin)
+      fetchUserLists(email).then(setUserLists)
     } else {
       setUserIsAdmin(false)
       setUserLists([])

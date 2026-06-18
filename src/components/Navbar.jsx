@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react'
+import React, { useRef, useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { signOut, fetchUserLists, fetchSuggestions as fetchSuggestionsFn, fetchUserSuggestions as fetchUserSuggestionsFn } from '../supabase'
 
@@ -30,7 +30,7 @@ function hslToHex(h, s, l) {
   return `#${toHex(0)}${toHex(8)}${toHex(4)}`
 }
 
-export default function Navbar({
+const Navbar = React.memo(function Navbar({
   user,
   userIsAdmin,
   searchQuery,
@@ -379,7 +379,7 @@ export default function Navbar({
       )}
     </>
   )
-}
+})
 
 // Color picker modal
 function ColorPickerModal({ show, hue, onHueChange, onApply, onReset, onClose }) {
@@ -442,3 +442,5 @@ function ColorPickerModal({ show, hue, onHueChange, onApply, onReset, onClose })
     </div>
   )
 }
+
+export default Navbar

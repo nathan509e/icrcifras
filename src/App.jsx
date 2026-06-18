@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback, Fragment } from 'react'
+import React, { useState, useRef, useEffect, useCallback, useMemo, Fragment } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { fetchSongs, saveSong, updateSong, deleteSong, signOut, fetchSuggestions, saveSuggestion, deleteSuggestion, updateSuggestionStatus, fetchUserSuggestions, fetchUserLists, createList, updateList, deleteList, fetchDomingoList, supabase, createUser, signInWithEmail } from './supabase'
 import { useAuth } from './AuthContext'
@@ -32,14 +32,6 @@ function safeParseJson(value, fallback = null) {
 }
 
 const FLAT_TO_SHARP = { 'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#', 'Cb': 'B' }
-const TUNINGS = {
-  'standard': 'E A D G B e',
-  'drop-d': 'D A D G B e',
-  'open-g': 'D G D G B d',
-  'open-d': 'D A D F# A d',
-  'half-step-down': 'Eb Ab Db Gb Bb eb',
-  'full-step-down': 'D G C F A d',
-}
 
 function normalizeNote(note) {
   if (!note) return ''
@@ -97,9 +89,10 @@ function chordToThird(chordStr) {
   return transposeNote(base, offset)
 }
 
-function processChordHtml(html, transposeOffset, simplify, violin, flipQuality) {
-  if (transposeOffset === 0 && !simplify && !violin && !flipQuality) return html
+function processChordHtml(html, transposeOffset, simplify, violin, flipQuality, singerMode) {
+  if (transposeOffset === 0 && !simplify && !violin && !flipQuality && !singerMode) return html
   return html.replace(/<b>([^<]+)<\/b>/g, (_, chordText) => {
+    if (singerMode) return '<b></b>'
     let c = chordText.trim()
     if (transposeOffset !== 0) c = transposeChordString(c, transposeOffset)
     if (flipQuality) c = flipChordQuality(c)
@@ -175,7 +168,7 @@ function extractTomInfo(text) {
 function detectKey(textContent) {
   const tomMatch = textContent.match(/^[Tt]om\s*:\s*([A-G][#b]?m?)/m)
   if (tomMatch) return tomMatch[1]
-  const chordRoots = textContent.match(/\b([A-G][#b]?)(?=\s*[\/\(\)\d]|m(?!\w)|M|dim|aug|sus|add|°|7|$)/g)
+  const chordRoots = textContent.match(/\b([A-G][#b]?)(?=\s|$|\s*[\/\(\)\d]|m(?!\w)|M|dim|aug|sus|add|°|7)/g)
   if (!chordRoots || chordRoots.length === 0) return 'G'
   const counts = {}
   const seen = []
@@ -203,7 +196,7 @@ function App() {
   const [formaTom, setFormaTom] = useState(null)
   const [simplifyChords, setSimplifyChords] = useState(false)
   const [violinMode, setViolinMode] = useState(false)
-  const [tuning, setTuning] = useState('standard')
+  const [singerMode, setSingerMode] = useState(() => localStorage.getItem('singer-mode') === 'true')
   const [metronomeBpm, setMetronomeBpm] = useState(100)
   const [isMetronomePlaying, setIsMetronomePlaying] = useState(false)
   const [selectedChord, setSelectedChord] = useState('')
@@ -338,32 +331,17 @@ function App() {
       const hex = getComputedStyle(document.documentElement).getPropertyValue('--accent-color').trim() || '#059669'
       setPickerHue(hexToHue(hex))
     }
-  }, [showColorPicker])
+  }, [])
 
   useEffect(() => {
     fetchSongs().then(data => {
-      if (data && data.length > 0) {
-        setSongs(data)
-      }
+      setSongs(data || [])
     })
-
-    const shouldLoadPlaylist = sessionStorage.getItem('loadPlaylistFromUrl') === 'true'
-    sessionStorage.removeItem('loadPlaylistFromUrl')
-
-    if (shouldLoadPlaylist) {
-      const storedPlaylist = sessionStorage.getItem('currentPlaylist')
-      const storedIndex = sessionStorage.getItem('currentPlaylistIndex')
-      if (storedPlaylist) {
-        setCurrentPlaylist(safeParseJson(storedPlaylist))
-        setCurrentPlaylistIndex(parseInt(storedIndex) || 0)
-      }
-    } else {
-      sessionStorage.removeItem('currentPlaylist')
-      sessionStorage.removeItem('currentPlaylistIndex')
-    }
-
-    fetchDomingoList().then(data => setDomingoList(data))
   }, [])
+
+  useEffect(() => {
+    localStorage.setItem('singer-mode', singerMode)
+  }, [singerMode])
 
   // Handle OAuth callback via deep link
   useEffect(() => {
@@ -462,11 +440,12 @@ function App() {
     }
   }, [selectedSongId, songs])
 
-  const searchResults = searchQuery.trim()
+  const searchResults = useMemo(() => searchQuery.trim()
     ? songs.filter(s =>
         s.name.toLowerCase().includes(searchQuery.toLowerCase())
       )
-    : []
+    : [],
+  [songs, searchQuery])
 
   const avatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || ''
   const displayName = user?.user_metadata?.full_name || user?.email || ''
@@ -486,7 +465,6 @@ function App() {
     }
     setFormaTom(null)
     setSimplifyChords(false)
-    setCapo(0)
     setIsScrolling(false)
   }, [])
 
@@ -631,17 +609,24 @@ function App() {
     ? songs.find(s => s.id === selectedSongId)
     : null
 
-  const currentRawHtml = currentSong
-    ? (currentSong.content.includes('<b>') ? stripTomLine(currentSong.content) : convertPlainTextToHtml(stripTomLine(currentSong.content)))
-    : ''
-  const processedChordHtml = processChordHtml(currentRawHtml, transposeOffset, simplifyChords, violinMode, chordQualityFlip)
-  const currentKey = getKeyFromOffset(currentSong?.key || ORIGINAL_KEY, transposeOffset, chordQualityFlip ? !(currentSong?.key || ORIGINAL_KEY).endsWith('m') : (tomIsMinor || undefined))
-  const currentFormaTom = getFormaTomTransposed(formaTom, transposeOffset)
+  const currentRawHtml = useMemo(() => {
+    const content = currentSong?.content
+    if (!content) return ''
+    return content.includes('<b>') ? stripTomLine(content) : convertPlainTextToHtml(stripTomLine(content))
+  }, [currentSong?.content])
+  const processedChordHtml = useMemo(() => processChordHtml(currentRawHtml, transposeOffset, simplifyChords, violinMode, chordQualityFlip, singerMode),
+    [currentRawHtml, transposeOffset, simplifyChords, violinMode, chordQualityFlip, singerMode])
+  const currentKey = useMemo(() => getKeyFromOffset(currentSong?.key || ORIGINAL_KEY, transposeOffset, chordQualityFlip ? !(currentSong?.key || ORIGINAL_KEY).endsWith('m') : (tomIsMinor || undefined)),
+    [currentSong?.key, transposeOffset, chordQualityFlip, tomIsMinor])
+  const currentFormaTom = useMemo(() => getFormaTomTransposed(formaTom, transposeOffset),
+    [formaTom, transposeOffset])
 
-  const sortedSongs = [...songs].sort((a, b) => a.name.localeCompare(b.name, 'pt', { sensitivity: 'base' }))
-  const filteredSongs = songFilter.trim()
+  const sortedSongs = useMemo(() => [...songs].sort((a, b) => a.name.localeCompare(b.name, 'pt', { sensitivity: 'base' })),
+    [songs])
+  const filteredSongs = useMemo(() => songFilter.trim()
     ? sortedSongs.filter(s => s.name.toLowerCase().includes(songFilter.toLowerCase()))
-    : sortedSongs
+    : sortedSongs,
+  [sortedSongs, songFilter])
 
   const handleChordClick = (e) => {
     if (e.target.tagName === 'B') {
@@ -815,6 +800,7 @@ function App() {
                           sessionStorage.setItem('currentPlaylist', JSON.stringify(currentPlaylist))
                           sessionStorage.setItem('currentPlaylistIndex', newIndex.toString())
                           navigate(`/${songId}`)
+                          window.scrollTo(0, 0)
                         }
                       }}
                       disabled={currentPlaylistIndex === 0}
@@ -834,6 +820,7 @@ function App() {
                           sessionStorage.setItem('currentPlaylist', JSON.stringify(currentPlaylist))
                           sessionStorage.setItem('currentPlaylistIndex', newIndex.toString())
                           navigate(`/${songId}`)
+                          window.scrollTo(0, 0)
                         }
                       }}
                       disabled={currentPlaylistIndex >= currentPlaylist.song_ids?.length - 1}
@@ -885,12 +872,12 @@ function App() {
               </div>
 
               <div className="sidebar-section">
-                <h3 className="sidebar-title">Afinação</h3>
-                <select className="tool-select" value={tuning} onChange={(e) => setTuning(e.target.value)}>
-                  {Object.entries(TUNINGS).map(([key, label]) => (
-                    <option key={key} value={key}>{key.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())} ({label})</option>
-                  ))}
-                </select>
+                <h3 className="sidebar-title">Cantor</h3>
+                <label className="toggle-switch">
+                  <input type="checkbox" checked={singerMode} onChange={(e) => setSingerMode(e.target.checked)} />
+                  <span className="toggle-track"></span>
+                </label>
+                <span className="tool-hint">{singerMode ? 'Ocultar notas' : 'Mostrar notas'}</span>
               </div>
 
               <div className="sidebar-section">
@@ -2139,6 +2126,14 @@ function App() {
                 </div>
 
                 <div className="mobile-panel-item">
+                  <span>Cantor</span>
+                  <label className="toggle-switch">
+                    <input type="checkbox" checked={singerMode} onChange={(e) => setSingerMode(e.target.checked)} />
+                    <span className="toggle-track"></span>
+                  </label>
+                </div>
+
+                <div className="mobile-panel-item">
                   <span>Metrônomo ({metronomeBpm} BPM)</span>
                   <div className="mobile-tool-row-small">
                     <button className={`mobile-tool-btn-small ${isMetronomePlaying ? 'active' : ''}`} onClick={() => setIsMetronomePlaying(s => !s)}>
@@ -2165,15 +2160,6 @@ function App() {
                     onChange={(e) => setFontSize(Number(e.target.value))}
                     className="mobile-slider-small"
                   />
-                </div>
-
-                <div className="mobile-panel-item">
-                  <span>Afinação</span>
-                  <select className="mobile-select" value={tuning} onChange={(e) => setTuning(e.target.value)}>
-                    {Object.entries(TUNINGS).map(([key, label]) => (
-                      <option key={key} value={key}>{key.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</option>
-                    ))}
-                  </select>
                 </div>
 
                 <div className="mobile-panel-item">
