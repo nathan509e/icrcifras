@@ -75,12 +75,14 @@ export default function MusicasPage() {
   const [newSongName, setNewSongName] = useState('')
   const [newSongComposer, setNewSongComposer] = useState('')
   const [newSongFile, setNewSongFile] = useState(null)
+  const [newSongFileGuitar, setNewSongFileGuitar] = useState(null)
   const [newSongYoutubeUrl, setNewSongYoutubeUrl] = useState('')
   const [importUrl, setImportUrl] = useState('')
   const [importLoading, setImportLoading] = useState(false)
   const [importHtml, setImportHtml] = useState('')
   const [showImportHtml, setShowImportHtml] = useState(false)
   const fileInputRef = useRef(null)
+  const fileInputGuitarRef = useRef(null)
   const navigate = useNavigate()
   const userMenuRef = useRef(null)
 
@@ -88,6 +90,9 @@ export default function MusicasPage() {
     fetchSongs().then(data => {
       const sorted = (data || []).sort((a, b) => a.name.localeCompare(b.name, 'pt', { sensitivity: 'base' }))
       setSongs(sorted)
+    }).catch(err => {
+      console.error('Error fetching songs:', err)
+    }).finally(() => {
       setLoading(false)
     })
 
@@ -164,16 +169,20 @@ export default function MusicasPage() {
   }
 
   const handleAddSong = async () => {
-    if (!newSongName.trim() || !newSongFile) return
-    const content = await newSongFile.text()
-    const detectedKey = detectKey(content)
-    const saved = await saveSong(newSongName.trim(), content, newSongYoutubeUrl.trim(), newSongComposer.trim(), detectedKey)
+    if (!newSongName.trim() || (!newSongFile && !newSongFileGuitar)) return
+    let content = ''
+    if (newSongFile) content = await newSongFile.text()
+    let contentGuitar = ''
+    if (newSongFileGuitar) contentGuitar = await newSongFileGuitar.text()
+    const detectedKey = detectKey(content || contentGuitar)
+    const saved = await saveSong(newSongName.trim(), content, newSongYoutubeUrl.trim(), newSongComposer.trim(), detectedKey, contentGuitar)
     if (saved) {
       setSongs(prev => [saved, ...prev])
       setShowAddModal(false)
       setNewSongName('')
       setNewSongComposer('')
       setNewSongFile(null)
+      setNewSongFileGuitar(null)
       setNewSongYoutubeUrl('')
       setImportUrl('')
       setImportHtml('')
@@ -1349,7 +1358,7 @@ export default function MusicasPage() {
                 value={newSongComposer}
                 onChange={e => setNewSongComposer(e.target.value)}
               />
-              <label className="modal-label">Arquivo TXT</label>
+              <label className="modal-label">Cifra Teclado (txt)</label>
               <div className="modal-file-area" onClick={() => fileInputRef.current?.click()}>
                 {newSongFile ? (
                   <span className="modal-file-name">{newSongFile.name}</span>
@@ -1365,6 +1374,24 @@ export default function MusicasPage() {
                 onChange={e => {
                   const file = e.target.files[0]
                   if (file && file.name.endsWith('.txt')) setNewSongFile(file)
+                }}
+              />
+              <label className="modal-label" style={{ marginTop: '10px' }}>Cifra Violão (txt)</label>
+              <div className="modal-file-area" onClick={() => fileInputGuitarRef.current?.click()}>
+                {newSongFileGuitar ? (
+                  <span className="modal-file-name">{newSongFileGuitar.name}</span>
+                ) : (
+                  <span className="modal-file-placeholder">Clique para selecionar arquivo .txt (violão)</span>
+                )}
+              </div>
+              <input
+                ref={fileInputGuitarRef}
+                type="file"
+                accept=".txt"
+                style={{ display: 'none' }}
+                onChange={e => {
+                  const file = e.target.files[0]
+                  if (file && file.name.endsWith('.txt')) setNewSongFileGuitar(file)
                 }}
               />
               <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>

@@ -11,6 +11,24 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 const isNative = typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.()
 
+function cleanupStalePkceState() {
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key && (key === 'supabase.auth.auth-code' || key === 'supabase.auth.code-verifier' || key.includes('oauth_state'))) {
+        localStorage.removeItem(key)
+        i--
+      }
+    }
+  } catch (e) {
+    // localStorage pode nao estar disponivel
+  }
+}
+
+if (isNative) {
+  cleanupStalePkceState()
+}
+
 export const supabase = supabaseUrl && supabaseAnonKey
   ? createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
@@ -18,6 +36,26 @@ export const supabase = supabaseUrl && supabaseAnonKey
         detectSessionInUrl: !isNative,
         persistSession: true,
         autoRefreshToken: true,
+        storage: isNative
+          ? {
+              getItem: (key) => {
+                try {
+                  const val = localStorage.getItem(key)
+                  return val
+                } catch { return null }
+              },
+              setItem: (key, value) => {
+                try {
+                  localStorage.setItem(key, value)
+                } catch {}
+              },
+              removeItem: (key) => {
+                try {
+                  localStorage.removeItem(key)
+                } catch {}
+              },
+            }
+          : undefined,
       },
     })
   : null
@@ -37,11 +75,13 @@ export async function fetchSongs() {
   return data || []
 }
 
-export async function saveSong(name, content, youtubeUrl = '', composer = '', key = '') {
+export async function saveSong(name, content, youtubeUrl = '', composer = '', key = '', contentGuitar = '') {
   if (!supabase) return null
+  const row = { name, content, youtube_url: youtubeUrl, composer, key }
+  if (contentGuitar) row.content_guitar = contentGuitar
   const { data, error } = await supabase
     .from('songs')
-    .insert([{ name, content, youtube_url: youtubeUrl, composer, key }])
+    .insert([row])
     .select()
     .single()
   if (error) {
@@ -184,8 +224,11 @@ export function onAuthChange(callback) {
 
 export async function getCurrentUser() {
   if (!supabase) return null
-  const { data } = await supabase.auth.getSession()
-  return data?.session?.user || null
+  const result = await Promise.race([
+    supabase.auth.getSession(),
+    new Promise(resolve => setTimeout(() => resolve({ data: { session: null } }), 8000)),
+  ])
+  return result?.data?.session?.user || null
 }
 
 // ---- ADMINS ----

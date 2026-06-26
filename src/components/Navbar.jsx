@@ -75,6 +75,8 @@ const Navbar = React.memo(function Navbar({
   fetchUserSuggestions: fetchUserSuggestionsProp,
   showColorPicker: externalShowColorPicker,
   setShowColorPicker: externalSetShowColorPicker,
+  instrumentMode,
+  setInstrumentMode,
 }) {
   const fetchSuggestions = fetchSuggestionsProp || fetchSuggestionsFn
   const fetchUserSuggestions = fetchUserSuggestionsProp || fetchUserSuggestionsFn

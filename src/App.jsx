@@ -211,6 +211,8 @@ function App() {
   const [newSongName, setNewSongName] = useState('')
   const [newSongComposer, setNewSongComposer] = useState('')
   const [newSongFile, setNewSongFile] = useState(null)
+  const [newSongFileGuitar, setNewSongFileGuitar] = useState(null)
+  const [instrumentMode, setInstrumentMode] = useState('teclado')
   const [newSongYoutubeUrl, setNewSongYoutubeUrl] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [showSearchResults, setShowSearchResults] = useState(false)
@@ -318,6 +320,7 @@ function App() {
   const audioCtxRef = useRef(null)
   const searchRef = useRef(null)
   const fileInputRef = useRef(null)
+  const fileInputGuitarRef = useRef(null)
   const userMenuRef = useRef(null)
 
   useEffect(() => {
@@ -491,7 +494,7 @@ function App() {
       clearInterval(scrollRef.current)
       return
     }
-    const speed = autoScrollSpeed * 0.6
+    const speed = autoScrollSpeed * 0.35
     scrollRef.current = setInterval(() => {
       window.scrollBy(0, speed)
     }, 50)
@@ -544,16 +547,20 @@ function App() {
   }, [isMetronomePlaying, metronomeBpm])
 
   const handleAddSong = async () => {
-    if (!newSongName.trim() || !newSongFile) return
-    const content = await newSongFile.text()
-    const detectedKey = detectKey(content)
-    const saved = await saveSong(newSongName.trim(), content, newSongYoutubeUrl.trim(), newSongComposer.trim(), detectedKey)
+    if (!newSongName.trim() || (!newSongFile && !newSongFileGuitar)) return
+    let content = ''
+    if (newSongFile) content = await newSongFile.text()
+    let contentGuitar = ''
+    if (newSongFileGuitar) contentGuitar = await newSongFileGuitar.text()
+    const detectedKey = detectKey(content || contentGuitar)
+    const saved = await saveSong(newSongName.trim(), content, newSongYoutubeUrl.trim(), newSongComposer.trim(), detectedKey, contentGuitar)
     if (saved) {
       setSongs(prev => [saved, ...prev])
       setShowAddModal(false)
       setNewSongName('')
       setNewSongComposer('')
       setNewSongFile(null)
+      setNewSongFileGuitar(null)
       setNewSongYoutubeUrl('')
     }
   }
@@ -610,10 +617,12 @@ function App() {
     : null
 
   const currentRawHtml = useMemo(() => {
-    const content = currentSong?.content
-    if (!content) return ''
-    return content.includes('<b>') ? stripTomLine(content) : convertPlainTextToHtml(stripTomLine(content))
-  }, [currentSong?.content])
+    const baseContent = instrumentMode === 'violao' && currentSong?.content_guitar
+      ? currentSong.content_guitar
+      : currentSong?.content
+    if (!baseContent) return ''
+    return baseContent.includes('<b>') ? stripTomLine(baseContent) : convertPlainTextToHtml(stripTomLine(baseContent))
+  }, [currentSong?.content, currentSong?.content_guitar, instrumentMode])
   const processedChordHtml = useMemo(() => processChordHtml(currentRawHtml, transposeOffset, simplifyChords, violinMode, chordQualityFlip, singerMode),
     [currentRawHtml, transposeOffset, simplifyChords, violinMode, chordQualityFlip, singerMode])
   const currentKey = useMemo(() => getKeyFromOffset(currentSong?.key || ORIGINAL_KEY, transposeOffset, chordQualityFlip ? !(currentSong?.key || ORIGINAL_KEY).endsWith('m') : (tomIsMinor || undefined)),
@@ -775,6 +784,8 @@ function App() {
          fetchUserSuggestions={fetchUserSuggestions}
          showColorPicker={showColorPicker}
          setShowColorPicker={setShowColorPicker}
+         instrumentMode={instrumentMode}
+         setInstrumentMode={setInstrumentMode}
        />
 
       <main>
@@ -860,6 +871,23 @@ function App() {
                   <span className="toggle-track"></span>
                 </label>
                 <span className="tool-hint">{simplifyChords ? 'Ativado' : 'Desativado'}</span>
+              </div>
+
+              <div className="sidebar-section">
+                <h3 className="sidebar-title">Instrumento</h3>
+                <div className="tool-row" style={{ gap: '6px' }}>
+                  <button
+                    className={`tool-btn ${instrumentMode === 'teclado' ? 'active' : ''}`}
+                    onClick={() => setInstrumentMode('teclado')}
+                    style={{ fontSize: '12px', padding: '4px 10px' }}
+                  >🎹 Teclado</button>
+                  <button
+                    className={`tool-btn ${instrumentMode === 'violao' ? 'active' : ''}`}
+                    onClick={() => setInstrumentMode('violao')}
+                    style={{ fontSize: '12px', padding: '4px 10px' }}
+                  >🎸 Violão</button>
+                </div>
+                <span className="tool-hint">{instrumentMode === 'violao' ? 'Cifra violão' : 'Cifra teclado'}</span>
               </div>
 
               <div className="sidebar-section">
@@ -1046,7 +1074,7 @@ function App() {
                 value={newSongComposer}
                 onChange={e => setNewSongComposer(e.target.value)}
               />
-              <label className="modal-label">Arquivo TXT</label>
+              <label className="modal-label">Cifra Teclado (txt)</label>
               <div className="modal-file-area" onClick={() => fileInputRef.current?.click()}>
                 {newSongFile ? (
                   <span className="modal-file-name">{newSongFile.name}</span>
@@ -1062,6 +1090,24 @@ function App() {
                 onChange={e => {
                   const file = e.target.files[0]
                   if (file && file.name.endsWith('.txt')) setNewSongFile(file)
+                }}
+              />
+              <label className="modal-label" style={{ marginTop: '10px' }}>Cifra Violão (txt)</label>
+              <div className="modal-file-area" onClick={() => fileInputGuitarRef.current?.click()}>
+                {newSongFileGuitar ? (
+                  <span className="modal-file-name">{newSongFileGuitar.name}</span>
+                ) : (
+                  <span className="modal-file-placeholder">Clique para selecionar arquivo .txt (violão)</span>
+                )}
+              </div>
+              <input
+                ref={fileInputGuitarRef}
+                type="file"
+                accept=".txt"
+                style={{ display: 'none' }}
+                onChange={e => {
+                  const file = e.target.files[0]
+                  if (file && file.name.endsWith('.txt')) setNewSongFileGuitar(file)
                 }}
               />
               <label className="modal-label" style={{ marginTop: 16 }}>Link do YouTube (opcional)</label>
@@ -2134,6 +2180,14 @@ function App() {
                 </div>
 
                 <div className="mobile-panel-item">
+                  <span>{instrumentMode === "teclado" ? "🎹" : "🎸"} {instrumentMode === "teclado" ? "Teclado" : "Violão"}</span>
+                  <label className="toggle-switch">
+                    <input type="checkbox" checked={instrumentMode === "violao"} onChange={(e) => setInstrumentMode(e.target.checked ? "violao" : "teclado")} />
+                    <span className="toggle-track"></span>
+                  </label>
+                </div>
+
+                <div className="mobile-panel-item">
                   <span>Metrônomo ({metronomeBpm} BPM)</span>
                   <div className="mobile-tool-row-small">
                     <button className={`mobile-tool-btn-small ${isMetronomePlaying ? 'active' : ''}`} onClick={() => setIsMetronomePlaying(s => !s)}>
@@ -2171,6 +2225,7 @@ function App() {
                     title="Personalizar cor dos destaques"
                   />
                 </div>
+
 
                {userIsAdmin && currentSong && (
                 <div className="mobile-panel-item" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 6, padding: '12px 0 0', borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: 8 }}>
