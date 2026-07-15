@@ -93,21 +93,14 @@ export async function saveSong(name, content, youtubeUrl = '', composer = '', ke
 
 export async function updateSong(id, updates) {
   if (!supabase) return null
-  const { error: delErr } = await supabase
+  const { data, error } = await supabase
     .from('songs')
-    .delete()
+    .update(updates)
     .eq('id', id)
-  if (delErr) {
-    console.error('Error deleting song for update:', delErr)
-    return null
-  }
-  const { data, error: insErr } = await supabase
-    .from('songs')
-    .insert([{ id, ...updates }])
     .select()
     .single()
-  if (insErr) {
-    console.error('Error re-inserting song:', insErr)
+  if (error) {
+    console.error('Error updating song:', error)
     return null
   }
   return data
@@ -127,8 +120,6 @@ export async function deleteSong(id) {
 }
 
 // ---- AUTH ----
-
-let authResolve = null
 
 export async function signInWithGoogle() {
   if (!supabase) return

@@ -11,8 +11,9 @@ CREATE TABLE IF NOT EXISTS songs (
 
 ALTER TABLE songs ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow anonymous read" ON songs FOR SELECT USING (true);
-CREATE POLICY "Allow anonymous insert" ON songs FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow anonymous delete" ON songs FOR DELETE USING (true);
+CREATE POLICY "Allow admin insert" ON songs FOR INSERT WITH CHECK (auth.jwt()->>'email' IN (SELECT email FROM admins));
+CREATE POLICY "Allow admin update" ON songs FOR UPDATE USING (auth.jwt()->>'email' IN (SELECT email FROM admins));
+CREATE POLICY "Allow admin delete" ON songs FOR DELETE USING (auth.jwt()->>'email' IN (SELECT email FROM admins));
 
 -- ADMINS TABLE
 CREATE TABLE IF NOT EXISTS admins (
@@ -34,7 +35,8 @@ CREATE TABLE IF NOT EXISTS suggestions (
 ALTER TABLE suggestions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow anonymous read" ON suggestions FOR SELECT USING (true);
 CREATE POLICY "Allow anonymous insert" ON suggestions FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow anonymous delete" ON suggestions FOR DELETE USING (true);
+CREATE POLICY "Allow admin update" ON suggestions FOR UPDATE USING (auth.jwt()->>'email' IN (SELECT email FROM admins));
+CREATE POLICY "Allow admin delete" ON suggestions FOR DELETE USING (auth.jwt()->>'email' IN (SELECT email FROM admins));
 
 -- LISTS TABLE
 CREATE TABLE IF NOT EXISTS lists (
@@ -48,5 +50,5 @@ CREATE TABLE IF NOT EXISTS lists (
 ALTER TABLE lists ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow anonymous read" ON lists FOR SELECT USING (true);
 CREATE POLICY "Allow anonymous insert" ON lists FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow anonymous update" ON lists FOR UPDATE USING (true);
-CREATE POLICY "Allow anonymous delete" ON lists FOR DELETE USING (true);
+CREATE POLICY "Allow owner or admin update" ON lists FOR UPDATE USING (user_email = auth.jwt()->>'email' OR auth.jwt()->>'email' IN (SELECT email FROM admins));
+CREATE POLICY "Allow owner or admin delete" ON lists FOR DELETE USING (user_email = auth.jwt()->>'email' OR auth.jwt()->>'email' IN (SELECT email FROM admins));

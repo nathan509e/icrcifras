@@ -125,6 +125,19 @@ function getFormaTomTransposed(originalFormaTom, offset) {
   return getKeyFromOffset(originalFormaTom, offset)
 }
 
+function sanitizeHtml(text) {
+  if (!text) return ''
+  let escaped = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+  return escaped
+    .replace(/&lt;b&gt;/gi, '<b>')
+    .replace(/&lt;\/b&gt;/gi, '</b>')
+}
+
 function convertPlainTextToHtml(text) {
   const chordPattern = /^\(?[A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*(?:\([^)]*\))*(?:\/[A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*)*\)?$/
   const sectionPattern = /^\[.*\]$/
@@ -621,7 +634,8 @@ function App() {
       ? currentSong.content_guitar
       : currentSong?.content
     if (!baseContent) return ''
-    return baseContent.includes('<b>') ? stripTomLine(baseContent) : convertPlainTextToHtml(stripTomLine(baseContent))
+    const sanitized = sanitizeHtml(baseContent)
+    return sanitized.includes('<b>') ? stripTomLine(sanitized) : convertPlainTextToHtml(stripTomLine(sanitized))
   }, [currentSong?.content, currentSong?.content_guitar, instrumentMode])
   const processedChordHtml = useMemo(() => processChordHtml(currentRawHtml, transposeOffset, simplifyChords, violinMode, chordQualityFlip, singerMode),
     [currentRawHtml, transposeOffset, simplifyChords, violinMode, chordQualityFlip, singerMode])
