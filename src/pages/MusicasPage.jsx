@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { fetchSongs, signOut, fetchUserLists, createList, updateList, deleteList, saveSuggestion, fetchUserSuggestions, fetchDomingoList, fetchSuggestions, saveSong, deleteSuggestion, updateSuggestionStatus, createUser, signInWithEmail } from '../supabase'
+import { fetchSongs, signOut, fetchUserLists, createList, updateList, deleteList, saveSuggestion, fetchUserSuggestions, fetchDomingoList, fetchSuggestions, saveSong, deleteSuggestion, updateSuggestionStatus, createUser, signInWithEmail, signInWithGoogle } from '../supabase'
 import { useAuth } from '../AuthContext'
 import Navbar from '../components/Navbar'
 
@@ -57,6 +57,8 @@ export default function MusicasPage() {
   const [showDomingoModal, setShowDomingoModal] = useState(false)
   const [showAddModal, setShowAddModal] = useState(false)
   const [domingoList, setDomingoList] = useState(null)
+  const [selectedLocation, setSelectedLocation] = useState(null)
+  const [loadingDomingo, setLoadingDomingo] = useState(false)
   const [isEditingDomingo, setIsEditingDomingo] = useState(false)
   const [showUserSuggestions, setShowUserSuggestions] = useState(false)
   const [userSuggestions, setUserSuggestions] = useState([])
@@ -67,6 +69,9 @@ export default function MusicasPage() {
   const [newListName, setNewListName] = useState('')
   const [selectedSongs, setSelectedSongs] = useState([])
   const [editingList, setEditingList] = useState(null)
+  const [isSundayType, setIsSundayType] = useState(false)
+  const [sundayLocationSelection, setSundayLocationSelection] = useState('Guarulhos')
+  const [modalSearchQuery, setModalSearchQuery] = useState('')
   const [currentPlaylist, setCurrentPlaylist] = useState(null)
   const [currentPlaylistIndex, setCurrentPlaylistIndex] = useState(0)
   const [showMySongs, setShowMySongs] = useState(false)
@@ -81,6 +86,7 @@ export default function MusicasPage() {
   const [importLoading, setImportLoading] = useState(false)
   const [importHtml, setImportHtml] = useState('')
   const [showImportHtml, setShowImportHtml] = useState(false)
+  const [activeView, setActiveView] = useState('menu')
   const fileInputRef = useRef(null)
   const fileInputGuitarRef = useRef(null)
   const navigate = useNavigate()
@@ -102,22 +108,47 @@ export default function MusicasPage() {
       setCurrentPlaylist(safeParseJson(storedPlaylist))
       setCurrentPlaylistIndex(parseInt(storedIndex) || 0)
     }
-
-    fetchDomingoList().then(data => setDomingoList(data))
   }, [])
 
   useEffect(() => {
-    if (showDomingoModal) {
-      fetchDomingoList().then(data => setDomingoList(data))
+    if (!showDomingoModal) {
+      setSelectedLocation(null)
+      setDomingoList(null)
+      setSelectedSongs([])
+      setIsEditingDomingo(false)
     }
   }, [showDomingoModal])
 
   useEffect(() => {
-    if (showDomingoModal && domingoList && userIsAdmin) {
-      // Initialize selectedSongs with the current domingo list when admin opens modal
-      setSelectedSongs(domingoList.song_ids || [])
+    if (!showCreateListModal) {
+      setIsSundayType(false)
+      setSundayLocationSelection('Guarulhos')
     }
-  }, [showDomingoModal, domingoList, userIsAdmin])
+  }, [showCreateListModal])
+
+  useEffect(() => {
+    if (showEditListModal && editingList) {
+      if (editingList.name.startsWith('Esse Domingo - ')) {
+        setIsSundayType(true)
+        setSundayLocationSelection(editingList.name.replace('Esse Domingo - ', ''))
+      } else {
+        setIsSundayType(false)
+        setSundayLocationSelection('Guarulhos')
+      }
+    }
+  }, [showEditListModal, editingList])
+
+  useEffect(() => {
+    if (!showCreateListModal) {
+      setModalSearchQuery('')
+    }
+  }, [showCreateListModal])
+
+  useEffect(() => {
+    if (!showEditListModal) {
+      setModalSearchQuery('')
+    }
+  }, [showEditListModal])
 
   useEffect(() => {
     if (darkMode) {
@@ -125,7 +156,7 @@ export default function MusicasPage() {
     } else {
       document.documentElement.classList.remove('dark')
     }
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', darkMode ? '#000000' : '#059669')
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', darkMode ? '#000000' : '#fbb134')
   }, [darkMode])
 
   useEffect(() => {
@@ -296,20 +327,26 @@ export default function MusicasPage() {
   }
 
   const handleCreateList = async () => {
-    if (!newListName.trim() || !user?.email) return
-    await createList(newListName.trim(), user.email, selectedSongs)
+    if (!isSundayType && !newListName.trim()) return
+    if (!user?.email) return
+    const finalName = isSundayType ? `Esse Domingo - ${sundayLocationSelection}` : newListName.trim()
+    await createList(finalName, user.email, selectedSongs)
     setNewListName('')
     setSelectedSongs([])
+    setIsSundayType(false)
     setShowCreateListModal(false)
     fetchUserLists(user.email).then(setUserLists)
   }
 
   const handleEditList = async () => {
-    if (!editingList || !newListName.trim()) return
-    await updateList(editingList.id, newListName.trim(), selectedSongs)
+    if (!editingList) return
+    if (!isSundayType && !newListName.trim()) return
+    const finalName = isSundayType ? `Esse Domingo - ${sundayLocationSelection}` : newListName.trim()
+    await updateList(editingList.id, finalName, selectedSongs)
     setEditingList(null)
     setNewListName('')
     setSelectedSongs([])
+    setIsSundayType(false)
     setShowEditListModal(false)
     fetchUserLists(user.email).then(setUserLists)
   }
@@ -320,8 +357,8 @@ export default function MusicasPage() {
   }
 
   const handleSaveDomingoList = async () => {
-    if (!domingoList) return
-    await updateList(domingoList.id, 'Esse Domingo', selectedSongs)
+    if (!domingoList || !selectedLocation) return
+    await updateList(domingoList.id, 'Esse Domingo - ' + selectedLocation, selectedSongs)
     setDomingoList({ ...domingoList, song_ids: selectedSongs })
     setSelectedSongs([])
   }
@@ -467,33 +504,142 @@ export default function MusicasPage() {
       <main>
         <div className="musicas-page">
           <div className="container">
-            <header className="musicas-header">
-              <h1>Louvores</h1>
-              <p className="musicas-count">{songs.length} musicas disponiveis</p>
-            </header>
+            {activeView === 'menu' ? (
+              <div className="menu-container">
+                <header className="musicas-header text-center" style={{ textAlign: 'center', marginBottom: '40px' }}>
+                  <h1 style={{ fontSize: '32px', marginBottom: '12px' }}>Louvor Restauração</h1>
+                  <p className="musicas-count" style={{ fontSize: '16px' }}>O que vamos tocar hoje?</p>
+                </header>
 
-            {filteredSongs.length === 0 ? (
-              <div className="empty-state">
-                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
-                </svg>
-                <p>{searchQuery ? 'Nenhuma musica encontrada' : 'Nenhuma musica cadastrada'}</p>
-                {searchQuery && <button className="btn-clear" onClick={() => setSearchQuery('')}>Limpar busca</button>}
+                <div className="menu-grid">
+                  <button className="menu-card card-domingo" onClick={() => setShowDomingoModal(true)}>
+                    <div className="menu-card-icon">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    </div>
+                    <div className="menu-card-info">
+                      <h3>Esse Domingo</h3>
+                      <p>Lista de louvores do culto de domingo</p>
+                    </div>
+                  </button>
+
+                  <button className="menu-card card-louvores" onClick={() => setActiveView('songs')}>
+                    <div className="menu-card-icon">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                    </div>
+                    <div className="menu-card-info">
+                      <h3>Louvores</h3>
+                      <p>Acesse todas as cifras disponíveis</p>
+                    </div>
+                  </button>
+
+                  <button className="menu-card card-listas" onClick={() => {
+                    if (!user) {
+                      setShowLoginModal(true)
+                    } else {
+                      fetchUserLists(user.email).then(setUserLists)
+                      setShowListsModal(true)
+                    }
+                  }}>
+                    <div className="menu-card-icon">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                    </div>
+                    <div className="menu-card-info">
+                      <h3>Listas</h3>
+                      <p>Visualize e organize seus repertórios</p>
+                    </div>
+                  </button>
+
+                  {userIsAdmin ? (
+                    <button className="menu-card card-sugestoes" onClick={() => {
+                      if (!user) {
+                        setShowLoginModal(true)
+                      } else {
+                        fetchSuggestions().then(setSuggestions)
+                        setShowSuggestionsList(true)
+                      }
+                    }}>
+                      <div className="menu-card-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="9" cy="10" r="1"/><circle cx="12" cy="10" r="1"/><circle cx="15" cy="10" r="1"/></svg>
+                      </div>
+                      <div className="menu-card-info">
+                        <h3>Sugestões</h3>
+                        <p>Gerencie sugestões de louvores enviados</p>
+                      </div>
+                    </button>
+                  ) : (
+                    <button className="menu-card card-sugerir" onClick={() => {
+                      if (!user) {
+                        setShowLoginModal(true)
+                      } else {
+                        fetchUserSuggestions(user.email).then(setUserSuggestions)
+                        setShowUserSuggestions(true)
+                      }
+                    }}>
+                      <div className="menu-card-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                      </div>
+                      <div className="menu-card-info">
+                        <h3>Sugerir Louvor</h3>
+                        <p>Envie sugestões de novos louvores</p>
+                      </div>
+                    </button>
+                  )}
+                </div>
               </div>
             ) : (
-              <ul className="musicas-list">
-                {filteredSongs.map(song => (
-                  <li key={song.id} className="musica-item" onClick={() => handleSongClick(song)}>
-                    <div className="musica-info">
-                      <h3 className="musica-name">{song.name}</h3>
-                      {song.composer && <span className="musica-composer">{song.composer}</span>}
-                    </div>
-                    <svg className="musica-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M5 12h14M12 5l7 7-7 7"/>
+              <>
+                <button
+                  className="back-link"
+                  onClick={() => setActiveView('menu')}
+                  style={{
+                    cursor: 'pointer',
+                    background: 'none',
+                    border: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    color: 'var(--accent-color, #fbb134)',
+                    fontWeight: '600',
+                    marginBottom: '24px',
+                    fontSize: '15px',
+                    padding: '0'
+                  }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                  </svg>
+                  Voltar ao menu
+                </button>
+
+                <header className="musicas-header">
+                  <h1>Louvores</h1>
+                  <p className="musicas-count">{songs.length} musicas disponiveis</p>
+                </header>
+
+                {filteredSongs.length === 0 ? (
+                  <div className="empty-state">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
                     </svg>
-                  </li>
-                ))}
-              </ul>
+                    <p>{searchQuery ? 'Nenhuma musica encontrada' : 'Nenhuma musica cadastrada'}</p>
+                    {searchQuery && <button className="btn-clear" onClick={() => setSearchQuery('')}>Limpar busca</button>}
+                  </div>
+                ) : (
+                  <ul className="musicas-list">
+                    {filteredSongs.map(song => (
+                      <li key={song.id} className="musica-item" onClick={() => handleSongClick(song)}>
+                        <div className="musica-info">
+                          <h3 className="musica-name">{song.name}</h3>
+                          {song.composer && <span className="musica-composer">{song.composer}</span>}
+                        </div>
+                        <svg className="musica-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -557,10 +703,40 @@ export default function MusicasPage() {
                   Faca login com email/senha para acessar e gerenciar as cifras.
                 </p>
                 <button className="btn-signup" onClick={() => setShowEmailForm(true)}>
-                  Entrar
+                  Entrar com E-mail
                 </button>
                 <button className="btn-signup btn-signup-secondary" onClick={() => { setShowEmailForm(true); setShowSignupForm(true) }}>
                   Criar conta
+                </button>
+                <button
+                  className="btn-signup"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px',
+                    background: '#ffffff',
+                    color: '#333333',
+                    border: '1px solid #ddd',
+                    marginTop: '12px',
+                    width: '100%',
+                    borderRadius: '12px'
+                  }}
+                  onClick={async () => {
+                    try {
+                      await signInWithGoogle()
+                    } catch (err) {
+                      console.error('Google login error:', err)
+                    }
+                  }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                  </svg>
+                  Entrar com o Google
                 </button>
                 <div className="modal-actions">
                   <button className="modal-btn modal-btn-cancel" onClick={() => setShowLoginModal(false)}>Cancelar</button>
@@ -825,27 +1001,155 @@ export default function MusicasPage() {
           <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
             <h2 className="modal-title">Criar nova lista</h2>
             <div className="modal-body">
-              <label className="modal-label">Nome da lista</label>
-              <input
-                className="modal-input"
-                type="text"
-                placeholder="Digite o nome da lista"
-                value={newListName}
-                onChange={e => setNewListName(e.target.value)}
-                autoFocus
-              />
+              <label className="modal-label">Tipo de lista</label>
+              <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>
+                  <input
+                    type="radio"
+                    name="listTypeCreate"
+                    checked={!isSundayType}
+                    onChange={() => setIsSundayType(false)}
+                  />
+                  Escala comum
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>
+                  <input
+                    type="radio"
+                    name="listTypeCreate"
+                    checked={isSundayType}
+                    onChange={() => setIsSundayType(true)}
+                  />
+                  Esse Domingo
+                </label>
+              </div>
+
+              {isSundayType ? (
+                <div style={{ marginBottom: '16px' }}>
+                  <label className="modal-label">Selecione a filial</label>
+                  <select
+                    className="modal-input"
+                    value={sundayLocationSelection}
+                    onChange={e => setSundayLocationSelection(e.target.value)}
+                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color, #e0e0e0)', background: 'var(--bg-card, #fff)', color: 'var(--text-color, #333)', marginBottom: '10px' }}
+                  >
+                    <option value="Guarulhos">Guarulhos</option>
+                    <option value="Mairinque">Mairinque</option>
+                    <option value="Sorocaba">Sorocaba</option>
+                  </select>
+                </div>
+              ) : (
+                <div style={{ marginBottom: '16px' }}>
+                  <label className="modal-label">Nome da lista</label>
+                  <input
+                    className="modal-input"
+                    type="text"
+                    placeholder="Digite o nome da lista"
+                    value={newListName}
+                    onChange={e => setNewListName(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+              )}
+
+              {selectedSongs.length > 0 && (
+                <div className="reorder-container">
+                  <label className="modal-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>Ordem das Músicas ({selectedSongs.length})</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {selectedSongs.map((item, index) => {
+                      const parsed = parseSongIdItem(item)
+                      if (!parsed) return null
+                      const song = songs.find(s => s.id === parsed.songId)
+                      if (!song) return null
+                      return (
+                        <div key={index} className="reorder-item">
+                          <span className="reorder-item-text">
+                            <span style={{ color: 'var(--accent-color, #fbb134)', marginRight: '6px' }}>{index + 1}º</span>
+                            {song.name} <span style={{ opacity: 0.6, fontSize: '11px' }}>({parsed.tom})</span>
+                          </span>
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            <button
+                              type="button"
+                              disabled={index === 0}
+                              onClick={() => {
+                                setSelectedSongs(prev => {
+                                  const arr = [...prev]
+                                  const temp = arr[index]
+                                  arr[index] = arr[index - 1]
+                                  arr[index - 1] = temp
+                                  return arr
+                                })
+                              }}
+                              className="reorder-btn"
+                            >
+                              ▲
+                            </button>
+                            <button
+                              type="button"
+                              disabled={index === selectedSongs.length - 1}
+                              onClick={() => {
+                                setSelectedSongs(prev => {
+                                  const arr = [...prev]
+                                  const temp = arr[index]
+                                  arr[index] = arr[index + 1]
+                                  arr[index + 1] = temp
+                                  return arr
+                                })
+                              }}
+                              className="reorder-btn"
+                            >
+                              ▼
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
               <label className="modal-label">Selecione as musicas</label>
-              <div className="song-select-list">
-                {songs.map(song => (
-                  <div key={song.id} className="song-select-item-wrap">
-                    <label className="song-select-item">
-                      <input
-                        type="checkbox"
-                        checked={selectedSongs.some(s => {
-                          const parsed = parseSongIdItem(s)
-                          return parsed && parsed.songId === song.id
-                        })}
-                        onChange={() => setSelectedSongs(prev => {
+              <div style={{ position: 'relative', marginBottom: '16px' }}>
+                <input
+                  type="text"
+                  placeholder="Pesquisar louvor..."
+                  value={modalSearchQuery}
+                  onChange={e => setModalSearchQuery(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    borderRadius: '10px',
+                    border: '1px solid var(--border-color, rgba(0,0,0,0.1))',
+                    background: 'var(--bg-card, rgba(0,0,0,0.02))',
+                    color: 'var(--text-color, #333)',
+                    fontSize: '15px',
+                    outline: 'none',
+                    transition: 'border-color 0.2s'
+                  }}
+                />
+              </div>
+              <div className="song-select-list" style={{ maxHeight: '320px', overflowY: 'auto', gap: '8px', display: 'flex', flexDirection: 'column', paddingRight: '4px' }}>
+                {songs.filter(s => s.name.toLowerCase().includes(modalSearchQuery.toLowerCase())).map(song => {
+                  const isSelected = selectedSongs.some(s => {
+                    const parsed = parseSongIdItem(s)
+                    return parsed && parsed.songId === song.id
+                  })
+                  return (
+                    <div
+                      key={song.id}
+                      className="song-select-card"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '10px 14px',
+                        borderRadius: '10px',
+                        background: isSelected ? 'rgba(251, 177, 52, 0.08)' : 'var(--bg-card, rgba(0,0,0,0.01))',
+                        border: isSelected ? '1px solid var(--accent-color, #fbb134)' : '1px solid rgba(0,0,0,0.05)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                      onClick={() => {
+                        setSelectedSongs(prev => {
                           const exists = prev.some(s => {
                             const parsed = parseSongIdItem(s)
                             return parsed && parsed.songId === song.id
@@ -858,39 +1162,71 @@ export default function MusicasPage() {
                           } else {
                             return [...prev, JSON.stringify({ songId: song.id, tom: song.key || 'G' })]
                           }
-                        })}
-                      />
-                      <span>{song.name}</span>
-                    </label>
-                    {selectedSongs.some(s => {
-                      const parsed = parseSongIdItem(s)
-                      return parsed && parsed.songId === song.id
-                    }) && (
-                      <select
-                        className="tom-select"
-                        value={(() => {
-                          const found = selectedSongs.find(s => {
-                            const parsed = parseSongIdItem(s)
-                            return parsed && parsed.songId === song.id
-                          })
-                          const parsed = parseSongIdItem(found)
-                          return (parsed && parsed.tom) || song.key || 'G'
-                        })()}
-                        onChange={(e) => {
-                          setSelectedSongs(prev => prev.map(s => {
-                            const parsed = parseSongIdItem(s)
-                            if (parsed && parsed.songId === song.id) {
-                              return JSON.stringify({ songId: song.id, tom: e.target.value })
-                            }
-                            return s
-                          }))
-                        }}
-                      >
-                        {KEYS.map(k => <option key={k} value={k}>{k}</option>)}
-                      </select>
-                    )}
-                  </div>
-                ))}
+                        })
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div
+                          style={{
+                            width: '18px',
+                            height: '18px',
+                            borderRadius: '5px',
+                            border: isSelected ? 'none' : '2px solid rgba(0,0,0,0.2)',
+                            background: isSelected ? 'var(--accent-color, #fbb134)' : 'transparent',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#fff',
+                            fontSize: '11px',
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          {isSelected && '✓'}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span className="song-select-card-name">{song.name}</span>
+                          {song.composer && <span className="song-select-card-composer">{song.composer}</span>}
+                        </div>
+                      </div>
+                      {isSelected && (
+                        <div onClick={e => e.stopPropagation()}>
+                          <select
+                            className="tom-select"
+                            value={(() => {
+                              const found = selectedSongs.find(s => {
+                                const parsed = parseSongIdItem(s)
+                                return parsed && parsed.songId === song.id
+                              })
+                              const parsed = parseSongIdItem(found)
+                              return (parsed && parsed.tom) || song.key || 'G'
+                            })()}
+                            onChange={(e) => {
+                              setSelectedSongs(prev => prev.map(s => {
+                                const parsed = parseSongIdItem(s)
+                                if (parsed && parsed.songId === song.id) {
+                                  return JSON.stringify({ songId: song.id, tom: e.target.value })
+                                }
+                                return s
+                              }))
+                            }}
+                            style={{
+                              padding: '4px 8px',
+                              borderRadius: '6px',
+                              border: '1px solid rgba(0,0,0,0.1)',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              outline: 'none',
+                              background: 'var(--bg-card, #fff)',
+                              color: 'var(--text-color, #333)'
+                            }}
+                          >
+                            {KEYS.map(k => <option key={k} value={k}>{k}</option>)}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             </div>
             <div className="modal-actions">
@@ -898,7 +1234,7 @@ export default function MusicasPage() {
               <button
                 className="modal-btn modal-btn-confirm"
                 onClick={handleCreateList}
-                disabled={!newListName.trim()}
+                disabled={!isSundayType && !newListName.trim()}
               >
                 Criar lista
               </button>
@@ -912,26 +1248,154 @@ export default function MusicasPage() {
           <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
             <h2 className="modal-title">Editar lista</h2>
             <div className="modal-body">
-              <label className="modal-label">Nome da lista</label>
-              <input
-                className="modal-input"
-                type="text"
-                placeholder="Digite o nome da lista"
-                value={newListName}
-                onChange={e => setNewListName(e.target.value)}
-              />
+              <label className="modal-label">Tipo de lista</label>
+              <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>
+                  <input
+                    type="radio"
+                    name="listTypeEdit"
+                    checked={!isSundayType}
+                    onChange={() => setIsSundayType(false)}
+                  />
+                  Escala comum
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>
+                  <input
+                    type="radio"
+                    name="listTypeEdit"
+                    checked={isSundayType}
+                    onChange={() => setIsSundayType(true)}
+                  />
+                  Esse Domingo
+                </label>
+              </div>
+
+              {isSundayType ? (
+                <div style={{ marginBottom: '16px' }}>
+                  <label className="modal-label">Selecione a filial</label>
+                  <select
+                    className="modal-input"
+                    value={sundayLocationSelection}
+                    onChange={e => setSundayLocationSelection(e.target.value)}
+                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color, #e0e0e0)', background: 'var(--bg-card, #fff)', color: 'var(--text-color, #333)', marginBottom: '10px' }}
+                  >
+                    <option value="Guarulhos">Guarulhos</option>
+                    <option value="Mairinque">Mairinque</option>
+                    <option value="Sorocaba">Sorocaba</option>
+                  </select>
+                </div>
+              ) : (
+                <div style={{ marginBottom: '16px' }}>
+                  <label className="modal-label">Nome da lista</label>
+                  <input
+                    className="modal-input"
+                    type="text"
+                    placeholder="Digite o nome da lista"
+                    value={newListName}
+                    onChange={e => setNewListName(e.target.value)}
+                  />
+                </div>
+              )}
+
+              {selectedSongs.length > 0 && (
+                <div className="reorder-container">
+                  <label className="modal-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>Ordem das Músicas ({selectedSongs.length})</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {selectedSongs.map((item, index) => {
+                      const parsed = parseSongIdItem(item)
+                      if (!parsed) return null
+                      const song = songs.find(s => s.id === parsed.songId)
+                      if (!song) return null
+                      return (
+                        <div key={index} className="reorder-item">
+                          <span className="reorder-item-text">
+                            <span style={{ color: 'var(--accent-color, #fbb134)', marginRight: '6px' }}>{index + 1}º</span>
+                            {song.name} <span style={{ opacity: 0.6, fontSize: '11px' }}>({parsed.tom})</span>
+                          </span>
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            <button
+                              type="button"
+                              disabled={index === 0}
+                              onClick={() => {
+                                setSelectedSongs(prev => {
+                                  const arr = [...prev]
+                                  const temp = arr[index]
+                                  arr[index] = arr[index - 1]
+                                  arr[index - 1] = temp
+                                  return arr
+                                })
+                              }}
+                              className="reorder-btn"
+                            >
+                              ▲
+                            </button>
+                            <button
+                              type="button"
+                              disabled={index === selectedSongs.length - 1}
+                              onClick={() => {
+                                setSelectedSongs(prev => {
+                                  const arr = [...prev]
+                                  const temp = arr[index]
+                                  arr[index] = arr[index + 1]
+                                  arr[index + 1] = temp
+                                  return arr
+                                })
+                              }}
+                              className="reorder-btn"
+                            >
+                              ▼
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
               <label className="modal-label">Selecione as musicas</label>
-              <div className="song-select-list">
-                {songs.map(song => (
-                  <div key={song.id} className="song-select-item-wrap">
-                    <label className="song-select-item">
-                      <input
-                        type="checkbox"
-                        checked={selectedSongs.some(s => {
-                          const parsed = parseSongIdItem(s)
-                          return parsed && parsed.songId === song.id
-                        })}
-                        onChange={() => setSelectedSongs(prev => {
+              <div style={{ position: 'relative', marginBottom: '16px' }}>
+                <input
+                  type="text"
+                  placeholder="Pesquisar louvor..."
+                  value={modalSearchQuery}
+                  onChange={e => setModalSearchQuery(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    borderRadius: '10px',
+                    border: '1px solid var(--border-color, rgba(0,0,0,0.1))',
+                    background: 'var(--bg-card, rgba(0,0,0,0.02))',
+                    color: 'var(--text-color, #333)',
+                    fontSize: '15px',
+                    outline: 'none',
+                    transition: 'border-color 0.2s'
+                  }}
+                />
+              </div>
+              <div className="song-select-list" style={{ maxHeight: '320px', overflowY: 'auto', gap: '8px', display: 'flex', flexDirection: 'column', paddingRight: '4px' }}>
+                {songs.filter(s => s.name.toLowerCase().includes(modalSearchQuery.toLowerCase())).map(song => {
+                  const isSelected = selectedSongs.some(s => {
+                    const parsed = parseSongIdItem(s)
+                    return parsed && parsed.songId === song.id
+                  })
+                  return (
+                    <div
+                      key={song.id}
+                      className="song-select-card"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '10px 14px',
+                        borderRadius: '10px',
+                        background: isSelected ? 'rgba(251, 177, 52, 0.08)' : 'var(--bg-card, rgba(0,0,0,0.01))',
+                        border: isSelected ? '1px solid var(--accent-color, #fbb134)' : '1px solid rgba(0,0,0,0.05)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                      onClick={() => {
+                        setSelectedSongs(prev => {
                           const exists = prev.some(s => {
                             const parsed = parseSongIdItem(s)
                             return parsed && parsed.songId === song.id
@@ -944,39 +1408,71 @@ export default function MusicasPage() {
                           } else {
                             return [...prev, JSON.stringify({ songId: song.id, tom: song.key || 'G' })]
                           }
-                        })}
-                      />
-                      <span>{song.name}</span>
-                    </label>
-                    {selectedSongs.some(s => {
-                      const parsed = parseSongIdItem(s)
-                      return parsed && parsed.songId === song.id
-                    }) && (
-                      <select
-                        className="tom-select"
-                        value={(() => {
-                          const found = selectedSongs.find(s => {
-                            const parsed = parseSongIdItem(s)
-                            return parsed && parsed.songId === song.id
-                          })
-                          const parsed = parseSongIdItem(found)
-                          return (parsed && parsed.tom) || song.key || 'G'
-                        })()}
-                        onChange={(e) => {
-                          setSelectedSongs(prev => prev.map(s => {
-                            const parsed = parseSongIdItem(s)
-                            if (parsed && parsed.songId === song.id) {
-                              return JSON.stringify({ songId: song.id, tom: e.target.value })
-                            }
-                            return s
-                          }))
-                        }}
-                      >
-                        {KEYS.map(k => <option key={k} value={k}>{k}</option>)}
-                      </select>
-                    )}
-                  </div>
-                ))}
+                        })
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div
+                          style={{
+                            width: '18px',
+                            height: '18px',
+                            borderRadius: '5px',
+                            border: isSelected ? 'none' : '2px solid rgba(0,0,0,0.2)',
+                            background: isSelected ? 'var(--accent-color, #fbb134)' : 'transparent',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#fff',
+                            fontSize: '11px',
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          {isSelected && '✓'}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span className="song-select-card-name">{song.name}</span>
+                          {song.composer && <span className="song-select-card-composer">{song.composer}</span>}
+                        </div>
+                      </div>
+                      {isSelected && (
+                        <div onClick={e => e.stopPropagation()}>
+                          <select
+                            className="tom-select"
+                            value={(() => {
+                              const found = selectedSongs.find(s => {
+                                const parsed = parseSongIdItem(s)
+                                return parsed && parsed.songId === song.id
+                              })
+                              const parsed = parseSongIdItem(found)
+                              return (parsed && parsed.tom) || song.key || 'G'
+                            })()}
+                            onChange={(e) => {
+                              setSelectedSongs(prev => prev.map(s => {
+                                const parsed = parseSongIdItem(s)
+                                if (parsed && parsed.songId === song.id) {
+                                  return JSON.stringify({ songId: song.id, tom: e.target.value })
+                                }
+                                return s
+                              }))
+                            }}
+                            style={{
+                              padding: '4px 8px',
+                              borderRadius: '6px',
+                              border: '1px solid rgba(0,0,0,0.1)',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              outline: 'none',
+                              background: 'var(--bg-card, #fff)',
+                              color: 'var(--text-color, #333)'
+                            }}
+                          >
+                            {KEYS.map(k => <option key={k} value={k}>{k}</option>)}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             </div>
             <div className="modal-actions">
@@ -984,7 +1480,7 @@ export default function MusicasPage() {
               <button
                 className="modal-btn modal-btn-confirm"
                 onClick={handleEditList}
-                disabled={!newListName.trim()}
+                disabled={!isSundayType && !newListName.trim()}
               >
                 Salvar alteracoes
               </button>
@@ -1023,7 +1519,7 @@ export default function MusicasPage() {
                 })}
               </div>
             </div>
-              <div className="modal-actions">
+            <div className="modal-actions">
               <button className="modal-btn modal-btn-cancel" onClick={() => setShowPlaylistModal(false)}>Fechar</button>
             </div>
           </div>
@@ -1031,17 +1527,52 @@ export default function MusicasPage() {
       )}
 
       {showDomingoModal && (
-        <div className="modal-overlay" onClick={() => { setShowDomingoModal(false); setIsEditingDomingo(false); }}>
+        <div className="modal-overlay" onClick={() => { setShowDomingoModal(false); setSelectedLocation(null); setIsEditingDomingo(false); }}>
           <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
-            <h2 className="modal-title">Esse Domingo</h2>
+            <h2 className="modal-title">Esse Domingo {selectedLocation ? ` - ${selectedLocation}` : ''}</h2>
             <div className="modal-body">
-              {loading ? (
+              {loadingDomingo ? (
                 <div className="loading-spinner">Carregando...</div>
-               ) : userIsAdmin ? (
+              ) : !selectedLocation ? (
+                <div className="location-select-container" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '10px 0' }}>
+                  <p className="modal-text" style={{ textAlign: 'center', marginBottom: '8px' }}>Selecione a filial para visualizar a escala de domingo:</p>
+                  <div className="location-grid" style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '360px', margin: '0 auto', width: '100%' }}>
+                    {['Guarulhos', 'Mairinque', 'Sorocaba'].map(loc => (
+                      <button
+                        key={loc}
+                        className="btn-primary"
+                        style={{
+                          padding: '14px 20px',
+                          fontSize: '16px',
+                          background: 'var(--accent-color, #fbb134)',
+                          borderRadius: '12px',
+                          cursor: 'pointer',
+                          textAlign: 'center',
+                          border: 'none',
+                          color: '#fff',
+                          fontWeight: '600',
+                          transition: 'all 0.2s',
+                          width: '100%'
+                        }}
+                        onClick={() => {
+                          setSelectedLocation(loc)
+                          setLoadingDomingo(true)
+                          fetchDomingoList(loc).then(data => {
+                            setDomingoList(data)
+                            setLoadingDomingo(false)
+                          })
+                        }}
+                      >
+                        <span>{loc}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : userIsAdmin ? (
                 <>
                   {domingoList && !isEditingDomingo ? (
                     <>
-                      <p className="modal-text">Lista atual. Clique em uma musica para tocar.</p>
+                      <p className="modal-text">Lista atual de {selectedLocation}. Clique em uma musica para tocar.</p>
                       <div className="playlist-songs">
                         {domingoList.song_ids?.map((item, index) => {
                           const parsed = parseSongIdItem(item)
@@ -1071,18 +1602,105 @@ export default function MusicasPage() {
                     </>
                   ) : (
                     <>
-                      <p className="modal-text">Selecione as musicas e o tom para o culto de domingo:</p>
-                      <div className="song-select-list">
-                        {songs.map(song => (
-                          <div key={song.id} className="song-select-item-wrap">
-                            <label className="song-select-item">
-                              <input
-                                type="checkbox"
-                                checked={selectedSongs.some(s => {
-                                  const parsed = parseSongIdItem(s)
-                                  return parsed && parsed.songId === song.id
-                                })}
-                                onChange={() => setSelectedSongs(prev => {
+                      <p className="modal-text">Selecione as musicas e o tom para o culto de domingo ({selectedLocation}):</p>
+                      {selectedSongs.length > 0 && (
+                        <div className="reorder-container">
+                          <label className="modal-label" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>Ordem das Músicas ({selectedSongs.length})</label>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            {selectedSongs.map((item, index) => {
+                              const parsed = parseSongIdItem(item)
+                              if (!parsed) return null
+                              const song = songs.find(s => s.id === parsed.songId)
+                              if (!song) return null
+                              return (
+                                <div key={index} className="reorder-item">
+                                  <span className="reorder-item-text">
+                                    <span style={{ color: 'var(--accent-color, #fbb134)', marginRight: '6px' }}>{index + 1}º</span>
+                                    {song.name} <span style={{ opacity: 0.6, fontSize: '11px' }}>({parsed.tom})</span>
+                                  </span>
+                                  <div style={{ display: 'flex', gap: '4px' }}>
+                                    <button
+                                      type="button"
+                                      disabled={index === 0}
+                                      onClick={() => {
+                                        setSelectedSongs(prev => {
+                                          const arr = [...prev]
+                                          const temp = arr[index]
+                                          arr[index] = arr[index - 1]
+                                          arr[index - 1] = temp
+                                          return arr
+                                        })
+                                      }}
+                                      className="reorder-btn"
+                                    >
+                                      ▲
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={index === selectedSongs.length - 1}
+                                      onClick={() => {
+                                        setSelectedSongs(prev => {
+                                          const arr = [...prev]
+                                          const temp = arr[index]
+                                          arr[index] = arr[index + 1]
+                                          arr[index + 1] = temp
+                                          return arr
+                                        })
+                                      }}
+                                      className="reorder-btn"
+                                    >
+                                      ▼
+                                    </button>
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      <div style={{ position: 'relative', marginBottom: '16px' }}>
+                        <input
+                          type="text"
+                          placeholder="Pesquisar louvor..."
+                          value={modalSearchQuery}
+                          onChange={e => setModalSearchQuery(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '12px 16px',
+                            borderRadius: '10px',
+                            border: '1px solid var(--border-color, rgba(0,0,0,0.1))',
+                            background: 'var(--bg-card, rgba(0,0,0,0.02))',
+                            color: 'var(--text-color, #333)',
+                            fontSize: '15px',
+                            outline: 'none',
+                            transition: 'border-color 0.2s'
+                          }}
+                        />
+                      </div>
+                      <div className="song-select-list" style={{ maxHeight: '320px', overflowY: 'auto', gap: '8px', display: 'flex', flexDirection: 'column', paddingRight: '4px' }}>
+                        {songs.filter(s => s.name.toLowerCase().includes(modalSearchQuery.toLowerCase())).map(song => {
+                          const isSelected = selectedSongs.some(s => {
+                            const parsed = parseSongIdItem(s)
+                            return parsed && parsed.songId === song.id
+                          })
+                          return (
+                            <div
+                              key={song.id}
+                              className="song-select-card"
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                padding: '10px 14px',
+                                borderRadius: '10px',
+                                background: isSelected ? 'rgba(251, 177, 52, 0.08)' : 'var(--bg-card, rgba(0,0,0,0.01))',
+                                border: isSelected ? '1px solid var(--accent-color, #fbb134)' : '1px solid rgba(0,0,0,0.05)',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                              }}
+                              onClick={() => {
+                                setSelectedSongs(prev => {
                                   const exists = prev.some(s => {
                                     const parsed = parseSongIdItem(s)
                                     return parsed && parsed.songId === song.id
@@ -1095,46 +1713,78 @@ export default function MusicasPage() {
                                   } else {
                                     return [...prev, JSON.stringify({ songId: song.id, tom: song.key || 'G' })]
                                   }
-                                })}
-                              />
-                              <span>{song.name}</span>
-                            </label>
-                            {selectedSongs.some(s => {
-                              const parsed = parseSongIdItem(s)
-                              return parsed && parsed.songId === song.id
-                            }) && (
-                              <select
-                                className="tom-select"
-                                value={(() => {
-                                  const found = selectedSongs.find(s => {
-                                    const parsed = parseSongIdItem(s)
-                                    return parsed && parsed.songId === song.id
-                                  })
-                                  const parsed = parseSongIdItem(found)
-                                  return (parsed && parsed.tom) || song.key || 'G'
-                                })()}
-                                onChange={(e) => {
-                                  setSelectedSongs(prev => prev.map(s => {
-                                    const parsed = parseSongIdItem(s)
-                                    if (parsed && parsed.songId === song.id) {
-                                      return JSON.stringify({ songId: song.id, tom: e.target.value })
-                                    }
-                                    return s
-                                  }))
-                                }}
-                              >
-                                {KEYS.map(k => <option key={k} value={k}>{k}</option>)}
-                              </select>
-                            )}
-                          </div>
-                        ))}
+                                })
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div
+                                  style={{
+                                    width: '18px',
+                                    height: '18px',
+                                    borderRadius: '5px',
+                                    border: isSelected ? 'none' : '2px solid rgba(0,0,0,0.2)',
+                                    background: isSelected ? 'var(--accent-color, #fbb134)' : 'transparent',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: '#fff',
+                                    fontSize: '11px',
+                                    fontWeight: 'bold'
+                                  }}
+                                >
+                                  {isSelected && '✓'}
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                  <span className="song-select-card-name">{song.name}</span>
+                                  {song.composer && <span className="song-select-card-composer">{song.composer}</span>}
+                                </div>
+                              </div>
+                              {isSelected && (
+                                <div onClick={e => e.stopPropagation()}>
+                                  <select
+                                    className="tom-select"
+                                    value={(() => {
+                                      const found = selectedSongs.find(s => {
+                                        const parsed = parseSongIdItem(s)
+                                        return parsed && parsed.songId === song.id
+                                      })
+                                      const parsed = parseSongIdItem(found)
+                                      return (parsed && parsed.tom) || song.key || 'G'
+                                    })()}
+                                    onChange={(e) => {
+                                      setSelectedSongs(prev => prev.map(s => {
+                                        const parsed = parseSongIdItem(s)
+                                        if (parsed && parsed.songId === song.id) {
+                                          return JSON.stringify({ songId: song.id, tom: e.target.value })
+                                        }
+                                        return s
+                                      }))
+                                    }}
+                                    style={{
+                                      padding: '4px 8px',
+                                      borderRadius: '6px',
+                                      border: '1px solid rgba(0,0,0,0.1)',
+                                      fontSize: '12px',
+                                      fontWeight: '600',
+                                      outline: 'none',
+                                      background: 'var(--bg-card, #fff)',
+                                      color: 'var(--text-color, #333)'
+                                    }}
+                                  >
+                                    {KEYS.map(k => <option key={k} value={k}>{k}</option>)}
+                                  </select>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
                       </div>
                     </>
                   )}
                 </>
               ) : (
                 <>
-                  <p className="modal-text">Musicas do culto de domingo:</p>
+                  <p className="modal-text">Musicas do culto de domingo ({selectedLocation}):</p>
                   {domingoList ? (
                     <div className="playlist-songs">
                       {domingoList.song_ids?.map((item, index) => {
@@ -1163,73 +1813,79 @@ export default function MusicasPage() {
                       })}
                     </div>
                   ) : (
-                    <p className="modal-text">Nenhuma lista agendada ainda.</p>
+                    <p className="modal-text">Nenhuma lista agendada ainda para {selectedLocation}.</p>
                   )}
                 </>
               )}
             </div>
-            <div className="modal-actions">
-              {isEditingDomingo ? (
-                <>
-                  <button className="modal-btn modal-btn-cancel" onClick={() => setIsEditingDomingo(false)}>Voltar</button>
-                  <button
-                    className="modal-btn modal-btn-confirm"
-                    onClick={async () => {
-                      await handleSaveDomingoList()
-                      setIsEditingDomingo(false)
-                    }}
-                    disabled={selectedSongs.length === 0}
-                  >
-                    Salvar alteracoes
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button className="modal-btn modal-btn-cancel" onClick={() => { setShowDomingoModal(false); setIsEditingDomingo(false); }}>Fechar</button>
-                  {userIsAdmin && (
-                    <>
-                      {domingoList ? (
-                        <>
+            <div className="modal-actions" style={{ justifyContent: 'space-between' }}>
+              {selectedLocation && !isEditingDomingo && (
+                <button className="modal-btn modal-btn-cancel" onClick={() => { setSelectedLocation(null); setDomingoList(null); setSelectedSongs([]); }}>
+                  ← Voltar Filiais
+                </button>
+              )}
+              <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
+                {isEditingDomingo ? (
+                  <>
+                    <button className="modal-btn modal-btn-cancel" onClick={() => setIsEditingDomingo(false)}>Voltar</button>
+                    <button
+                      className="modal-btn modal-btn-confirm"
+                      onClick={async () => {
+                        await handleSaveDomingoList()
+                        setIsEditingDomingo(false)
+                      }}
+                      disabled={selectedSongs.length === 0}
+                    >
+                      Salvar alteracoes
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button className="modal-btn modal-btn-cancel" onClick={() => { setShowDomingoModal(false); setSelectedLocation(null); setIsEditingDomingo(false); }}>Fechar</button>
+                    {userIsAdmin && selectedLocation && (
+                      <>
+                        {domingoList ? (
+                          <>
+                            <button
+                              className="modal-btn modal-btn-confirm"
+                              onClick={() => {
+                                setSelectedSongs(domingoList.song_ids || [])
+                                setIsEditingDomingo(true)
+                              }}
+                            >
+                              Editar lista
+                            </button>
+                            <button
+                              className="modal-btn modal-btn-danger"
+                              onClick={async () => {
+                                if (window.confirm('Tem certeza que deseja excluir a lista atual?')) {
+                                  await deleteList(domingoList.id)
+                                  setDomingoList(null)
+                                  setSelectedSongs([])
+                                }
+                              }}
+                            >
+                              Excluir lista
+                            </button>
+                          </>
+                        ) : (
                           <button
                             className="modal-btn modal-btn-confirm"
-                            onClick={() => {
-                              setSelectedSongs(domingoList.song_ids || [])
-                              setIsEditingDomingo(true)
-                            }}
-                          >
-                            Editar lista
-                          </button>
-                          <button
-                            className="modal-btn modal-btn-danger"
                             onClick={async () => {
-                              if (window.confirm('Tem certeza que deseja excluir a lista atual?')) {
-                                await deleteList(domingoList.id)
-                                setDomingoList(null)
-                                setSelectedSongs([])
-                              }
+                              const newList = await createList('Esse Domingo - ' + selectedLocation, 'domingo@cifras', selectedSongs)
+                              setDomingoList(newList)
+                              setSelectedSongs([])
                             }}
+                            disabled={selectedSongs.length === 0}
                           >
-                            Excluir lista
+                            Criar lista
                           </button>
-                        </>
-                      ) : (
-                        <button
-                          className="modal-btn modal-btn-confirm"
-                          onClick={async () => {
-                            const newList = await createList('Esse Domingo', 'domingo@cifras', selectedSongs)
-                            setDomingoList(newList)
-                            setSelectedSongs([])
-                            setShowDomingoModal(false)
-                          }}
-                          disabled={selectedSongs.length === 0}
-                        >
-                          Criar lista
-                        </button>
-                      )}
-                    </>
-                  )}
-                </>
-              )}
+                        )}
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -1238,7 +1894,7 @@ export default function MusicasPage() {
       {showUserSuggestions && (
         <div className="modal-overlay" onClick={() => setShowUserSuggestions(false)}>
           <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
-            <h2 className="modal-title">Minhas sugestoes</h2>
+            <h2 className="modal-title">Sugerir Louvor</h2>
             <div className="modal-body">
               {userSuggestions.length === 0 ? (
                 <p className="modal-empty">Nenhuma sugestao enviada.</p>

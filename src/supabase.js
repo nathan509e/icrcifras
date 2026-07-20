@@ -359,12 +359,13 @@ export async function deleteList(id) {
   return true
 }
 
-export async function fetchDomingoList() {
+export async function fetchDomingoList(location) {
   if (!supabase) return null
+  const listName = location ? `Esse Domingo - ${location}` : 'Esse Domingo'
   const { data, error } = await supabase
     .from('lists')
     .select('*')
-    .eq('name', 'Esse Domingo')
+    .eq('name', listName)
     .maybeSingle()
   if (error) {
     console.error('Error fetching domingo list:', error)

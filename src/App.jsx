@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo, Fragment } from 'react'
+﻿import React, { useState, useRef, useEffect, useCallback, useMemo, Fragment } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { fetchSongs, saveSong, updateSong, deleteSong, signOut, fetchSuggestions, saveSuggestion, deleteSuggestion, updateSuggestionStatus, fetchUserSuggestions, fetchUserLists, createList, updateList, deleteList, fetchDomingoList, supabase, createUser, signInWithEmail } from './supabase'
 import { useAuth } from './AuthContext'
@@ -84,7 +84,7 @@ function chordToThird(chordStr) {
   if (!root) return chordStr
   const base = normalizeNote(root[1])
   const rest = chordStr.slice(root[1].length)
-  const isMinor = rest.startsWith('m') || rest.startsWith('dim') || rest.startsWith('°')
+  const isMinor = rest.startsWith('m') || rest.startsWith('dim') || rest.startsWith('Â°')
   const offset = isMinor ? 3 : 4
   return transposeNote(base, offset)
 }
@@ -117,6 +117,12 @@ function getTransposeOffsetFromNotes(originalNote, targetNote) {
   const idx1 = NOTES.indexOf(normalized1)
   const idx2 = NOTES.indexOf(normalized2)
   if (idx1 === -1 || idx2 === -1) return 0
+  useEffect(() => {
+    return () => {
+      if (padAudioRef.current) { padAudioRef.current.pause(); padAudioRef.current = null; }
+    };
+  }, []);
+
   return (idx2 - idx1 + 12) % 12
 }
 
@@ -139,7 +145,7 @@ function sanitizeHtml(text) {
 }
 
 function convertPlainTextToHtml(text) {
-  const chordPattern = /^\(?[A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*(?:\([^)]*\))*(?:\/[A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*)*\)?$/
+  const chordPattern = /^\(?[A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|Â°|Âº|\+|Ã¸|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|Â°|Âº|-[0-9]*)*(?:\([^)]*\))*(?:\/[A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|Â°|Âº|\+|Ã¸|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|Â°|Âº|-[0-9]*)*)*\)?$/
   const sectionPattern = /^\[.*\]$/
   return text.split('\n').map(line => {
     const trimmed = line.trim()
@@ -147,7 +153,7 @@ function convertPlainTextToHtml(text) {
     const tokens = trimmed.split(/\s+/)
     const isChordLine = tokens.every(t => chordPattern.test(t) || sectionPattern.test(t) || /^\d+x?$|^[\|:]+$|^(?:Riff|Solo|Fine|Coda|D\.?[CS]\.?)$|[\[\]]/i.test(t))
     if (!isChordLine) return line
-    return line.replace(/\b(\(?)([A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*(?:\([^)]*\))?(?:\/[A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*)?)(\)?)(?=\s|$)/g, '$1<b>$2</b>$3')
+    return line.replace(/\b(\(?)([A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|Â°|Âº|\+|Ã¸|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|Â°|Âº|-[0-9]*)*(?:\([^)]*\))?(?:\/[A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|Â°|Âº|\+|Ã¸|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|Â°|Âº|-[0-9]*)*)?)(\)?)(?=\s|$)/g, '$1<b>$2</b>$3')
   }).join('\n')
 }
 
@@ -181,7 +187,7 @@ function extractTomInfo(text) {
 function detectKey(textContent) {
   const tomMatch = textContent.match(/^[Tt]om\s*:\s*([A-G][#b]?m?)/m)
   if (tomMatch) return tomMatch[1]
-  const chordRoots = textContent.match(/\b([A-G][#b]?)(?=\s|$|\s*[\/\(\)\d]|m(?!\w)|M|dim|aug|sus|add|°|7)/g)
+  const chordRoots = textContent.match(/\b([A-G][#b]?)(?=\s|$|\s*[\/\(\)\d]|m(?!\w)|M|dim|aug|sus|add|Â°|7)/g)
   if (!chordRoots || chordRoots.length === 0) return 'G'
   const counts = {}
   const seen = []
@@ -212,6 +218,8 @@ function App() {
   const [singerMode, setSingerMode] = useState(() => localStorage.getItem('singer-mode') === 'true')
   const [metronomeBpm, setMetronomeBpm] = useState(100)
   const [isMetronomePlaying, setIsMetronomePlaying] = useState(false)
+  const padAudioRef = useRef(null)
+  const [playingPadKey, setPlayingPadKey] = useState(null)
   const [selectedChord, setSelectedChord] = useState('')
   const [tomIsMinor, setTomIsMinor] = useState(false)
   const [chordQualityFlip, setChordQualityFlip] = useState(false)
@@ -525,6 +533,23 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isScrolling])
 
+  function togglePad(key) {
+    if (playingPadKey === key) {
+      if (padAudioRef.current) { padAudioRef.current.pause(); padAudioRef.current = null; }
+      setPlayingPadKey(null);
+      return;
+    }
+    if (padAudioRef.current) { padAudioRef.current.pause(); padAudioRef.current = null; }
+    // Map display key (C#, D#, etc.) to file name (Cs, Ds, etc.)
+    const fileKey = key.replace(/#/g, 's');
+    const audio = new Audio('/Pads/' + encodeURIComponent(fileKey) + '.mp3');
+    audio.volume = 0.6;
+    audio.loop = true;
+    audio.play().catch(() => {});
+    padAudioRef.current = audio;
+    setPlayingPadKey(key);
+  }
+
   useEffect(() => {
     if (!isMetronomePlaying) {
       clearInterval(metronomeRef.current)
@@ -644,6 +669,20 @@ function App() {
   const currentFormaTom = useMemo(() => getFormaTomTransposed(formaTom, transposeOffset),
     [formaTom, transposeOffset])
 
+
+  // When the key changes while pad is playing, switch the pad audio to the new key
+  useEffect(() => {
+    if (playingPadKey && playingPadKey !== currentKey) {
+      const fileKey = currentKey.replace(/#/g, 's');
+      const audio = new Audio('/Pads/' + encodeURIComponent(fileKey) + '.mp3');
+      audio.volume = 0.6;
+      audio.loop = true;
+      audio.play().catch(() => {});
+      if (padAudioRef.current) { padAudioRef.current.pause(); }
+      padAudioRef.current = audio;
+      setPlayingPadKey(currentKey);
+    }
+  }, [currentKey]);
   const sortedSongs = useMemo(() => [...songs].sort((a, b) => a.name.localeCompare(b.name, 'pt', { sensitivity: 'base' })),
     [songs])
   const filteredSongs = useMemo(() => songFilter.trim()
@@ -863,7 +902,7 @@ function App() {
               <div className="sidebar-section">
                 <h3 className="sidebar-title">Tom</h3>
                 <div className="tool-row">
-                  <button className="tool-btn" onClick={() => setTransposeOffset(t => Math.max(-6, t - 1))} title="Diminuir tom">−</button>
+                  <button className="tool-btn" onClick={() => setTransposeOffset(t => Math.max(-6, t - 1))} title="Diminuir tom">âˆ’</button>
                   <span className="tool-value">{currentKey}</span>
                   <button className="tool-btn" onClick={() => setTransposeOffset(t => Math.min(6, t + 1))} title="Aumentar tom">+</button>
                   <button className={`tool-btn tool-btn--quality${chordQualityFlip ? ' active' : ''}`} onClick={() => setChordQualityFlip(v => !v)} title="Alternar maior/menor">
@@ -894,14 +933,14 @@ function App() {
                     className={`tool-btn ${instrumentMode === 'teclado' ? 'active' : ''}`}
                     onClick={() => setInstrumentMode('teclado')}
                     style={{ fontSize: '12px', padding: '4px 10px' }}
-                  >🎹 Teclado</button>
+                  >ðŸŽ¹ Teclado</button>
                   <button
                     className={`tool-btn ${instrumentMode === 'violao' ? 'active' : ''}`}
                     onClick={() => setInstrumentMode('violao')}
                     style={{ fontSize: '12px', padding: '4px 10px' }}
-                  >🎸 Violão</button>
+                  >ðŸŽ¸ ViolÃ£o</button>
                 </div>
-                <span className="tool-hint">{instrumentMode === 'violao' ? 'Cifra violão' : 'Cifra teclado'}</span>
+                <span className="tool-hint">{instrumentMode === 'violao' ? 'Cifra violÃ£o' : 'Cifra teclado'}</span>
               </div>
 
               <div className="sidebar-section">
@@ -910,7 +949,7 @@ function App() {
                   <input type="checkbox" checked={violinMode} onChange={(e) => setViolinMode(e.target.checked)} />
                   <span className="toggle-track"></span>
                 </label>
-                <span className="tool-hint">{violinMode ? 'Terça' : 'Desativado'}</span>
+                <span className="tool-hint">{violinMode ? 'TerÃ§a' : 'Desativado'}</span>
               </div>
 
               <div className="sidebar-section">
@@ -929,7 +968,7 @@ function App() {
                     className={`tool-btn play-btn ${isScrolling ? 'active' : ''}`}
                     onClick={() => setIsScrolling(s => !s)}
                   >
-                    {isScrolling ? '⏸' : '▶'}
+                    {isScrolling ? 'â¸' : 'â–¶'}
                   </button>
                   <span className="tool-label">{isScrolling ? 'Pausar' : 'Iniciar'}</span>
                 </div>
@@ -945,17 +984,17 @@ function App() {
                   />
                   <span className="slider-value">{autoScrollSpeed}</span>
                 </div>
-                {isScrolling && <span className="tool-hint">Espaço para pausar</span>}
+                {isScrolling && <span className="tool-hint">EspaÃ§o para pausar</span>}
               </div>
 
               <div className="sidebar-section">
-                <h3 className="sidebar-title">Metrônomo</h3>
+                <h3 className="sidebar-title">MetrÃ´nomo</h3>
                 <div className="tool-row">
                   <button
                     className={`tool-btn play-btn ${isMetronomePlaying ? 'active' : ''}`}
                     onClick={() => setIsMetronomePlaying(s => !s)}
                   >
-                    {isMetronomePlaying ? '⏹' : '▶'}
+                    {isMetronomePlaying ? 'â¹' : 'â–¶'}
                   </button>
                   <span className="tool-label">{isMetronomePlaying ? 'Parar' : 'Iniciar'}</span>
                 </div>
@@ -1011,11 +1050,38 @@ function App() {
 
             <div className="cifra-col-left">
               <div className="cifra-content" style={{ fontSize: `${fontSize}px` }}>
-                <div className="cifra-tom">
+                <div className="cifra-tom" style={{ position: 'relative', paddingTop: 44 }}>
                   tom: <a href="#" title="alterar o tom da cifra">{currentKey}</a>
                   {currentFormaTom && (
                     <span title="forma dos acordes"> (forma dos acordes no tom de {currentFormaTom})</span>
                   )}
+                <button
+                    onClick={() => togglePad(currentKey)}
+                    style={{
+                      position: 'absolute',
+                      top: 2,
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      padding: '8px 28px',
+                      fontSize: 15,
+                      fontWeight: 700,
+                      borderRadius: 24,
+                      border: 'none',
+                      background: playingPadKey === currentKey
+                        ? 'linear-gradient(135deg, #e74c3c, #c0392b)'
+                        : 'linear-gradient(135deg, #f39c12, #e67e22)',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      boxShadow: playingPadKey === currentKey
+                        ? '0 4px 15px rgba(231,76,60,0.4)'
+                        : '0 4px 15px rgba(243,156,18,0.4)',
+                      transition: 'all 0.3s ease',
+                      zIndex: 10,
+                      letterSpacing: 0.5,
+                    }}
+                  >
+                    Pad
+                  </button>
                 </div>
                 <pre onClick={handleChordClick} dangerouslySetInnerHTML={{
                   __html: processedChordHtml
@@ -1106,12 +1172,12 @@ function App() {
                   if (file && file.name.endsWith('.txt')) setNewSongFile(file)
                 }}
               />
-              <label className="modal-label" style={{ marginTop: '10px' }}>Cifra Violão (txt)</label>
+              <label className="modal-label" style={{ marginTop: '10px' }}>Cifra ViolÃ£o (txt)</label>
               <div className="modal-file-area" onClick={() => fileInputGuitarRef.current?.click()}>
                 {newSongFileGuitar ? (
                   <span className="modal-file-name">{newSongFileGuitar.name}</span>
                 ) : (
-                  <span className="modal-file-placeholder">Clique para selecionar arquivo .txt (violão)</span>
+                  <span className="modal-file-placeholder">Clique para selecionar arquivo .txt (violÃ£o)</span>
                 )}
               </div>
               <input
@@ -1152,14 +1218,14 @@ function App() {
           <div className="modal modal--wide" onClick={e => e.stopPropagation()} style={{ maxWidth: 700 }}>
             <h2 className="modal-title">Alterar notas</h2>
             <div className="modal-body">
-              <label className="modal-label">Nome da música</label>
+              <label className="modal-label">Nome da mÃºsica</label>
               <input
                 className="modal-input"
                 value={editSongName}
                 onChange={e => setEditSongName(e.target.value)}
-                placeholder="Nome da música"
+                placeholder="Nome da mÃºsica"
               />
-              <label className="modal-label" style={{ marginTop: 12 }}>Conteúdo da cifra</label>
+              <label className="modal-label" style={{ marginTop: 12 }}>ConteÃºdo da cifra</label>
               <ChordEditor
                 content={editSongContent}
                 onChange={setEditSongContent}
@@ -2093,17 +2159,17 @@ function App() {
             <h4 className="mobile-panel-title">
               {activeMobilePanel === 'tom' && 'Alterar Tom'}
               {activeMobilePanel === 'rolagem' && 'Auto Rolagem'}
-              {activeMobilePanel === 'ouvir' && 'Ouvir Música'}
-              {activeMobilePanel === 'opcoes' && 'Mais Opções'}
+              {activeMobilePanel === 'ouvir' && 'Ouvir MÃºsica'}
+              {activeMobilePanel === 'opcoes' && 'Mais OpÃ§Ãµes'}
             </h4>
-            <button className="mobile-panel-close" onClick={() => setActiveMobilePanel(null)}>×</button>
+            <button className="mobile-panel-close" onClick={() => setActiveMobilePanel(null)}>Ã—</button>
           </div>
           
           <div className="mobile-panel-body">
             {activeMobilePanel === 'tom' && (
               <div className="mobile-panel-content">
                 <div className="mobile-tool-row">
-                  <button className="mobile-tool-btn" onClick={() => setTransposeOffset(t => Math.max(-6, t - 1))}>−</button>
+                  <button className="mobile-tool-btn" onClick={() => setTransposeOffset(t => Math.max(-6, t - 1))}>âˆ’</button>
                   <span className="mobile-tool-value">{currentKey}</span>
                   <button className="mobile-tool-btn" onClick={() => setTransposeOffset(t => Math.min(6, t + 1))}>+</button>
                   <button className={`mobile-tool-btn${chordQualityFlip ? ' active' : ''}`} onClick={() => setChordQualityFlip(v => !v)} title="Alternar maior/menor" style={{ fontFamily: 'serif', fontWeight: 700, fontSize: 15 }}>
@@ -2159,7 +2225,7 @@ function App() {
                       />
                     ) : (
                       <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
-                        Nenhum vídeo disponível
+                        Nenhum vÃ­deo disponÃ­vel
                       </div>
                     )
                   })()}
@@ -2194,7 +2260,7 @@ function App() {
                 </div>
 
                 <div className="mobile-panel-item">
-                  <span>{instrumentMode === "teclado" ? "🎹" : "🎸"} {instrumentMode === "teclado" ? "Teclado" : "Violão"}</span>
+                  <span>{instrumentMode === "teclado" ? "ðŸŽ¹" : "ðŸŽ¸"} {instrumentMode === "teclado" ? "Teclado" : "ViolÃ£o"}</span>
                   <label className="toggle-switch">
                     <input type="checkbox" checked={instrumentMode === "violao"} onChange={(e) => setInstrumentMode(e.target.checked ? "violao" : "teclado")} />
                     <span className="toggle-track"></span>
@@ -2202,10 +2268,10 @@ function App() {
                 </div>
 
                 <div className="mobile-panel-item">
-                  <span>Metrônomo ({metronomeBpm} BPM)</span>
+                  <span>MetrÃ´nomo ({metronomeBpm} BPM)</span>
                   <div className="mobile-tool-row-small">
                     <button className={`mobile-tool-btn-small ${isMetronomePlaying ? 'active' : ''}`} onClick={() => setIsMetronomePlaying(s => !s)}>
-                      {isMetronomePlaying ? '⏹' : '▶'}
+                      {isMetronomePlaying ? 'â¹' : 'â–¶'}
                     </button>
                     <input
                       type="range"
@@ -2326,7 +2392,7 @@ function App() {
             <line x1="12" y1="10" x2="12" y2="14"></line>
             <line x1="10" y1="12" x2="14" y2="12"></line>
           </svg>
-          <span>Opções</span>
+          <span>OpÃ§Ãµes</span>
         </button>
       </div>
     </div>
@@ -2400,12 +2466,12 @@ function App() {
 }
 
 // Chord editor component for admin "Alterar notas"
-const COMMON_CHORDS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B', 'Cm', 'C#m', 'Dm', 'D#m', 'Em', 'Fm', 'F#m', 'Gm', 'G#m', 'Am', 'A#m', 'Bm', 'C7', 'D7', 'E7', 'F7', 'G7', 'A7', 'B7', 'Cm7', 'Dm7', 'Gm7', 'Am7', 'Em7', 'Dm9', 'Am9', 'G9', 'Cº', 'C°', 'Cdim', 'Caug', 'C+', 'Csus4', 'Csus2', 'Cadd9']
+const COMMON_CHORDS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B', 'Cm', 'C#m', 'Dm', 'D#m', 'Em', 'Fm', 'F#m', 'Gm', 'G#m', 'Am', 'A#m', 'Bm', 'C7', 'D7', 'E7', 'F7', 'G7', 'A7', 'B7', 'Cm7', 'Dm7', 'Gm7', 'Am7', 'Em7', 'Dm9', 'Am9', 'G9', 'CÂº', 'CÂ°', 'Cdim', 'Caug', 'C+', 'Csus4', 'Csus2', 'Cadd9']
 
 function ChordEditor({ content, onChange }) {
   const lines = content.split('\n')
 
-  const chordPattern = /^\(?[A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*(?:\([^)]*\))*(?:\/[A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*)*\)?$/
+  const chordPattern = /^\(?[A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|Â°|Âº|\+|Ã¸|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|Â°|Âº|-[0-9]*)*(?:\([^)]*\))*(?:\/[A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|Â°|Âº|\+|Ã¸|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|Â°|Âº|-[0-9]*)*)*\)?$/
   const sectionPattern = /^\[.*\]$/
 
   function isChordLine(line) {
@@ -2634,7 +2700,7 @@ function ChordEditor({ content, onChange }) {
           <div className="chord-editor-picker" onClick={e => e.stopPropagation()}>
             <div className="chord-editor-picker-header">
               <strong>{showPicker?.currentChord ? `Alterar ${showPicker.currentChord}` : 'Escolha o acorde'}</strong>
-              <button className="chord-editor-picker-close" onClick={() => setShowPicker(null)}>×</button>
+              <button className="chord-editor-picker-close" onClick={() => setShowPicker(null)}>Ã—</button>
             </div>
             {showPicker?.currentChord && (
               <div style={{ marginBottom: 10 }}>
