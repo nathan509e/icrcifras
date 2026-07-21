@@ -547,7 +547,7 @@ function App() {
     if (padAudioRef.current) { padAudioRef.current.pause(); padAudioRef.current = null; }
     // Map display key (C#, D#, etc.) to file name (Cs, Ds, etc.)
     const fileKey = key.replace(/#/g, 's');
-    const audio = new Audio('/Pads/' + encodeURIComponent(fileKey) + '.mp3');
+    const audio = new Audio('https://fwnikwwvprngswbbxjrk.supabase.co/storage/v1/object/public/pads/' + encodeURIComponent(fileKey) + '.mp3');
     audio.volume = 0.6;
     audio.loop = true;
     audio.play().catch(() => {});
@@ -679,7 +679,7 @@ function App() {
   useEffect(() => {
     if (playingPadKey && playingPadKey !== currentKey) {
       const fileKey = currentKey.replace(/#/g, 's');
-      const audio = new Audio('/Pads/' + encodeURIComponent(fileKey) + '.mp3');
+      const audio = new Audio('https://fwnikwwvprngswbbxjrk.supabase.co/storage/v1/object/public/pads/' + encodeURIComponent(fileKey) + '.mp3');
       audio.volume = 0.6;
       audio.loop = true;
       audio.play().catch(() => {});
