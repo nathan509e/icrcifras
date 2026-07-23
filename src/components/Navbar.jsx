@@ -90,13 +90,21 @@ const Navbar = React.memo(function Navbar({
   const [pickerHue, setPickerHue] = useState(hexToHue(DEFAULT_ACCENT))
 
   useEffect(() => {
-    const saved = localStorage.getItem('accent-color')
-    if (saved) {
-      document.documentElement.style.setProperty('--accent-color', saved)
-      const hue = hexToHue(saved)
-      setPickerHue(hue)
+    if (isViewingSong) {
+      const saved = localStorage.getItem('accent-color')
+      if (saved) {
+        document.documentElement.style.setProperty('--accent-color', saved)
+        const hue = hexToHue(saved)
+        setPickerHue(hue)
+      } else {
+        document.documentElement.style.setProperty('--accent-color', DEFAULT_ACCENT)
+        setPickerHue(hexToHue(DEFAULT_ACCENT))
+      }
+    } else {
+      document.documentElement.style.setProperty('--accent-color', DEFAULT_ACCENT)
+      setPickerHue(hexToHue(DEFAULT_ACCENT))
     }
-  }, [])
+  }, [isViewingSong])
 
   function handleHueChange(e) {
     const h = Number(e.target.value)

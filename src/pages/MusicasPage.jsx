@@ -170,6 +170,10 @@ export default function MusicasPage() {
   }, [darkMode])
 
   useEffect(() => {
+    document.documentElement.style.setProperty('--accent-color', '#fbb134')
+  }, [])
+
+  useEffect(() => {
     function handleClickOutside(e) {
       const clickedDesktopMenu = userMenuRef.current?.contains(e.target)
       const clickedMobileTrigger = e.target.closest('.nav-mobile-bottom-btn')
@@ -194,7 +198,7 @@ export default function MusicasPage() {
   function detectKey(textContent) {
     const tomMatch = textContent.match(/^[Tt]om\s*:\s*([A-G][#b]?m?)/m)
     if (tomMatch) return tomMatch[1]
-    const chordRoots = textContent.match(/\b([A-G][#b]?)(?=\s|$|\s*[\/\(\)\d]|m(?!\w)|M|dim|aug|sus|add|°|7)/g)
+    const chordRoots = textContent.match(/\b([A-G][#b]?)(?=\s|$|\s*[\/\(\)\[\d]|m(?!\w)|M|dim|aug|sus|add|°|7)/g)
     if (!chordRoots || chordRoots.length === 0) return 'G'
     const counts = {}
     const seen = []

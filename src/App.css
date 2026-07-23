@@ -1163,6 +1163,10 @@ html, body { background: var(--white) }
   padding: 32px;
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6) inset, 0 16px 48px rgba(0, 0, 0, 0.08);
   transition: all 0.5s cubic-bezier(0.32, 0.72, 0, 1);
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  box-sizing: border-box;
 }
 .modal-lg {
   max-width: 640px;
@@ -1174,6 +1178,9 @@ html, body { background: var(--white) }
 }
 .modal-body {
   margin-bottom: 20px;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0; /* allows flex item to shrink and scroll properly */
 }
 .modal-label {
   display: block;
@@ -3184,4 +3191,40 @@ html.keyboard-open .nav-song-header-mobile {
 
 .dark .pad-play-btn:not(.playing) {
   color: #ffffff !important;
+}
+
+@media (max-width: 500px) {
+  .modal {
+    padding: 20px !important; /* reduce padding so buttons have more space */
+  }
+  .modal-actions {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+  .modal-actions > div {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    width: 100% !important;
+    margin-left: 0 !important;
+    gap: 8px !important;
+  }
+  .modal-actions .modal-btn {
+    flex: 1 1 calc(50% - 4px);
+    min-width: 70px;
+    height: 42px !important;
+    padding: 4px 8px !important;
+    font-size: 12px !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    line-height: 1.1 !important;
+    box-sizing: border-box !important;
+  }
+  .modal-actions > button {
+    width: 100% !important;
+  }
 }

@@ -141,7 +141,7 @@ function sanitizeHtml(text) {
 }
 
 function convertPlainTextToHtml(text) {
-  const chordPattern = /^\(?[A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*(?:\([^)]*\))*(?:\/[A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*)*\)?$/
+  const chordPattern = /^\(?[A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*(?:\([^)]*\)|\[[^\]]*\])*(?:\/[A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*)*\)?$/
   const sectionPattern = /^\[.*\]$/
   return text.split('\n').map(line => {
     const trimmed = line.trim()
@@ -149,7 +149,7 @@ function convertPlainTextToHtml(text) {
     const tokens = trimmed.split(/\s+/)
     const isChordLine = tokens.every(t => chordPattern.test(t) || sectionPattern.test(t) || /^\d+x?$|^[\|:]+$|^(?:Riff|Solo|Fine|Coda|D\.?[CS]\.?)$|[\[\]]/i.test(t))
     if (!isChordLine) return line
-    return line.replace(/\b(\(?)([A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*(?:\([^)]*\))?(?:\/[A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*)?)(\)?)(?=\s|$)/g, '$1<b>$2</b>$3')
+    return line.replace(/\b(\(?)([A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*(?:\([^)]*\)|\[[^\]]*\])*(?:\/[A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*)?)(\)?)(?=\s|$)/g, '$1<b>$2</b>$3')
   }).join('\n')
 }
 
@@ -183,7 +183,7 @@ function extractTomInfo(text) {
 function detectKey(textContent) {
   const tomMatch = textContent.match(/^[Tt]om\s*:\s*([A-G][#b]?m?)/m)
   if (tomMatch) return tomMatch[1]
-  const chordRoots = textContent.match(/\b([A-G][#b]?)(?=\s|$|\s*[\/\(\)\d]|m(?!\w)|M|dim|aug|sus|add|°|7)/g)
+  const chordRoots = textContent.match(/\b([A-G][#b]?)(?=\s|$|\s*[\/\(\)\[\d]|m(?!\w)|M|dim|aug|sus|add|°|7)/g)
   if (!chordRoots || chordRoots.length === 0) return 'G'
   const counts = {}
   const seen = []
@@ -293,7 +293,7 @@ function App() {
   const [currentPlaylistIndex, setCurrentPlaylistIndex] = useState(0)
   const [showColorPicker, setShowColorPicker] = useState(false)
   const [pickerHue, setPickerHue] = useState(() => {
-    const saved = localStorage.getItem('accent-color') || '#059669'
+    const saved = localStorage.getItem('accent-color') || '#fbb134'
     const r = parseInt(saved.slice(1, 3), 16) / 255
     const g = parseInt(saved.slice(3, 5), 16) / 255
     const b = parseInt(saved.slice(5, 7), 16) / 255
@@ -340,13 +340,13 @@ function App() {
   }
 
   function applyAccentColor() {
-    const hex = getComputedStyle(document.documentElement).getPropertyValue('--accent-color').trim() || '#059669'
+    const hex = getComputedStyle(document.documentElement).getPropertyValue('--accent-color').trim() || '#fbb134'
     localStorage.setItem('accent-color', hex)
     setShowColorPicker(false)
   }
 
   function resetAccentColor() {
-    document.documentElement.style.setProperty('--accent-color', '#059669')
+    document.documentElement.style.setProperty('--accent-color', '#fbb134')
     localStorage.removeItem('accent-color')
     setShowColorPicker(false)
   }
@@ -2383,7 +2383,7 @@ function App() {
       {showColorPicker && (
         <div className="color-picker-overlay" onClick={() => {
           const saved = localStorage.getItem('accent-color')
-          document.documentElement.style.setProperty('--accent-color', saved || '#059669')
+          document.documentElement.style.setProperty('--accent-color', saved || '#fbb134')
           setShowColorPicker(false)
         }}>
           <div className="color-picker-modal" onClick={e => e.stopPropagation()}>
@@ -2391,7 +2391,7 @@ function App() {
               <h3 className="color-picker-title">Personalizar cor</h3>
               <button className="color-picker-close" onClick={() => {
                 const saved = localStorage.getItem('accent-color')
-                document.documentElement.style.setProperty('--accent-color', saved || '#059669')
+                document.documentElement.style.setProperty('--accent-color', saved || '#fbb134')
                 setShowColorPicker(false)
               }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -2454,7 +2454,7 @@ const COMMON_CHORDS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#
 function ChordEditor({ content, onChange }) {
   const lines = content.split('\n')
 
-  const chordPattern = /^\(?[A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*(?:\([^)]*\))*(?:\/[A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*)*\)?$/
+  const chordPattern = /^\(?[A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*(?:\([^)]*\)|\[[^\]]*\])*(?:\/[A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*)*\)?$/
   const sectionPattern = /^\[.*\]$/
 
   function isChordLine(line) {
