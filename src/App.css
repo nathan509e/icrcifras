@@ -114,7 +114,11 @@
 }
 
 .dark .modal {
-  background: var(--gray-bg);
+  background: rgba(28, 28, 30, 0.94);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05) inset, 0 24px 60px rgba(0, 0, 0, 0.4);
 }
 
 .dark .modal-title {
@@ -145,9 +149,9 @@
 }
 
 .dark .btn-google {
-  background: var(--white);
-  color: var(--dark);
-  border-color: var(--gray-border);
+  background: transparent;
+  color: var(--green);
+  border-color: var(--green);
 }
 
 .dark .tom-select {
@@ -1152,11 +1156,13 @@ html, body { background: var(--white) }
 }
 .modal {
   background: var(--white);
-  border-radius: 12px;
+  border: 1px solid var(--gray-border);
+  border-radius: 24px;
   width: 90%;
-  max-width: 480px;
-  padding: 24px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  max-width: 400px;
+  padding: 32px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6) inset, 0 16px 48px rgba(0, 0, 0, 0.08);
+  transition: all 0.5s cubic-bezier(0.32, 0.72, 0, 1);
 }
 .modal-lg {
   max-width: 640px;
@@ -1353,6 +1359,10 @@ html, body { background: var(--white) }
 .modal-login-icon {
   margin-bottom: 16px;
 }
+.modal-login-icon img {
+  box-shadow: 0 8px 24px rgba(251, 177, 52, 0.2);
+  border: 1px solid rgba(251, 177, 52, 0.3);
+}
 .modal-login-desc {
   font: 14px var(--font-roboto);
   color: var(--gray);
@@ -1360,24 +1370,25 @@ html, body { background: var(--white) }
   line-height: 1.6;
 }
 .btn-google {
+  margin-top: 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
   height: 44px;
   padding: 0 24px;
-  border: 1px solid var(--gray-border);
+  border: 1px solid var(--green);
   border-radius: 8px;
-  background: var(--white);
+  background: transparent;
   font: 600 14px var(--font-roboto);
-  color: var(--dark);
+  color: var(--green);
   cursor: pointer;
   transition: background 0.15s;
   width: 100%;
   margin-bottom: 16px;
 }
 .btn-google:hover {
-  background: var(--gray-bg);
+  background: rgba(251, 177, 52, 0.1);
 }
 
 .btn-signup {
@@ -1389,9 +1400,9 @@ html, body { background: var(--white) }
   padding: 0 24px;
   border: 1px solid var(--green);
   border-radius: 8px;
-  background: var(--green);
+  background: transparent;
   font: 600 14px var(--font-roboto);
-  color: white;
+  color: var(--green);
   cursor: pointer;
   transition: background 0.15s;
   width: 100%;
@@ -1399,17 +1410,15 @@ html, body { background: var(--white) }
 }
 
 .btn-signup:hover {
-  background: var(--green-hover);
+  background: rgba(251, 177, 52, 0.1);
 }
 
 .btn-signup.btn-signup-secondary {
-  background: transparent;
-  color: var(--green);
   margin-bottom: 0;
 }
 
 .btn-signup.btn-signup-secondary:hover {
-  background: rgba(1, 113, 85, 0.1);
+  background: rgba(251, 177, 52, 0.1);
 }
 
 .modal-login-divider {

@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { fetchSongs, signOut, fetchUserLists, createList, updateList, deleteList, saveSuggestion, fetchUserSuggestions, fetchDomingoList, fetchSuggestions, saveSong, deleteSuggestion, updateSuggestionStatus, createUser, signInWithEmail, signInWithGoogle } from '../supabase'
 import { useAuth } from '../AuthContext'
 import Navbar from '../components/Navbar'
+import appLogo from '../../icons/icon-128.webp'
 
 const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 const KEYS = NOTES.flatMap(n => [n, n + 'm'])
@@ -66,6 +67,15 @@ export default function MusicasPage() {
   const [suggSong, setSuggSong] = useState('')
   const [suggUrl, setSuggUrl] = useState('')
   const { user, setUser, userIsAdmin, setUserIsAdmin, userLists, setUserLists } = useAuth()
+
+  useEffect(() => {
+    if (user) {
+      setShowLoginModal(false)
+      setShowEmailForm(false)
+      setShowSignupForm(false)
+    }
+  }, [user])
+
   const [newListName, setNewListName] = useState('')
   const [selectedSongs, setSelectedSongs] = useState([])
   const [editingList, setEditingList] = useState(null)
@@ -694,8 +704,8 @@ export default function MusicasPage() {
           <div className="modal modal-login" onClick={e => e.stopPropagation()}>
             {!showEmailForm ? (
               <>
-                <div className="modal-login-icon">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                <div className="modal-login-icon" style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+                  <img src={appLogo} alt="Logo" style={{ width: '48px', height: '48px', borderRadius: '12px' }} />
                 </div>
                 <h2 className="modal-title">Bem-vindo ao Cifras</h2>
                 <p className="modal-login-desc">
@@ -709,19 +719,7 @@ export default function MusicasPage() {
                   Criar conta
                 </button>
                 <button
-                  className="btn-signup"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '10px',
-                    background: '#ffffff',
-                    color: '#333333',
-                    border: '1px solid #ddd',
-                    marginTop: '12px',
-                    width: '100%',
-                    borderRadius: '12px'
-                  }}
+                  className="btn-google"
                   onClick={async () => {
                     try {
                       await signInWithGoogle()
