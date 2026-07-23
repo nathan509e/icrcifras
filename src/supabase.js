@@ -26,7 +26,8 @@ function cleanupStalePkceState() {
 }
 
 if (isNative) {
-  cleanupStalePkceState()
+  // Desativado para evitar que remova o code-verifier ao retornar do navegador de login (OAuth)
+  // cleanupStalePkceState()
 }
 
 export const supabase = supabaseUrl && supabaseAnonKey
