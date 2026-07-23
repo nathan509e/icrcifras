@@ -392,9 +392,39 @@ function App() {
         await Browser.close()
       } catch {}
 
-      // Supabase will auto-detect and exchange code when URL has ?code=
-      console.log('[Auth] Waiting for Supabase to detect session...')
-      
+      try {
+        const code = url.match(/[?&]code=([^&#]+)/)?.[1]
+        if (code) {
+          console.log('[Auth] Exchanging code for session...')
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+          if (error) throw error
+          console.log('[Auth] Session established via code exchange:', data.session ? 'active' : 'none')
+          if (data.session?.user) {
+            setUser(data.session.user)
+            return
+          }
+        } else {
+          const accessToken = url.match(/[#?&]access_token=([^&#]+)/)?.[1]
+          const refreshToken = url.match(/[#?&]refresh_token=([^&#]+)/)?.[1]
+          if (accessToken && refreshToken) {
+            console.log('[Auth] Setting session via tokens...')
+            const { data, error } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken
+            })
+            if (error) throw error
+            if (data.session?.user) {
+              setUser(data.session.user)
+              return
+            }
+          }
+        }
+      } catch (err) {
+        console.error('[Auth] Error processing auth redirect:', err)
+      }
+
+      // Fallback
+      console.log('[Auth] Waiting for Supabase to detect session (fallback)...')
       setTimeout(async () => {
         const { data: { session } } = await supabase.auth.getSession()
         console.log('[Auth] Session after timeout:', session ? 'active' : 'none')

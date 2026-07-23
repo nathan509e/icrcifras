@@ -121,6 +121,8 @@ export async function deleteSong(id) {
 
 // ---- AUTH ----
 
+let authResolve = null
+
 export async function signInWithGoogle() {
   if (!supabase) return
   const isNative = typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.()
