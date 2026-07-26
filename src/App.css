@@ -294,8 +294,45 @@
   color: var(--gray-light);
 }
 
+/* FULL SCREEN & COMPONENT SPINNER LOADER */
+.full-screen-loader {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gray-bg, #111111);
+  z-index: 999999;
+}
+
+.loading-spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 140px;
+  width: 100%;
+  color: transparent !important;
+  font-size: 0 !important;
+}
+
+.loading-spinner::after {
+  content: '';
+  width: 46px;
+  height: 46px;
+  border: 4px solid rgba(251, 177, 52, 0.18);
+  border-top-color: var(--accent-color, #fbb134);
+  border-radius: 50%;
+  animation: spinner-loop 0.75s linear infinite;
+  box-shadow: 0 0 18px rgba(251, 177, 52, 0.25);
+}
+
+@keyframes spinner-loop {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 .dark .loading-spinner {
-  color: var(--gray-light);
+  color: transparent;
 }
 
 .dark .empty-state p {
@@ -645,16 +682,18 @@ html, body { background: var(--white) }
 /* CHORD CONTENT */
 .cifra-body {
   display: flex;
-  gap: 0;
+  gap: 24px;
+  align-items: flex-start;
 }
 .cifra-col-left {
   flex: 1;
-  max-width: 595px;
+  min-width: 0;
+  max-width: 680px;
 }
 .cifra-col-right {
-  flex: 0 0 auto;
+  flex: 0 0 240px;
   margin-left: auto;
-  margin-top: -52px;
+  margin-top: 0;
 }
 
 .cifra-content {
@@ -822,106 +861,106 @@ html, body { background: var(--white) }
 }
 
 /* INSTRUMENT SIDEBAR */
+/* INSTRUMENT SIDEBAR */
 .instrument-sidebar {
-  width: 200px;
+  width: 240px;
   flex-shrink: 0;
-  padding: 8px 12px;
-  border-right: 1px solid var(--gray-border);
-  margin-right: 20px;
-  margin-top: -52px;
-  padding-top: 52px;
+  padding: 0;
+  border-right: none;
+  margin-right: 0;
+  margin-top: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
 
 .sidebar-section {
-  padding: 10px 0;
-  border-bottom: 1px solid var(--gray-border);
+  padding: 12px 14px;
+  background: var(--gray-bg, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--gray-border, rgba(255, 255, 255, 0.08));
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .sidebar-section:last-child {
-  border-bottom: none;
+  border-bottom: 1px solid var(--gray-border, rgba(255, 255, 255, 0.08));
 }
 
 .sidebar-title {
-  font: 700 10px var(--font-roboto);
-  color: var(--gray-light);
+  font: 700 11px var(--font-roboto);
+  color: var(--gray-light, #94a3b8);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin: 0 0 6px 0;
+  letter-spacing: 0.06em;
+  margin: 0;
 }
 
 .tool-row {
   display: flex;
   align-items: center;
   gap: 8px;
+  width: 100%;
 }
 
 .tool-btn {
   min-width: 36px;
   height: 36px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--gray-border, rgba(255, 255, 255, 0.12));
+  border-radius: 10px;
+  background: var(--white, rgba(255, 255, 255, 0.06));
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font: 600 15px var(--font-roboto);
-  color: var(--dark);
-  transition: all 0.4s cubic-bezier(0.32, 0.72, 0, 1);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), inset 0 1px 1px rgba(255, 255, 255, 0.5);
+  font: 600 14px var(--font-roboto);
+  color: var(--dark, #f8fafc);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .tool-btn:hover {
-  background: #fff;
-  border-color: rgba(1, 113, 85, 0.3);
+  background: var(--gray-bg, rgba(255, 255, 255, 0.12));
+  border-color: var(--accent-color, #fbb134);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(1, 113, 85, 0.12);
 }
 
 .tool-btn:active {
   transform: scale(0.96) translateY(0);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .tool-btn.play-btn {
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   font-size: 14px;
-  border-radius: 14px;
+  border-radius: 10px;
 }
 
-.tool-btn.play-btn.active {
-  background: var(--orange);
-  border-color: var(--orange);
-  color: var(--white);
-  box-shadow: 0 4px 16px rgba(255, 153, 0, 0.35);
-}
-
+.tool-btn.play-btn.active,
+.tool-btn.active,
 .tool-btn--quality.active {
-  background: var(--orange);
-  border-color: var(--orange);
-  color: var(--white);
-  box-shadow: 0 4px 16px rgba(255, 153, 0, 0.35);
+  background: var(--accent-color, #fbb134) !important;
+  border-color: var(--accent-color, #fbb134) !important;
+  color: #111111 !important;
+  font-weight: 700;
+  box-shadow: 0 0 12px rgba(251, 177, 52, 0.35) !important;
 }
 
 .tool-value {
   font: 700 16px var(--font-mont);
-  color: var(--dark);
+  color: var(--dark, #f8fafc);
   min-width: 32px;
   text-align: center;
 }
 
 .tool-label {
-  font: 13px var(--font-roboto);
-  color: var(--gray);
+  font: 500 13px var(--font-roboto);
+  color: var(--gray, #cbd5e1);
 }
 
 .tool-hint {
-  font: 10px var(--font-roboto);
-  color: var(--gray-light);
+  font: 11px var(--font-roboto);
+  color: var(--gray-light, #94a3b8);
   margin-top: 2px;
   display: block;
 }
@@ -929,70 +968,77 @@ html, body { background: var(--white) }
 .tool-slider-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
   margin-top: 4px;
+  width: 100%;
 }
 
 .slider-label {
-  font: 11px var(--font-roboto);
-  color: var(--gray);
-  min-width: 24px;
+  font: 500 11px var(--font-roboto);
+  color: var(--gray-light, #94a3b8);
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 58px;
 }
 
 .slider-value {
-  font: 11px var(--font-roboto);
-  color: var(--gray);
-  min-width: 24px;
+  font: 700 12px var(--font-roboto);
+  color: var(--accent-color, #fbb134);
+  min-width: 28px;
   text-align: right;
+  flex-shrink: 0;
 }
 
 .tool-slider {
   flex: 1;
-  height: 4px;
+  min-width: 0;
+  height: 6px;
   -webkit-appearance: none;
   appearance: none;
-  background: var(--gray-border);
-  border-radius: 2px;
+  background: var(--gray-border, rgba(255, 255, 255, 0.15));
+  border-radius: 3px;
   outline: none;
   cursor: pointer;
 }
 
 .tool-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: var(--orange);
+  background: var(--accent-color, #fbb134);
   cursor: pointer;
-  border: none;
+  border: 2px solid #1c1c1c;
+  box-shadow: 0 0 8px rgba(251, 177, 52, 0.4);
 }
 
 .tool-slider::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: var(--orange);
+  background: var(--accent-color, #fbb134);
   cursor: pointer;
-  border: none;
+  border: 2px solid #1c1c1c;
+  box-shadow: 0 0 8px rgba(251, 177, 52, 0.4);
 }
 
 .tool-select {
   width: 100%;
-  height: 28px;
-  border: 1px solid var(--gray-border);
-  border-radius: 6px;
-  background: var(--white);
-  padding: 0 6px;
-  font: 11px var(--font-roboto);
-  color: var(--dark);
+  height: 32px;
+  border: 1px solid var(--gray-border, rgba(255, 255, 255, 0.15));
+  border-radius: 8px;
+  background: var(--white, #1e1e1e);
+  padding: 0 8px;
+  font: 12px var(--font-roboto);
+  color: var(--dark, #f8fafc);
   cursor: pointer;
 }
 
 .toggle-switch {
   position: relative;
   display: inline-block;
-  width: 36px;
-  height: 20px;
+  width: 40px;
+  height: 22px;
   cursor: pointer;
 }
 
@@ -1005,29 +1051,29 @@ html, body { background: var(--white) }
 .toggle-track {
   position: absolute;
   inset: 0;
-  background: var(--gray-border);
-  border-radius: 10px;
-  transition: background 0.2s;
+  background: var(--gray-border, rgba(255, 255, 255, 0.15));
+  border-radius: 11px;
+  transition: background 0.2s ease;
 }
 
 .toggle-track::before {
   content: '';
   position: absolute;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   left: 2px;
   top: 2px;
-  background: var(--white);
+  background: var(--white, #ffffff);
   border-radius: 50%;
-  transition: transform 0.2s;
+  transition: transform 0.2s ease;
 }
 
 .toggle-switch input:checked + .toggle-track {
-  background: var(--orange);
+  background: var(--accent-color, #fbb134);
 }
 
 .toggle-switch input:checked + .toggle-track::before {
-  transform: translateX(16px);
+  transform: translateX(18px);
 }
 
 .chord-dictionary .chord-display {
@@ -1042,15 +1088,7 @@ html, body { background: var(--white) }
 
 .chord-dictionary .chord-name {
   font: 700 20px var(--font-mont);
-  color: var(--orange);
-}
-
-@media (max-width: 1594px) {
-  .instrument-sidebar { width: 170px }
-}
-
-@media (max-width: 1235px) {
-  .instrument-sidebar { width: 150px; margin-right: 12px }
+  color: var(--accent-color, #fbb134);
 }
 
 @media (max-width: 1023px) {
@@ -1764,6 +1802,59 @@ html, body { background: var(--white) }
 }
 .suggestion-label--rejected {
   color: #dc2626;
+}
+
+/* DESKTOP PLAYLIST CONTROLS BAR */
+.playlist-inline-controls {
+  position: relative !important;
+  z-index: 50 !important;
+  pointer-events: auto !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+
+.playlist-nav-btn {
+  position: relative !important;
+  z-index: 51 !important;
+  pointer-events: auto !important;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #262626;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  outline: none;
+  opacity: 1 !important;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.playlist-nav-btn:hover {
+  background: var(--accent-color, #fbb134);
+  color: #111111;
+  border-color: var(--accent-color, #fbb134);
+  transform: scale(1.06);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.playlist-nav-btn:active {
+  transform: scale(0.94);
+}
+
+.playlist-nav-btn svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
 }
 
 /* MOBILE BOTTOM BAR & FLOATING CONTROLS */

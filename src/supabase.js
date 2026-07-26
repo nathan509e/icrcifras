@@ -218,11 +218,30 @@ export function onAuthChange(callback) {
 
 export async function getCurrentUser() {
   if (!supabase) return null
-  const result = await Promise.race([
-    supabase.auth.getSession(),
-    new Promise(resolve => setTimeout(() => resolve({ data: { session: null } }), 8000)),
-  ])
-  return result?.data?.session?.user || null
+  try {
+    const result = await Promise.race([
+      supabase.auth.getSession().catch((err) => {
+        console.warn('[Auth] getSession error:', err)
+        return { data: { session: null }, error: err }
+      }),
+      new Promise(resolve => setTimeout(() => resolve({ data: { session: null } }), 4000)),
+    ])
+
+    if (result?.error && (
+      result.error.message?.includes('Invalid Refresh Token') ||
+      result.error.message?.includes('invalid_grant') ||
+      result.error.status === 400
+    )) {
+      console.warn('[Auth] Clearing corrupted auth session from storage')
+      await supabase.auth.signOut().catch(() => {})
+      return null
+    }
+
+    return result?.data?.session?.user || null
+  } catch (e) {
+    console.error('[Auth] getCurrentUser exception:', e)
+    return null
+  }
 }
 
 // ---- ADMINS ----

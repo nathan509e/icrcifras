@@ -196,21 +196,39 @@ export default function MusicasPage() {
   }
 
   function detectKey(textContent) {
-    const tomMatch = textContent.match(/^[Tt]om\s*:\s*([A-G][#b]?m?)/m)
-    if (tomMatch) return tomMatch[1]
-    const chordRoots = textContent.match(/\b([A-G][#b]?)(?=\s|$|\s*[\/\(\)\[\d]|m(?!\w)|M|dim|aug|sus|add|°|7)/g)
-    if (!chordRoots || chordRoots.length === 0) return 'G'
+    if (!textContent) return 'G'
+    const rawText = textContent.replace(/<[^>]+>/g, '')
+    const tomMatch = rawText.match(/(?:^|\n|\b)[Tt]om\s*:\s*([A-Ga-g][#b]?m?)/i)
+    if (tomMatch) {
+      const rawKey = tomMatch[1]
+      const root = rawKey.charAt(0).toUpperCase()
+      const rest = rawKey.slice(1)
+      return root + rest
+    }
+    const chords = rawText.match(/\b([A-Ga-g][#b]?m?)(?=\s|$|\s*[\/\(\)\[\d]|M|dim|aug|sus|add|°|7)/gi)
+    if (!chords || chords.length === 0) return 'G'
     const counts = {}
     const seen = []
-    for (const r of chordRoots) {
-      if (!counts[r]) { counts[r] = 0; seen.push(r) }
-      counts[r]++
+    for (const c of chords) {
+      const norm = c.charAt(0).toUpperCase() + c.slice(1)
+      if (!counts[norm]) { counts[norm] = 0; seen.push(norm) }
+      counts[norm]++
     }
     let best = seen[0], bestCount = counts[best]
-    for (const r of seen) {
-      if (counts[r] > bestCount) { best = r; bestCount = counts[r] }
+    for (const c of seen) {
+      if (counts[c] > bestCount) { best = c; bestCount = counts[c] }
     }
     return best
+  }
+
+  function getEffectiveSongKey(song) {
+    if (!song) return 'G'
+    const content = song.content || song.content_guitar || ''
+    if (content) {
+      const detected = detectKey(content)
+      if (detected) return detected
+    }
+    return song.key || 'G'
   }
 
   const handleAddSong = async () => {
@@ -409,21 +427,8 @@ export default function MusicasPage() {
 
   if (loading) {
     return (
-      <div className="page-wrapper">
-        <header className="header">
-          <div className="container header-inner">
-            <h1 className="header-logo"><Link to="/">Cifra Club</Link></h1>
-             <nav className="nav-links">
-               <button className="nav-link" onClick={() => navigate('/')}>Louvores</button>
-               <button className="nav-link" onClick={() => setShowLoginModal(true)}>Entrar</button>
-             </nav>
-          </div>
-        </header>
-        <main>
-          <div className="container">
-            <div className="loading-spinner">Carregando musicas...</div>
-          </div>
-        </main>
+      <div className="full-screen-loader">
+        <div className="loading-spinner"></div>
       </div>
     )
   }
@@ -1162,7 +1167,7 @@ export default function MusicasPage() {
                               return parsed && parsed.songId !== song.id
                             })
                           } else {
-                            return [...prev, JSON.stringify({ songId: song.id, tom: song.key || 'G' })]
+                            return [...prev, JSON.stringify({ songId: song.id, tom: getEffectiveSongKey(song) })]
                           }
                         })
                       }}
@@ -1200,7 +1205,7 @@ export default function MusicasPage() {
                                 return parsed && parsed.songId === song.id
                               })
                               const parsed = parseSongIdItem(found)
-                              return (parsed && parsed.tom) || song.key || 'G'
+                              return (parsed && parsed.tom) || getEffectiveSongKey(song)
                             })()}
                             onChange={(e) => {
                               setSelectedSongs(prev => prev.map(s => {
@@ -1408,7 +1413,7 @@ export default function MusicasPage() {
                               return parsed && parsed.songId !== song.id
                             })
                           } else {
-                            return [...prev, JSON.stringify({ songId: song.id, tom: song.key || 'G' })]
+                            return [...prev, JSON.stringify({ songId: song.id, tom: getEffectiveSongKey(song) })]
                           }
                         })
                       }}
@@ -1446,7 +1451,7 @@ export default function MusicasPage() {
                                 return parsed && parsed.songId === song.id
                               })
                               const parsed = parseSongIdItem(found)
-                              return (parsed && parsed.tom) || song.key || 'G'
+                              return (parsed && parsed.tom) || getEffectiveSongKey(song)
                             })()}
                             onChange={(e) => {
                               setSelectedSongs(prev => prev.map(s => {
@@ -1534,7 +1539,7 @@ export default function MusicasPage() {
             <h2 className="modal-title">Esse Domingo {selectedLocation ? ` - ${selectedLocation}` : ''}</h2>
             <div className="modal-body">
               {loadingDomingo ? (
-                <div className="loading-spinner">Carregando...</div>
+                <div className="loading-spinner"></div>
               ) : !selectedLocation ? (
                 <div className="location-select-container" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '10px 0' }}>
                   <p className="modal-text" style={{ textAlign: 'center', marginBottom: '8px' }}>Selecione a filial para visualizar a escala de domingo:</p>
@@ -1713,7 +1718,7 @@ export default function MusicasPage() {
                                       return parsed && parsed.songId !== song.id
                                     })
                                   } else {
-                                    return [...prev, JSON.stringify({ songId: song.id, tom: song.key || 'G' })]
+                                    return [...prev, JSON.stringify({ songId: song.id, tom: getEffectiveSongKey(song) })]
                                   }
                                 })
                               }}
@@ -1751,7 +1756,7 @@ export default function MusicasPage() {
                                         return parsed && parsed.songId === song.id
                                       })
                                       const parsed = parseSongIdItem(found)
-                                      return (parsed && parsed.tom) || song.key || 'G'
+                                      return (parsed && parsed.tom) || getEffectiveSongKey(song)
                                     })()}
                                     onChange={(e) => {
                                       setSelectedSongs(prev => prev.map(s => {

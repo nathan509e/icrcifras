@@ -57,27 +57,106 @@ import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 })()
 
 // Hide splash screen on app ready
-function hideSplash() {
+async function hideSplash() {
   try {
-    const { SplashScreen } = window.Capacitor?.Plugins || {}
-    if (SplashScreen?.hide) SplashScreen.hide()
+    const isNative = typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.()
+    if (isNative) {
+      const { SplashScreen } = await import('@capacitor/splash-screen')
+      await SplashScreen.hide()
+    } else {
+      const { SplashScreen } = window.Capacitor?.Plugins || {}
+      if (SplashScreen?.hide) SplashScreen.hide()
+    }
   } catch (e) {
-    // Not in native app
+    console.warn('[Splash] Error hiding splash screen:', e)
   }
 }
 
-window.addEventListener('DOMContentLoaded', hideSplash, { once: true })
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', hideSplash, { once: true })
+} else {
+  hideSplash()
+}
+// Safety fallback to guarantee splash screen is hidden
+setTimeout(hideSplash, 1000)
 
+const isNativeApp = typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.()
 
+// Check Google Play Store for immediate app updates on Android
+async function checkPlayStoreUpdate() {
+  if (!isNativeApp) return
+  try {
+    const { AppUpdate, AppUpdateAvailability } = await import('@capawesome/capacitor-app-update')
+    const result = await AppUpdate.getAppUpdateInfo()
+    if (result.updateAvailability === AppUpdateAvailability.UPDATE_AVAILABLE) {
+      if (result.immediateUpdateAllowed) {
+        await AppUpdate.performImmediateUpdate()
+      } else if (result.flexibleUpdateAllowed) {
+        await AppUpdate.startFlexibleUpdate()
+      }
+    }
+  } catch (e) {
+    console.warn('[PlayStore] Check update error:', e)
+  }
+}
 
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
+if (isNativeApp) {
+  checkPlayStoreUpdate()
+  import('@capacitor/app').then(({ App }) => {
+    App.addListener('appStateChange', ({ isActive }) => {
+      if (isActive) {
+        hideSplash()
+        checkPlayStoreUpdate()
+      }
+    })
+  })
+}
+if ('serviceWorker' in navigator && import.meta.env.PROD && !isNativeApp) {
+  let refreshing = false
+
+  // Reload page when new service worker takes control
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!refreshing) {
+      refreshing = true
+      window.location.reload()
+    }
+  })
+
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
       .then((registration) => {
-        console.log('SW registered:', registration)
+        console.log('[SW] Registered:', registration)
+
+        // Check for updates immediately on open
+        registration.update().catch(() => {})
+
+        // If a new worker is already waiting, activate it immediately
+        if (registration.waiting) {
+          registration.waiting.postMessage({ type: 'SKIP_WAITING' })
+        }
+
+        // Listen for new updates being installed
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                newWorker.postMessage({ type: 'SKIP_WAITING' })
+              }
+            })
+          }
+        })
+
+        // Re-check for updates whenever page becomes visible or focused
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') {
+            registration.update().catch(() => {})
+          }
+        })
+        window.addEventListener('focus', () => registration.update().catch(() => {}))
       })
       .catch((error) => {
-        console.log('SW registration failed:', error)
+        console.warn('[SW] Registration failed:', error)
       })
   })
 }

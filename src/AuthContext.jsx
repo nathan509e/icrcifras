@@ -7,6 +7,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [userIsAdmin, setUserIsAdmin] = useState(false)
   const [userLists, setUserLists] = useState([])
+  const processedUrlsRef = useRef(new Set())
   const lastEmailRef = useRef(null)
 
   useEffect(() => {
@@ -28,6 +29,16 @@ export function AuthProvider({ children }) {
       if (!url || !url.includes('auth/callback')) {
         return
       }
+
+      // Avoid re-processing identical deep link URLs on app re-open/resume
+      if (processedUrlsRef.current.has(url) || sessionStorage.getItem('processed_auth_url') === url) {
+        console.log('[Auth] Deep link already processed, skipping:', url)
+        return
+      }
+      processedUrlsRef.current.add(url)
+      try {
+        sessionStorage.setItem('processed_auth_url', url)
+      } catch {}
 
       try {
         const { Browser } = await import('@capacitor/browser')

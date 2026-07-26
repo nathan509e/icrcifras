@@ -1,4 +1,10 @@
-const CACHE_NAME = 'cifras-v4'
+const CACHE_NAME = 'cifras-v5'
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting()
+  }
+})
 
 self.addEventListener('install', (event) => {
   self.skipWaiting()
@@ -8,10 +14,9 @@ self.addEventListener('install', (event) => {
         '/',
         '/index.html',
         '/manifest.json',
-        '/logo.png',
-        '/logob.png',
-        '/pwa-192x192.png',
-        '/pwa-512x512.png',
+        '/icons/icon-128.webp',
+        '/icons/icon-192.webp',
+        '/icons/icon-512.webp',
       ]).catch(() => {})
     })
   )

@@ -23,6 +23,18 @@ function parseSongIdItem(item) {
   return { songId: item, tom: null }
 }
 
+function getSongIdFromItem(item) {
+  if (!item) return null
+  if (typeof item === 'object') {
+    return item.songId || item.id || item.song_id || null
+  }
+  const parsed = parseSongIdItem(item)
+  if (parsed && typeof parsed === 'object') {
+    return parsed.songId || parsed.id || parsed.song_id || item
+  }
+  return item
+}
+
 function safeParseJson(value, fallback = null) {
   if (!value) return fallback
   try {
@@ -141,15 +153,24 @@ function sanitizeHtml(text) {
 }
 
 function convertPlainTextToHtml(text) {
-  const chordPattern = /^\(?[A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*(?:\([^)]*\)|\[[^\]]*\])*(?:\/[A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*)*\)?$/
+  if (!text) return ''
+  const chordPattern = /^\(?[A-Ga-g][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*(?:\([^)]*\)|\[[^\]]*\])*(?:\/[A-Ga-g][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*)*\)?$/i
   const sectionPattern = /^\[.*\]$/
   return text.split('\n').map(line => {
-    const trimmed = line.trim()
-    if (!trimmed) return line
+    const rawLine = line.replace(/<\/?b>/gi, '')
+    const trimmed = rawLine.trim()
+    if (!trimmed) return rawLine
     const tokens = trimmed.split(/\s+/)
-    const isChordLine = tokens.every(t => chordPattern.test(t) || sectionPattern.test(t) || /^\d+x?$|^[\|:]+$|^(?:Riff|Solo|Fine|Coda|D\.?[CS]\.?)$|[\[\]]/i.test(t))
+    const isChordLine = tokens.every(t => {
+      const cleaned = t.replace(/^[,;:\-\.]+|[,;:\-\.]+$|\(?\d+x\)?/gi, '')
+      if (!cleaned) return true
+      return chordPattern.test(cleaned) || sectionPattern.test(cleaned) || /^\d+x?$|^[\|:]+$|^(?:Riff|Solo|Intro|Refrão|Ponte|Verso|Outro|Fine|Coda|D\.?[CS]\.?)$|[\[\]]/i.test(cleaned)
+    })
     if (!isChordLine) return line
-    return line.replace(/\b(\(?)([A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*(?:\([^)]*\)|\[[^\]]*\])*(?:\/[A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*)?)(\)?)(?=\s|$)/g, '$1<b>$2</b>$3')
+    return rawLine.replace(/\b(\(?)([A-Ga-g][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*(?:\([^)]*\)|\[[^\]]*\])*(?:\/[A-Ga-g][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*)?)(\)?)(?=\s|$|[,;\-\.:\)])/gi, (match, p1, p2, p3) => {
+      const chord = p2.replace(/^([a-g])/, m => m.toUpperCase())
+      return `${p1}<b>${chord}</b>${p3}`
+    })
   }).join('\n')
 }
 
@@ -166,36 +187,56 @@ function statusLabel(s) {
 }
 
 function stripTomLine(text) {
-  return text.replace(/^[Tt]om\s*:\s*[A-G][#b]?m?(?:\s*\([^)]*\))?\s*\n?/m, '')
+  if (!text) return ''
+  return text.replace(/(?:^|\n)(?:<[^>]+>)*[Tt]om\s*:\s*[A-Ga-g][#b]?m?(?:\s*\([^)]*\))?(?:<[^>]+>)*\s*\n?/gi, '\n').trimStart()
 }
 
 function extractTomInfo(text) {
-  const match = text.match(/^[Tt]om\s*:\s*([A-G][#b]?m?)(?:\s*\(forma dos acordes no tom de\s+([A-G][#b]?m?)\))?\s*\n?/m)
+  if (!text) return { tom: null, formaTom: null }
+  const rawText = text.replace(/<[^>]+>/g, '')
+  const match = rawText.match(/(?:^|\n|\b)[Tt]om\s*:\s*([A-Ga-g][#b]?m?)(?:\s*\(forma dos acordes no tom de\s+([A-Ga-g][#b]?m?)\))?/i)
   if (match) {
-    return {
-      tom: match[1],
-      formaTom: match[2] || null
-    }
+    const tom = match[1].charAt(0).toUpperCase() + match[1].slice(1)
+    const formaTom = match[2] ? match[2].charAt(0).toUpperCase() + match[2].slice(1) : null
+    return { tom, formaTom }
   }
   return { tom: null, formaTom: null }
 }
 
 function detectKey(textContent) {
-  const tomMatch = textContent.match(/^[Tt]om\s*:\s*([A-G][#b]?m?)/m)
-  if (tomMatch) return tomMatch[1]
-  const chordRoots = textContent.match(/\b([A-G][#b]?)(?=\s|$|\s*[\/\(\)\[\d]|m(?!\w)|M|dim|aug|sus|add|°|7)/g)
-  if (!chordRoots || chordRoots.length === 0) return 'G'
+  if (!textContent) return 'G'
+  const rawText = textContent.replace(/<[^>]+>/g, '')
+  const tomMatch = rawText.match(/(?:^|\n|\b)[Tt]om\s*:\s*([A-Ga-g][#b]?m?)/i)
+  if (tomMatch) {
+    const rawKey = tomMatch[1]
+    const root = rawKey.charAt(0).toUpperCase()
+    const rest = rawKey.slice(1)
+    return root + rest
+  }
+  const chords = rawText.match(/\b([A-Ga-g][#b]?m?)(?=\s|$|\s*[\/\(\)\[\d]|M|dim|aug|sus|add|°|7)/gi)
+  if (!chords || chords.length === 0) return 'G'
   const counts = {}
   const seen = []
-  for (const r of chordRoots) {
-    if (!counts[r]) { counts[r] = 0; seen.push(r) }
-    counts[r]++
+  for (const c of chords) {
+    const norm = c.charAt(0).toUpperCase() + c.slice(1)
+    if (!counts[norm]) { counts[norm] = 0; seen.push(norm) }
+    counts[norm]++
   }
   let best = seen[0], bestCount = counts[best]
-  for (const r of seen) {
-    if (counts[r] > bestCount) { best = r; bestCount = counts[r] }
+  for (const c of seen) {
+    if (counts[c] > bestCount) { best = c; bestCount = counts[c] }
   }
   return best
+}
+
+function getEffectiveSongKey(song) {
+  if (!song) return 'G'
+  const content = song.content || song.content_guitar || ''
+  if (content) {
+    const detected = detectKey(content)
+    if (detected) return detected
+  }
+  return song.key || 'G'
 }
 
 const ORIGINAL_KEY = 'G'
@@ -403,31 +444,51 @@ function App() {
     if (currentPlaylist && selectedSongId && songs.length > 0) {
       const currentSongData = songs.find(s => s.id === selectedSongId)
       if (currentSongData) {
-        const currentItem = currentPlaylist.song_ids[currentPlaylistIndex]
+        const currentItem = currentPlaylist.song_ids?.[currentPlaylistIndex]
         const parsed = parseSongIdItem(currentItem)
-        if (parsed && parsed.tom && parsed.songId === currentSongData.id) {
-          const songKey = currentSongData.key || ORIGINAL_KEY
-          const offset = getTransposeOffsetFromNotes(songKey, parsed.tom)
+        const effectiveSongKey = getEffectiveSongKey(currentSongData)
+        const originalIsMinor = effectiveSongKey.endsWith('m')
+
+        if (parsed && parsed.tom && parsed.songId?.toString() === currentSongData.id?.toString()) {
+          const offset = getTransposeOffsetFromNotes(effectiveSongKey, parsed.tom)
           setTransposeOffset(offset)
-          setTomIsMinor(parsed.tom.endsWith('m'))
-          const originalIsMinor = songKey.endsWith('m')
-          const targetIsMinor = parsed.tom.endsWith('m')
+
+          let targetIsMinor = parsed.tom.endsWith('m')
+          if (!targetIsMinor && originalIsMinor && !parsed.qualityFlipped) {
+            targetIsMinor = true
+          }
+
+          setTomIsMinor(targetIsMinor)
           setChordQualityFlip(originalIsMinor !== targetIsMinor)
+        } else {
+          setTransposeOffset(0)
+          setTomIsMinor(originalIsMinor)
+          setChordQualityFlip(false)
         }
       }
     }
   }, [currentPlaylist, currentPlaylistIndex, selectedSongId, songs])
 
-  // Extract forma dos acordes from song content
+  // Extract forma dos acordes from song content and auto-repair DB key if needed
   useEffect(() => {
     if (selectedSongId && songs.length > 0) {
       const song = songs.find(s => s.id === selectedSongId)
-      if (song && song.content) {
-        const { formaTom } = extractTomInfo(song.content)
+      if (song) {
+        const contentToUse = instrumentMode === 'violao' && song.content_guitar ? song.content_guitar : song.content
+        const { formaTom } = extractTomInfo(contentToUse || '')
         setFormaTom(formaTom)
+
+        const effectiveKey = getEffectiveSongKey(song)
+        if (song.key !== effectiveKey && userIsAdmin) {
+          updateSong(song.id, { key: effectiveKey }).then(updated => {
+            if (updated) {
+              setSongs(prev => prev.map(s => s.id === song.id ? { ...s, key: effectiveKey } : s))
+            }
+          })
+        }
       }
     }
-  }, [selectedSongId, songs])
+  }, [selectedSongId, songs, instrumentMode, userIsAdmin])
 
   const searchResults = useMemo(() => searchQuery.trim()
     ? songs.filter(s =>
@@ -446,7 +507,9 @@ function App() {
     setSearchQuery('')
     if (!fromPlaylist) {
       setTransposeOffset(0)
-      setTomIsMinor(false)
+      const targetSong = songs.find(s => s.id === id)
+      const effectiveKey = getEffectiveSongKey(targetSong)
+      setTomIsMinor(effectiveKey.endsWith('m'))
       setCurrentPlaylist(null)
       setCurrentPlaylistIndex(0)
       sessionStorage.removeItem('currentPlaylist')
@@ -455,7 +518,7 @@ function App() {
     setFormaTom(null)
     setSimplifyChords(false)
     setIsScrolling(false)
-  }, [])
+  }, [songs])
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -625,12 +688,16 @@ function App() {
       : currentSong?.content
     if (!baseContent) return ''
     const sanitized = sanitizeHtml(baseContent)
-    return sanitized.includes('<b>') ? stripTomLine(sanitized) : convertPlainTextToHtml(stripTomLine(sanitized))
+    return convertPlainTextToHtml(stripTomLine(sanitized))
   }, [currentSong?.content, currentSong?.content_guitar, instrumentMode])
   const processedChordHtml = useMemo(() => processChordHtml(currentRawHtml, transposeOffset, simplifyChords, violinMode, chordQualityFlip, singerMode),
     [currentRawHtml, transposeOffset, simplifyChords, violinMode, chordQualityFlip, singerMode])
-  const currentKey = useMemo(() => getKeyFromOffset(currentSong?.key || ORIGINAL_KEY, transposeOffset, chordQualityFlip ? !(currentSong?.key || ORIGINAL_KEY).endsWith('m') : (tomIsMinor || undefined)),
-    [currentSong?.key, transposeOffset, chordQualityFlip, tomIsMinor])
+  const effectiveOriginalKey = useMemo(() => {
+    return getEffectiveSongKey(currentSong)
+  }, [currentSong])
+
+  const currentKey = useMemo(() => getKeyFromOffset(effectiveOriginalKey, transposeOffset, chordQualityFlip ? !effectiveOriginalKey.endsWith('m') : (tomIsMinor || undefined)),
+    [effectiveOriginalKey, transposeOffset, chordQualityFlip, tomIsMinor])
   const currentFormaTom = useMemo(() => getFormaTomTransposed(formaTom, transposeOffset),
     [formaTom, transposeOffset])
 
@@ -816,48 +883,68 @@ function App() {
             <div className="cifra-meta">
               {currentPlaylist && (
                 <div className="playlist-inline-controls">
-                   <span className="playlist-name">{currentPlaylist.name}</span>
-                    <button
-                      className="playlist-nav-btn"
-                      onClick={() => {
-                        if (currentPlaylistIndex > 0) {
-                          const newIndex = currentPlaylistIndex - 1
-                          const currentItem = currentPlaylist.song_ids[newIndex]
-                          const parsed = parseSongIdItem(currentItem)
-                          const songId = parsed ? parsed.songId : currentItem
-                          setCurrentPlaylistIndex(newIndex)
-                          sessionStorage.setItem('currentPlaylist', JSON.stringify(currentPlaylist))
-                          sessionStorage.setItem('currentPlaylistIndex', newIndex.toString())
-                          navigate(`/${songId}`)
-                          window.scrollTo(0, 0)
+                  <button
+                    type="button"
+                    className="playlist-nav-btn"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      if (!currentPlaylist?.song_ids?.length) return
+                      const total = currentPlaylist.song_ids.length
+                      const newIndex = (currentPlaylistIndex - 1 + total) % total
+                      const currentItem = currentPlaylist.song_ids[newIndex]
+                      const songId = getSongIdFromItem(currentItem)
+                      if (songId) {
+                        const targetSong = songs.find(s => s.id.toString() === songId.toString())
+                        const targetId = targetSong ? targetSong.id : songId
+                        if (targetSong) {
+                          setSelectedSongId(targetSong.id)
                         }
-                      }}
-                      disabled={currentPlaylistIndex === 0}
-                      title="Anterior"
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
-                    </button>
-                    <button
-                      className="playlist-nav-btn"
-                      onClick={() => {
-                        if (currentPlaylistIndex < currentPlaylist.song_ids?.length - 1) {
-                          const newIndex = currentPlaylistIndex + 1
-                          const currentItem = currentPlaylist.song_ids[newIndex]
-                          const parsed = parseSongIdItem(currentItem)
-                          const songId = parsed ? parsed.songId : currentItem
-                          setCurrentPlaylistIndex(newIndex)
-                          sessionStorage.setItem('currentPlaylist', JSON.stringify(currentPlaylist))
-                          sessionStorage.setItem('currentPlaylistIndex', newIndex.toString())
-                          navigate(`/${songId}`)
-                          window.scrollTo(0, 0)
+                        setCurrentPlaylistIndex(newIndex)
+                        sessionStorage.setItem('currentPlaylist', JSON.stringify(currentPlaylist))
+                        sessionStorage.setItem('currentPlaylistIndex', newIndex.toString())
+                        navigate(`/${targetId}`)
+                        window.scrollTo({ top: 0, behavior: 'smooth' })
+                      }
+                    }}
+                    title="Anterior"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
+                    </svg>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="playlist-nav-btn"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      if (!currentPlaylist?.song_ids?.length) return
+                      const total = currentPlaylist.song_ids.length
+                      const newIndex = (currentPlaylistIndex + 1) % total
+                      const currentItem = currentPlaylist.song_ids[newIndex]
+                      const songId = getSongIdFromItem(currentItem)
+                      if (songId) {
+                        const targetSong = songs.find(s => s.id.toString() === songId.toString())
+                        const targetId = targetSong ? targetSong.id : songId
+                        if (targetSong) {
+                          setSelectedSongId(targetSong.id)
                         }
-                      }}
-                      disabled={currentPlaylistIndex >= currentPlaylist.song_ids?.length - 1}
-                      title="Proxima"
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
-                    </button>
-                 </div>
+                        setCurrentPlaylistIndex(newIndex)
+                        sessionStorage.setItem('currentPlaylist', JSON.stringify(currentPlaylist))
+                        sessionStorage.setItem('currentPlaylistIndex', newIndex.toString())
+                        navigate(`/${targetId}`)
+                        window.scrollTo({ top: 0, behavior: 'smooth' })
+                      }
+                    }}
+                    title="Próxima"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
+                    </svg>
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -1735,7 +1822,7 @@ function App() {
                               return parsed && parsed.songId !== song.id
                             })
                           } else {
-                            return [...prev, JSON.stringify({ songId: song.id, tom: song.key || 'G' })]
+                            return [...prev, JSON.stringify({ songId: song.id, tom: getEffectiveSongKey(song) })]
                           }
                         })}
                       />
@@ -1753,7 +1840,7 @@ function App() {
                             return parsed && parsed.songId === song.id
                           })
                           const parsed = parseSongIdItem(found)
-                          return (parsed && parsed.tom) || song.key || 'G'
+                          return (parsed && parsed.tom) || getEffectiveSongKey(song)
                         })()}
                         onChange={(e) => {
                           setSelectedSongs(prev => prev.map(s => {
@@ -1828,7 +1915,7 @@ function App() {
                               return parsed && parsed.songId !== song.id
                             })
                           } else {
-                            return [...prev, JSON.stringify({ songId: song.id, tom: song.key || 'G' })]
+                            return [...prev, JSON.stringify({ songId: song.id, tom: getEffectiveSongKey(song) })]
                           }
                         })}
                       />
@@ -1846,7 +1933,7 @@ function App() {
                             return parsed && parsed.songId === song.id
                           })
                           const parsed = parseSongIdItem(found)
-                          return (parsed && parsed.tom) || song.key || 'G'
+                          return (parsed && parsed.tom) || getEffectiveSongKey(song)
                         })()}
                         onChange={(e) => {
                           setSelectedSongs(prev => prev.map(s => {
@@ -1989,7 +2076,7 @@ function App() {
                                       return parsed && parsed.songId !== song.id
                                     })
                                   } else {
-                                    return [...prev, JSON.stringify({ songId: song.id, tom: song.key || 'G' })]
+                                    return [...prev, JSON.stringify({ songId: song.id, tom: getEffectiveSongKey(song) })]
                                   }
                                 })}
                               />
@@ -2007,7 +2094,7 @@ function App() {
                                     return parsed && parsed.songId === song.id
                                   })
                                   const parsed = parseSongIdItem(found)
-                                  return (parsed && parsed.tom) || song.key || 'G'
+                                  return (parsed && parsed.tom) || getEffectiveSongKey(song)
                                 })()}
                                 onChange={(e) => {
                                   setSelectedSongs(prev => prev.map(s => {
@@ -2454,14 +2541,19 @@ const COMMON_CHORDS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#
 function ChordEditor({ content, onChange }) {
   const lines = content.split('\n')
 
-  const chordPattern = /^\(?[A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*(?:\([^)]*\)|\[[^\]]*\])*(?:\/[A-G][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*)*\)?$/
+  const chordPattern = /^\(?[A-Ga-g][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*(?:\([^)]*\)|\[[^\]]*\])*(?:\/[A-Ga-g][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*)*\)?$/i
   const sectionPattern = /^\[.*\]$/
 
   function isChordLine(line) {
-    const trimmed = line.trim()
+    const rawLine = line.replace(/<\/?b>/gi, '')
+    const trimmed = rawLine.trim()
     if (!trimmed) return false
     const tokens = trimmed.split(/\s+/)
-    return tokens.every(t => chordPattern.test(t) || t === '__CHORD__' || /^\[.*\]$/.test(t) || /^\d+x?$|^[\|:]+$|^(?:Riff|Solo|Fine|Coda|D\.?[CS]\.?)$|[\[\]]/i.test(t))
+    return tokens.every(t => {
+      const cleaned = t.replace(/^[,;:\-\.]+|[,;:\-\.]+$|\(?\d+x\)?/gi, '')
+      if (!cleaned) return true
+      return chordPattern.test(cleaned) || cleaned === '__CHORD__' || sectionPattern.test(cleaned) || /^\d+x?$|^[\|:]+$|^(?:Riff|Solo|Intro|Refrão|Ponte|Verso|Outro|Fine|Coda|D\.?[CS]\.?)$|[\[\]]/i.test(cleaned)
+    })
   }
 
   function toggleChordAt(lineIdx, tokenIdx) {
@@ -2563,14 +2655,39 @@ function ChordEditor({ content, onChange }) {
               )
             }
             return (
-              <div
-                key={si}
-                className="chord-editor-lyric"
-                onClick={() => {
-                  setEditingLyric(si)
-                  setEditLyricValue(section.text)
-                }}
-              >{section.text}</div>
+              <div key={si} className="chord-editor-lyric-row" style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '2px 0' }}>
+                <button
+                  type="button"
+                  className="chord-editor-add-line-btn"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    const newLines = [...content.split('\n')]
+                    newLines.splice(section.lineIdx, 0, '__CHORD__')
+                    onChange(newLines.join('\n'))
+                  }}
+                  title="Adicionar linha de notas acima desta letra"
+                  style={{
+                    padding: '2px 8px',
+                    fontSize: '11px',
+                    borderRadius: '4px',
+                    background: 'rgba(251, 177, 52, 0.15)',
+                    border: '1px solid rgba(251, 177, 52, 0.3)',
+                    color: 'var(--accent-color, #fbb134)',
+                    cursor: 'pointer',
+                    flexShrink: 0
+                  }}
+                >
+                  + Nota
+                </button>
+                <div
+                  className="chord-editor-lyric"
+                  onClick={() => {
+                    setEditingLyric(si)
+                    setEditLyricValue(section.text)
+                  }}
+                  style={{ flex: 1 }}
+                >{section.text}</div>
+              </div>
             )
           }
           if (section.type === 'pair') {
