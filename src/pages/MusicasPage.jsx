@@ -192,6 +192,8 @@ export default function MusicasPage() {
   )
 
   const handleSongClick = (song) => {
+    sessionStorage.removeItem('currentPlaylist')
+    sessionStorage.removeItem('currentPlaylistIndex')
     navigate(`/${song.id}`)
   }
 
@@ -273,7 +275,17 @@ export default function MusicasPage() {
     let cifraContent = pre.textContent || pre.innerHTML
     cifraContent = cifraContent.replace(/<br\s*\/?>/gi, '\n').replace(/<\/?[^>]+(>|$)/g, '')
     cifraContent = cifraContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim()
-    if (tom) cifraContent = `Tom: ${tom}\n\n${cifraContent}`
+
+    // Strip any tuning line completely so it is not shown
+    cifraContent = cifraContent.replace(/^[Aa]fina[cç][aã]o\s*:\s*[^\n]+\n*/mi, '')
+    cifraContent = cifraContent.replace(/^[Tt]uning\s*:\s*[^\n]+\n*/mi, '')
+
+    // Strip any starting Tom: ... from the content to avoid duplication
+    cifraContent = cifraContent.replace(/^[Tt]om\s*:\s*[^\n]+\n*/mi, '').trim()
+
+    if (tom) {
+      cifraContent = `Tom: ${tom}\n\n${cifraContent}`
+    }
 
     const title = doc.title || ''
     const songName = title
@@ -282,14 +294,56 @@ export default function MusicasPage() {
       .replace(/ \(cifra.*\)$/i, '')
       .trim() || ''
 
-    return { songName, cifraContent }
+    // Extract YouTube ID
+    let youtubeId = ''
+    const ytEl = doc.querySelector('[data-youtube-id]')
+    if (ytEl) {
+      youtubeId = ytEl.getAttribute('data-youtube-id')
+    }
+    if (!youtubeId) {
+      const iframe = doc.querySelector('iframe[src*="youtube.com/embed/"]')
+      if (iframe) {
+        const src = iframe.getAttribute('src')
+        const match = src.match(/\/embed\/([a-zA-Z0-9_-]{11})/)
+        if (match) youtubeId = match[1]
+      }
+    }
+    if (!youtubeId) {
+      const match = html.match(/"youtubeId"\s*:\s*"([a-zA-Z0-9_-]{11})"/i)
+      if (match) youtubeId = match[1]
+    }
+    if (!youtubeId) {
+      const match = html.match(/"youtube"\s*:\s*"([a-zA-Z0-9_-]{11})"/i)
+      if (match) youtubeId = match[1]
+    }
+    if (!youtubeId) {
+      const match = html.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/i)
+      if (match) youtubeId = match[1]
+    }
+
+    const youtubeUrl = youtubeId ? `https://www.youtube.com/watch?v=${youtubeId}` : ''
+
+    return { songName, cifraContent, youtubeUrl }
   }
 
-  const applyImportResult = (songName, cifraContent) => {
-    const blob = new Blob([cifraContent], { type: 'text/plain' })
-    const file = new File([blob], `${songName || 'musica'}.txt`, { type: 'text/plain' })
+  const applyImportResult = (songName, cifraContentKeyboard, cifraContentGuitar = '', youtubeUrl = '') => {
+    const finalGuitar = cifraContentGuitar && cifraContentGuitar !== cifraContentKeyboard 
+      ? cifraContentGuitar 
+      : cifraContentKeyboard
+
+    const blobKeyboard = new Blob([cifraContentKeyboard], { type: 'text/plain' })
+    const fileKeyboard = new File([blobKeyboard], `${songName || 'musica'}.txt`, { type: 'text/plain' })
+
+    const blobGuitar = new Blob([finalGuitar], { type: 'text/plain' })
+    const fileGuitar = new File([blobGuitar], `${songName || 'musica'}_violao.txt`, { type: 'text/plain' })
+
     setNewSongName(songName)
-    setNewSongFile(file)
+    setNewSongFile(fileKeyboard)
+    setNewSongFileGuitar(fileGuitar)
+
+    if (youtubeUrl) {
+      setNewSongYoutubeUrl(youtubeUrl)
+    }
     setImportUrl('')
     setImportHtml('')
     setShowImportHtml(false)
@@ -299,33 +353,92 @@ export default function MusicasPage() {
     if (!importUrl.trim()) return
     setImportLoading(true)
     try {
-      let html = ''
+      let baseUrl = importUrl.trim().replace(/\?.*$/, '').replace(/\/$/, '')
+      let guitarUrl = baseUrl
+      let tecladoUrl = baseUrl
+
+      if (baseUrl.endsWith('/teclado.html')) {
+        guitarUrl = baseUrl.replace(/\/teclado\.html$/, '')
+      } else {
+        tecladoUrl = baseUrl + '/teclado.html'
+      }
+
+      let htmlGuitar = ''
+      let htmlTeclado = ''
+
+      // Fetch Guitar/Violão
       for (const proxy of CORS_PROXIES) {
         try {
-          const proxyUrl = proxy(importUrl)
+          const proxyUrl = proxy(guitarUrl)
           const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(15000) })
           if (res.ok) {
             const text = await res.text()
-            if (text.includes('<pre') || text.includes('cifra_tom') || text.includes('cifra_club')) {
-              html = text; break
-            }
+            let parsedHtml = text
             try {
               const json = JSON.parse(text)
-              if (json.contents) html = json.contents
-              else html = text; break
-            } catch { html = text; break }
+              if (json && json.contents) parsedHtml = json.contents
+            } catch {}
+            if (parsedHtml.includes('<pre') || parsedHtml.includes('cifra_tom') || parsedHtml.includes('cifra_club')) {
+              htmlGuitar = parsedHtml
+              break
+            }
           }
-        } catch { continue }
+        } catch (e) { continue }
       }
-      if (html) {
-        const result = parseCifraHtml(html)
-        if (result && result.cifraContent) {
-          applyImportResult(result.songName, result.cifraContent)
-          alert('Cifra importada com sucesso! Preencha o compositor (opcional) e clique em Salvar.')
-          setImportLoading(false)
-          return
+
+      // Fetch Teclado
+      for (const proxy of CORS_PROXIES) {
+        try {
+          const proxyUrl = proxy(tecladoUrl)
+          const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(15000) })
+          if (res.ok) {
+            const text = await res.text()
+            let parsedHtml = text
+            try {
+              const json = JSON.parse(text)
+              if (json && json.contents) parsedHtml = json.contents
+            } catch {}
+            if (parsedHtml.includes('<pre') || parsedHtml.includes('cifra_tom') || parsedHtml.includes('cifra_club')) {
+              htmlTeclado = parsedHtml
+              break
+            }
+          }
+        } catch (e) { continue }
+      }
+
+      let songName = ''
+      let cifraGuitar = ''
+      let cifraTeclado = ''
+      let youtubeUrl = ''
+
+      if (htmlGuitar) {
+        const resGuitar = parseCifraHtml(htmlGuitar)
+        if (resGuitar) {
+          songName = resGuitar.songName
+          cifraGuitar = resGuitar.cifraContent
+          youtubeUrl = resGuitar.youtubeUrl || ''
         }
       }
+
+      if (htmlTeclado) {
+        const resTeclado = parseCifraHtml(htmlTeclado)
+        if (resTeclado) {
+          if (!songName) songName = resTeclado.songName
+          cifraTeclado = resTeclado.cifraContent
+          if (!youtubeUrl) youtubeUrl = resTeclado.youtubeUrl || ''
+        }
+      }
+
+      if (cifraGuitar || cifraTeclado) {
+        const finalKeyboard = cifraTeclado || cifraGuitar
+        const finalGuitar = cifraGuitar || cifraTeclado
+        
+        applyImportResult(songName, finalKeyboard, finalGuitar, youtubeUrl)
+        alert('Cifra importada com sucesso! Verifique os dados e clique em Salvar.')
+        setImportLoading(false)
+        return
+      }
+
       setShowImportHtml(true)
       alert('Nao foi possivel acessar a URL automaticamente. Cole o codigo fonte da pagina no campo abaixo.')
     } catch (err) {
@@ -342,8 +455,8 @@ export default function MusicasPage() {
       alert('Nao foi possivel encontrar a cifra no HTML colado. Certifique-se de copiar o codigo fonte completo da pagina.')
       return
     }
-    applyImportResult(result.songName, result.cifraContent)
-    alert('Cifra importada com sucesso! Preencha o compositor (opcional) e clique em Salvar.')
+    applyImportResult(result.songName, result.cifraContent, '', result.youtubeUrl)
+    alert('Cifra importada com sucesso! Verifique os dados e clique em Salvar.')
   }
 
   const getYoutubeId = (url) => {
@@ -415,6 +528,8 @@ export default function MusicasPage() {
     : []
 
   const loadSongContent = (id) => {
+    sessionStorage.removeItem('currentPlaylist')
+    sessionStorage.removeItem('currentPlaylistIndex')
     navigate(`/${id}`)
     setShowSearchResults(false)
     setSearchQuery('')
@@ -689,6 +804,8 @@ export default function MusicasPage() {
                       <button
                         className="my-song-name"
                         onClick={() => {
+                          sessionStorage.removeItem('currentPlaylist')
+                          sessionStorage.removeItem('currentPlaylistIndex')
                           navigate(`/${song.id}`)
                           setShowMySongs(false)
                         }}

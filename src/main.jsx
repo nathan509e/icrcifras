@@ -7,6 +7,7 @@ import ErrorBoundary from './components/ErrorBoundary'
 import App from './App.jsx'
 import MusicasPage from './pages/MusicasPage'
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
+import AuthCallback from './pages/AuthCallback.jsx'
 
 // Hide mobile navs when keyboard is open
 ;(function initKeyboardDetection() {
@@ -169,6 +170,7 @@ createRoot(document.getElementById('root')).render(
           <Routes>
             <Route path="/" element={<MusicasPage />} />
             <Route path="/privacidade" element={<PrivacyPolicyPage />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/:songId" element={<App />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

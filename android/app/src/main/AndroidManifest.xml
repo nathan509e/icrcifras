@@ -24,6 +24,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="cifrasicr.app" android:pathPrefix="/auth/callback" />
+                <data android:scheme="https" android:host="icrcifras.tvphone.com" android:pathPrefix="/auth/callback" />
             </intent-filter>
 
             <intent-filter>

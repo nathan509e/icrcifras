@@ -152,6 +152,79 @@ function sanitizeHtml(text) {
     .replace(/&lt;\/b&gt;/gi, '</b>')
 }
 
+function filterBaixo(text, showBaixo) {
+  if (showBaixo) return text;
+  if (!text) return '';
+  
+  const lines = text.split('\n');
+  const result = [];
+  
+  const isTabLine = (line) => {
+    const trimmed = line.trim();
+    // Matches tab lines like E|-7--- or |---
+    return /^[a-gA-G\#b]?\s*\|[-|0-9\s()\/\\~p+h\^b]*$/i.test(trimmed) && trimmed.includes('|') && trimmed.includes('-');
+  };
+
+  const isTabHeader = (line) => {
+    const trimmed = line.trim().toLowerCase();
+    return trimmed.includes('[tab') || 
+           /^parte\s+\d+\s+de\s+\d+/i.test(trimmed);
+  };
+
+  const chordPattern = /^\(?[A-Ga-g][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*(?:\([^)]*\)|\[[^\]]*\])*(?:\/[A-Ga-g][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*)*\)?$/i;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    
+    if (isTabLine(line)) {
+      continue;
+    }
+    
+    if (isTabHeader(line)) {
+      continue;
+    }
+    
+    // Hide chord lines immediately preceding tab lines
+    const trimmed = line.trim();
+    if (trimmed) {
+      const tokens = trimmed.split(/\s+/);
+      const isChordLike = tokens.every(t => {
+        const cleaned = t.replace(/^[,;:\-\.]+|[,;:\-\.]+$|\(?\d+x\)?/gi, '');
+        if (!cleaned) return true;
+        return chordPattern.test(cleaned);
+      });
+      
+      if (isChordLike) {
+        let foundTabAhead = false;
+        for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
+          if (lines[j].trim() === '') continue;
+          if (isTabLine(lines[j])) {
+            foundTabAhead = true;
+            break;
+          }
+          break;
+        }
+        if (foundTabAhead) {
+          continue;
+        }
+      }
+    }
+    
+    result.push(line);
+  }
+  
+  // Clean up consecutive empty lines
+  const finalLines = [];
+  for (let i = 0; i < result.length; i++) {
+    if (result[i].trim() === '' && (i === 0 || result[i-1].trim() === '')) {
+      continue;
+    }
+    finalLines.push(result[i]);
+  }
+  
+  return finalLines.join('\n').trim();
+}
+
 function convertPlainTextToHtml(text) {
   if (!text) return ''
   const chordPattern = /^\(?[A-Ga-g][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*(?:\([^)]*\)|\[[^\]]*\])*(?:\/[A-Ga-g][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*)*\)?$/i
@@ -253,6 +326,7 @@ function App() {
   const [simplifyChords, setSimplifyChords] = useState(false)
   const [violinMode, setViolinMode] = useState(false)
   const [singerMode, setSingerMode] = useState(() => localStorage.getItem('singer-mode') === 'true')
+  const [showBaixo, setShowBaixo] = useState(false)
   const [metronomeBpm, setMetronomeBpm] = useState(100)
   const [isMetronomePlaying, setIsMetronomePlaying] = useState(false)
   const padAudioRef = useRef(null)
@@ -688,8 +762,9 @@ function App() {
       : currentSong?.content
     if (!baseContent) return ''
     const sanitized = sanitizeHtml(baseContent)
-    return convertPlainTextToHtml(stripTomLine(sanitized))
-  }, [currentSong?.content, currentSong?.content_guitar, instrumentMode])
+    const filtered = filterBaixo(stripTomLine(sanitized), showBaixo)
+    return convertPlainTextToHtml(filtered)
+  }, [currentSong?.content, currentSong?.content_guitar, instrumentMode, showBaixo])
   const processedChordHtml = useMemo(() => processChordHtml(currentRawHtml, transposeOffset, simplifyChords, violinMode, chordQualityFlip, singerMode),
     [currentRawHtml, transposeOffset, simplifyChords, violinMode, chordQualityFlip, singerMode])
   const effectiveOriginalKey = useMemo(() => {
@@ -1011,6 +1086,15 @@ function App() {
                   <span className="toggle-track"></span>
                 </label>
                 <span className="tool-hint">{singerMode ? 'Ocultar notas' : 'Mostrar notas'}</span>
+              </div>
+
+              <div className="sidebar-section">
+                <h3 className="sidebar-title">Baixo</h3>
+                <label className="toggle-switch">
+                  <input type="checkbox" checked={showBaixo} onChange={(e) => setShowBaixo(e.target.checked)} />
+                  <span className="toggle-track"></span>
+                </label>
+                <span className="tool-hint">{showBaixo ? 'Ativado' : 'Desativado'}</span>
               </div>
 
               <div className="sidebar-section">
@@ -2325,6 +2409,14 @@ function App() {
                   <span>Cantor</span>
                   <label className="toggle-switch">
                     <input type="checkbox" checked={singerMode} onChange={(e) => setSingerMode(e.target.checked)} />
+                    <span className="toggle-track"></span>
+                  </label>
+                </div>
+
+                <div className="mobile-panel-item">
+                  <span>Baixo</span>
+                  <label className="toggle-switch">
+                    <input type="checkbox" checked={showBaixo} onChange={(e) => setShowBaixo(e.target.checked)} />
                     <span className="toggle-track"></span>
                   </label>
                 </div>
