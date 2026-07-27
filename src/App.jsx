@@ -161,8 +161,11 @@ function filterBaixo(text, showBaixo) {
   
   const isTabLine = (line) => {
     const trimmed = line.trim();
-    // Matches tab lines like E|-7--- or |---
-    return /^[a-gA-G\#b]?\s*\|[-|0-9\s()\/\\~p+h\^b]*$/i.test(trimmed) && trimmed.includes('|') && trimmed.includes('-');
+    // Matches tab lines starting with a pipe or note+pipe (e.g. E| or |) and containing at least 3 hyphens,
+    // optionally prefixed by section labels like "Solo: " or "Intro: "
+    if (!/^(?:[a-zA-Z\s\u00C0-\u00FF]+:\s*)?[a-gA-G\#b]?\s*\|/i.test(trimmed)) return false;
+    const hyphenCount = (trimmed.match(/-/g) || []).length;
+    return hyphenCount >= 3;
   };
 
   const isTabHeader = (line) => {
@@ -237,7 +240,7 @@ function convertPlainTextToHtml(text) {
     const isChordLine = tokens.every(t => {
       const cleaned = t.replace(/^[,;:\-\.]+|[,;:\-\.]+$|\(?\d+x\)?/gi, '')
       if (!cleaned) return true
-      return chordPattern.test(cleaned) || sectionPattern.test(cleaned) || /^\d+x?$|^[\|:]+$|^(?:Riff|Solo|Intro|Refrão|Ponte|Verso|Outro|Fine|Coda|D\.?[CS]\.?)$|[\[\]]/i.test(cleaned)
+      return chordPattern.test(cleaned) || sectionPattern.test(cleaned) || /^\d+x?$|^[\|:]+$|^(?:Riff|Solo|Intro|Refrão|Ponte|Verso|Outro|Fine|Coda|D\.?[CS]\.?)$|[\[\]\(\)]/i.test(cleaned)
     })
     if (!isChordLine) return line
     return rawLine.replace(/\b(\(?)([A-Ga-g][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*(?:\([^)]*\)|\[[^\]]*\])*(?:\/[A-Ga-g][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*)?)(\)?)(?=\s|$|[,;\-\.:\)])/gi, (match, p1, p2, p3) => {
@@ -2644,7 +2647,7 @@ function ChordEditor({ content, onChange }) {
     return tokens.every(t => {
       const cleaned = t.replace(/^[,;:\-\.]+|[,;:\-\.]+$|\(?\d+x\)?/gi, '')
       if (!cleaned) return true
-      return chordPattern.test(cleaned) || cleaned === '__CHORD__' || sectionPattern.test(cleaned) || /^\d+x?$|^[\|:]+$|^(?:Riff|Solo|Intro|Refrão|Ponte|Verso|Outro|Fine|Coda|D\.?[CS]\.?)$|[\[\]]/i.test(cleaned)
+      return chordPattern.test(cleaned) || cleaned === '__CHORD__' || sectionPattern.test(cleaned) || /^\d+x?$|^[\|:]+$|^(?:Riff|Solo|Intro|Refrão|Ponte|Verso|Outro|Fine|Coda|D\.?[CS]\.?)$|[\[\]\(\)]/i.test(cleaned)
     })
   }
 

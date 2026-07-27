@@ -97,6 +97,8 @@ export default function MusicasPage() {
   const [importHtml, setImportHtml] = useState('')
   const [showImportHtml, setShowImportHtml] = useState(false)
   const [activeView, setActiveView] = useState('menu')
+  const [showAdminAddModal, setShowAdminAddModal] = useState(false)
+  const [successModalData, setSuccessModalData] = useState(null)
   const fileInputRef = useRef(null)
   const fileInputGuitarRef = useRef(null)
   const navigate = useNavigate()
@@ -244,6 +246,8 @@ export default function MusicasPage() {
     if (saved) {
       setSongs(prev => [saved, ...prev])
       setShowAddModal(false)
+      setShowAdminAddModal(false)
+      setSuccessModalData(saved)
       setNewSongName('')
       setNewSongComposer('')
       setNewSongFile(null)
@@ -256,9 +260,9 @@ export default function MusicasPage() {
   }
 
   const CORS_PROXIES = [
+    (url) => `https://corsproxy.org/?${encodeURIComponent(url)}`,
     (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
     (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
-    (url) => `https://corsproxy.org/?${encodeURIComponent(url)}`,
     (url) => `https://r.jina.ai/${encodeURIComponent(url)}`,
   ]
 
@@ -267,7 +271,8 @@ export default function MusicasPage() {
     const doc = parser.parseFromString(html, 'text/html')
 
     const tomSpan = doc.querySelector('#cifra_tom')
-    const tom = tomSpan ? tomSpan.textContent.trim() : ''
+    let tom = tomSpan ? tomSpan.textContent.trim() : ''
+    tom = tom.replace(/^[Tt]om\s*:\s*/i, '').trim()
 
     const pre = doc.querySelector('pre')
     if (!pre) return null
@@ -288,18 +293,87 @@ export default function MusicasPage() {
     }
 
     const title = doc.title || ''
-    const songName = title
-      .replace(/ - Cifra Club$/, '')
-      .replace(/^Cifra Club - /, '')
-      .replace(/ \(cifra.*\)$/i, '')
-      .trim() || ''
+    
+    // Extract artist / composer
+    let artistName = ''
+    const artistEl = doc.querySelector('.t3 a') || doc.querySelector('h2.t3') || doc.querySelector('.artist-name') || doc.querySelector('span.cifra-char_artist')
+    if (artistEl) {
+      artistName = artistEl.textContent.trim()
+    }
+    
+    let songName = ''
+    const songEl = doc.querySelector('h1.t1') || doc.querySelector('.cifra-char_title')
+    if (songEl) {
+      songName = songEl.textContent.trim()
+    }
+
+    if (!songName && title) {
+      const titleClean = title
+        .replace(/ - Cifra Club$/i, '')
+        .replace(/^Cifra Club - /i, '')
+        .replace(/ \(cifra.*\)$/i, '')
+        .trim()
+      const parts = titleClean.split(' - ')
+      if (parts.length >= 2) {
+        songName = parts[0].trim()
+        artistName = parts[1].trim()
+      } else {
+        songName = titleClean
+      }
+    }
 
     // Extract YouTube ID
     let youtubeId = ''
-    const ytEl = doc.querySelector('[data-youtube-id]')
-    if (ytEl) {
-      youtubeId = ytEl.getAttribute('data-youtube-id')
+    
+    // 1. Try to get it from the main player container
+    const playerEl = doc.querySelector('#cifra_video') || doc.querySelector('.js-video-player') || doc.querySelector('#player-video')
+    if (playerEl) {
+      youtubeId = playerEl.getAttribute('data-youtube-id') || playerEl.querySelector('[data-youtube-id]')?.getAttribute('data-youtube-id')
+      if (!youtubeId) {
+        const iframe = playerEl.querySelector('iframe[src*="youtube.com"]')
+        if (iframe) {
+          const src = iframe.getAttribute('src')
+          const match = src.match(/(?:embed\/|v\/|watch\?v=)([a-zA-Z0-9_-]{11})/)
+          if (match) youtubeId = match[1]
+        }
+      }
     }
+    
+    // 2. Try to get the first video within the main song content area (ignoring sidebar/footer)
+    if (!youtubeId) {
+      const contentEl = doc.querySelector('#cifra_cnt') || doc.querySelector('.cifra-wrapper') || doc.querySelector('article') || doc.querySelector('.cifra_conteudo')
+      if (contentEl) {
+        const ytElements = Array.from(contentEl.querySelectorAll('[data-youtube-id]'))
+        const officialVideoEl = ytElements.find(el => {
+          const className = (el.className || '').toLowerCase()
+          const parentClassName = (el.parentElement?.className || '').toLowerCase()
+          const isAula = className.includes('aula') || className.includes('lesson') || parentClassName.includes('aula') || parentClassName.includes('lesson')
+          return !isAula
+        })
+        if (officialVideoEl) {
+          youtubeId = officialVideoEl.getAttribute('data-youtube-id')
+        } else if (ytElements.length > 0) {
+          youtubeId = ytElements[0].getAttribute('data-youtube-id')
+        }
+      }
+    }
+    
+    // 3. Fallback to general page search if still not found
+    if (!youtubeId) {
+      const ytElements = Array.from(doc.querySelectorAll('[data-youtube-id]'))
+      const officialVideoEl = ytElements.find(el => {
+        const className = (el.className || '').toLowerCase()
+        const parentClassName = (el.parentElement?.className || '').toLowerCase()
+        const isAula = className.includes('aula') || className.includes('lesson') || parentClassName.includes('aula') || parentClassName.includes('lesson')
+        return !isAula
+      })
+      if (officialVideoEl) {
+        youtubeId = officialVideoEl.getAttribute('data-youtube-id')
+      } else if (ytElements.length > 0) {
+        youtubeId = ytElements[0].getAttribute('data-youtube-id')
+      }
+    }
+
     if (!youtubeId) {
       const iframe = doc.querySelector('iframe[src*="youtube.com/embed/"]')
       if (iframe) {
@@ -320,18 +394,99 @@ export default function MusicasPage() {
       const match = html.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/i)
       if (match) youtubeId = match[1]
     }
+    if (!youtubeId) {
+      const match = html.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|v\/)|youtu\.be\/|youtube-nocookie\.com\/embed\/)([a-zA-Z0-9_-]{11})/i)
+      if (match) youtubeId = match[1]
+    }
 
     const youtubeUrl = youtubeId ? `https://www.youtube.com/watch?v=${youtubeId}` : ''
 
-    return { songName, cifraContent, youtubeUrl }
+    return { songName, artistName, cifraContent, youtubeUrl }
   }
 
-  const applyImportResult = (songName, cifraContentKeyboard, cifraContentGuitar = '', youtubeUrl = '') => {
+  const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+
+  function normalizeNote(note) {
+    if (!note) return ''
+    const map = { 'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#' }
+    return map[note] || note
+  }
+
+  function transposeNote(note, offset) {
+    const normalized = normalizeNote(note)
+    const idx = NOTES.indexOf(normalized)
+    if (idx === -1) return note
+    return NOTES[(idx + offset + 1200) % 12]
+  }
+
+  function transposeChordString(chordStr, offset) {
+    if (offset === 0) return chordStr
+    let result = chordStr.replace(/^([A-Ga-g][#b]?)/, (_, root) => transposeNote(root, offset))
+    result = result.replace(/\/([A-Ga-g][#b]?)/g, (_, bass) => '/' + transposeNote(bass, offset))
+    return result
+  }
+
+  function getTransposeOffsetFromNotes(originalNote, targetNote) {
+    if (!originalNote || !targetNote) return 0
+    const normOrig = normalizeNote(originalNote.replace(/m$/, ''))
+    const normTarget = normalizeNote(targetNote.replace(/m$/, ''))
+    const idxOrig = NOTES.indexOf(normOrig)
+    const idxTarget = NOTES.indexOf(normTarget)
+    if (idxOrig === -1 || idxTarget === -1) return 0
+    return (idxTarget - idxOrig + 12) % 12
+  }
+
+  const extractTomInfo = (text) => {
+    if (!text) return { tom: null, formaTom: null }
+    const match = text.match(/^[Tt]om\s*:\s*([A-Ga-g][#b]?m?)(?:\s*\(forma dos acordes no tom de\s+([A-Ga-g][#b]?m?)\))?/m)
+    if (match) {
+      const tom = match[1].charAt(0).toUpperCase() + match[1].slice(1)
+      const formaTom = match[2] ? match[2].charAt(0).toUpperCase() + match[2].slice(1) : null
+      return { tom, formaTom }
+    }
+    return { tom: null, formaTom: null }
+  }
+
+  const transposeRawTextChords = (text, offset) => {
+    if (offset === 0 || !text) return text
+    const chordPattern = /^\(?[A-Ga-g][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*(?:\([^)]*\)|\[[^\]]*\])*(?:\/[A-Ga-g][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*)*\)?$/i
+    const sectionPattern = /^\[.*\]$/
+    
+    return text.split('\n').map(line => {
+      const trimmed = line.trim()
+      if (!trimmed) return line
+      const tokens = trimmed.split(/\s+/)
+      const isChordLine = tokens.every(t => {
+        const cleaned = t.replace(/^[,;:\-\.]+|[,;:\-\.]+$|\(?\d+x\)?/gi, '')
+        if (!cleaned) return true
+        return chordPattern.test(cleaned) || sectionPattern.test(cleaned) || /^\d+x?$|^[\|:\(\)]+$|[\[\]\(\)]/i.test(cleaned)
+      })
+      if (!isChordLine) return line
+      
+      return line.replace(/\b(\(?)([A-Ga-g][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*(?:\([^)]*\)|\[[^\]]*\])*(?:\/[A-Ga-g][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*)?)(\)?)(?=\s|$|[,;\-\.:\)])/gi, (match, p1, p2, p3) => {
+        const transposed = transposeChordString(p2.replace(/^([a-g])/, m => m.toUpperCase()), offset)
+        return `${p1}${transposed}${p3}`
+      })
+    }).join('\n')
+  }
+
+  const applyImportResult = (songName, cifraContentKeyboard, cifraContentGuitar = '', youtubeUrl = '', artistName = '') => {
     const finalGuitar = cifraContentGuitar && cifraContentGuitar !== cifraContentKeyboard 
       ? cifraContentGuitar 
       : cifraContentKeyboard
 
-    const blobKeyboard = new Blob([cifraContentKeyboard], { type: 'text/plain' })
+    // Automatically transpose Keyboard version if it has a shape (formaTom)
+    const infoTeclado = extractTomInfo(cifraContentKeyboard)
+    let finalKeyboard = cifraContentKeyboard
+    if (infoTeclado.formaTom && infoTeclado.tom && infoTeclado.formaTom !== infoTeclado.tom) {
+      const offset = getTransposeOffsetFromNotes(infoTeclado.formaTom, infoTeclado.tom)
+      if (offset !== 0) {
+        const transposedText = transposeRawTextChords(cifraContentKeyboard, offset)
+        finalKeyboard = transposedText.replace(/^[Tt]om\s*:\s*[^\n]+/m, `Tom: ${infoTeclado.tom}`)
+      }
+    }
+
+    const blobKeyboard = new Blob([finalKeyboard], { type: 'text/plain' })
     const fileKeyboard = new File([blobKeyboard], `${songName || 'musica'}.txt`, { type: 'text/plain' })
 
     const blobGuitar = new Blob([finalGuitar], { type: 'text/plain' })
@@ -340,6 +495,9 @@ export default function MusicasPage() {
     setNewSongName(songName)
     setNewSongFile(fileKeyboard)
     setNewSongFileGuitar(fileGuitar)
+    if (artistName) {
+      setNewSongComposer(artistName)
+    }
 
     if (youtubeUrl) {
       setNewSongYoutubeUrl(youtubeUrl)
@@ -363,50 +521,52 @@ export default function MusicasPage() {
         tecladoUrl = baseUrl + '/teclado.html'
       }
 
-      let htmlGuitar = ''
-      let htmlTeclado = ''
-
-      // Fetch Guitar/Violão
-      for (const proxy of CORS_PROXIES) {
-        try {
-          const proxyUrl = proxy(guitarUrl)
-          const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(15000) })
-          if (res.ok) {
-            const text = await res.text()
-            let parsedHtml = text
+      // Fetch both Guitar and Teclado versions in parallel
+      const [htmlGuitar, htmlTeclado] = await Promise.all([
+        (async () => {
+          for (const proxy of CORS_PROXIES) {
             try {
-              const json = JSON.parse(text)
-              if (json && json.contents) parsedHtml = json.contents
-            } catch {}
-            if (parsedHtml.includes('<pre') || parsedHtml.includes('cifra_tom') || parsedHtml.includes('cifra_club')) {
-              htmlGuitar = parsedHtml
-              break
-            }
+              const proxyUrl = proxy(guitarUrl)
+              const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(10000) })
+              if (res.ok) {
+                const text = await res.text()
+                let parsedHtml = text
+                try {
+                  const json = JSON.parse(text)
+                  if (json && json.contents) parsedHtml = json.contents
+                } catch {}
+                if (parsedHtml.includes('<pre') || parsedHtml.includes('cifra_tom') || parsedHtml.includes('cifra_club')) {
+                  return parsedHtml
+                }
+              }
+            } catch (e) { continue }
           }
-        } catch (e) { continue }
-      }
-
-      // Fetch Teclado
-      for (const proxy of CORS_PROXIES) {
-        try {
-          const proxyUrl = proxy(tecladoUrl)
-          const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(15000) })
-          if (res.ok) {
-            const text = await res.text()
-            let parsedHtml = text
+          return ''
+        })(),
+        (async () => {
+          for (const proxy of CORS_PROXIES) {
             try {
-              const json = JSON.parse(text)
-              if (json && json.contents) parsedHtml = json.contents
-            } catch {}
-            if (parsedHtml.includes('<pre') || parsedHtml.includes('cifra_tom') || parsedHtml.includes('cifra_club')) {
-              htmlTeclado = parsedHtml
-              break
-            }
+              const proxyUrl = proxy(tecladoUrl)
+              const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(10000) })
+              if (res.ok) {
+                const text = await res.text()
+                let parsedHtml = text
+                try {
+                  const json = JSON.parse(text)
+                  if (json && json.contents) parsedHtml = json.contents
+                } catch {}
+                if (parsedHtml.includes('<pre') || parsedHtml.includes('cifra_tom') || parsedHtml.includes('cifra_club')) {
+                  return parsedHtml
+                }
+              }
+            } catch (e) { continue }
           }
-        } catch (e) { continue }
-      }
+          return ''
+        })()
+      ])
 
       let songName = ''
+      let artistName = ''
       let cifraGuitar = ''
       let cifraTeclado = ''
       let youtubeUrl = ''
@@ -415,6 +575,7 @@ export default function MusicasPage() {
         const resGuitar = parseCifraHtml(htmlGuitar)
         if (resGuitar) {
           songName = resGuitar.songName
+          artistName = resGuitar.artistName || ''
           cifraGuitar = resGuitar.cifraContent
           youtubeUrl = resGuitar.youtubeUrl || ''
         }
@@ -424,6 +585,7 @@ export default function MusicasPage() {
         const resTeclado = parseCifraHtml(htmlTeclado)
         if (resTeclado) {
           if (!songName) songName = resTeclado.songName
+          if (!artistName) artistName = resTeclado.artistName || ''
           cifraTeclado = resTeclado.cifraContent
           if (!youtubeUrl) youtubeUrl = resTeclado.youtubeUrl || ''
         }
@@ -433,7 +595,7 @@ export default function MusicasPage() {
         const finalKeyboard = cifraTeclado || cifraGuitar
         const finalGuitar = cifraGuitar || cifraTeclado
         
-        applyImportResult(songName, finalKeyboard, finalGuitar, youtubeUrl)
+        applyImportResult(songName, finalKeyboard, finalGuitar, youtubeUrl, artistName)
         alert('Cifra importada com sucesso! Verifique os dados e clique em Salvar.')
         setImportLoading(false)
         return
@@ -455,7 +617,7 @@ export default function MusicasPage() {
       alert('Nao foi possivel encontrar a cifra no HTML colado. Certifique-se de copiar o codigo fonte completo da pagina.')
       return
     }
-    applyImportResult(result.songName, result.cifraContent, '', result.youtubeUrl)
+    applyImportResult(result.songName, result.cifraContent, '', result.youtubeUrl, result.artistName || '')
     alert('Cifra importada com sucesso! Verifique os dados e clique em Salvar.')
   }
 
@@ -684,22 +846,48 @@ export default function MusicasPage() {
                   </button>
 
                   {userIsAdmin ? (
-                    <button className="menu-card card-sugestoes" onClick={() => {
-                      if (!user) {
-                        setShowLoginModal(true)
-                      } else {
-                        fetchSuggestions().then(setSuggestions)
-                        setShowSuggestionsList(true)
-                      }
-                    }}>
-                      <div className="menu-card-icon">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="9" cy="10" r="1"/><circle cx="12" cy="10" r="1"/><circle cx="15" cy="10" r="1"/></svg>
-                      </div>
-                      <div className="menu-card-info">
-                        <h3>Sugestões</h3>
-                        <p>Gerencie sugestões de louvores enviados</p>
-                      </div>
-                    </button>
+                    <>
+                      <button className="menu-card card-sugestoes" onClick={() => {
+                        if (!user) {
+                          setShowLoginModal(true)
+                        } else {
+                          fetchSuggestions().then(setSuggestions)
+                          setShowSuggestionsList(true)
+                        }
+                      }}>
+                        <div className="menu-card-icon">
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="9" cy="10" r="1"/><circle cx="12" cy="10" r="1"/><circle cx="15" cy="10" r="1"/></svg>
+                        </div>
+                        <div className="menu-card-info">
+                          <h3>Sugestões</h3>
+                          <p>Gerencie sugestões de louvores enviados</p>
+                        </div>
+                      </button>
+
+                      <button className="menu-card card-adicionar" onClick={() => {
+                        if (!user) {
+                          setShowLoginModal(true)
+                        } else {
+                          setNewSongName('')
+                          setNewSongComposer('')
+                          setNewSongFile(null)
+                          setNewSongFileGuitar(null)
+                          setNewSongYoutubeUrl('')
+                          setImportUrl('')
+                          setImportHtml('')
+                          setShowImportHtml(false)
+                          setShowAdminAddModal(true)
+                        }
+                      }}>
+                        <div className="menu-card-icon">
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                        </div>
+                        <div className="menu-card-info">
+                          <h3>Adicionar</h3>
+                          <p>Importe e adicione novas cifras</p>
+                        </div>
+                      </button>
+                    </>
                   ) : (
                     <button className="menu-card card-sugerir" onClick={() => {
                       if (!user) {
@@ -2244,6 +2432,172 @@ export default function MusicasPage() {
                 disabled={!newSongName.trim() || !newSongFile}
               >
                 Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAdminAddModal && (
+        <div className="modal-overlay" onClick={() => { setShowAdminAddModal(false); setImportUrl(''); setImportHtml(''); setShowImportHtml(false); }}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h2 className="modal-title">Adicionar música</h2>
+            <div className="modal-body">
+              <label className="modal-label">Link do Cifra Club</label>
+              <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+                <input
+                  className="modal-input"
+                  type="url"
+                  placeholder="https://www.cifraclub.com.br/artista/musica/"
+                  value={importUrl}
+                  onChange={e => setImportUrl(e.target.value)}
+                  style={{ marginBottom: 0, flex: 1 }}
+                />
+                <button
+                  className="modal-btn modal-btn-confirm"
+                  onClick={handleImportFromUrl}
+                  disabled={importLoading || !importUrl.trim()}
+                  style={{ height: 40, whiteSpace: 'nowrap', fontSize: 13 }}
+                >
+                  {importLoading ? 'Importando...' : 'Importar'}
+                </button>
+              </div>
+
+              {showImportHtml && (
+                <div style={{ marginTop: 8, marginBottom: 16 }}>
+                  <label className="modal-label">OU cole o código fonte da página do CifraClub</label>
+                  <textarea
+                    className="modal-input"
+                    style={{ height: 120, resize: 'vertical', padding: 8, fontFamily: 'monospace', fontSize: 12, marginBottom: 6 }}
+                    placeholder="Clique com botão direito na página > 'Ver código fonte da página' (Ctrl+U), copie tudo e cole aqui."
+                    value={importHtml}
+                    onChange={e => setImportHtml(e.target.value)}
+                  />
+                  <button
+                    className="modal-btn modal-btn-confirm"
+                    onClick={handleImportFromHtml}
+                    disabled={!importHtml.trim()}
+                    style={{ height: 32, fontSize: 12 }}
+                  >
+                    Processar HTML
+                  </button>
+                </div>
+              )}
+
+              {newSongName && (
+                <div style={{ marginTop: 16, padding: '12px 16px', background: 'rgba(251, 177, 52, 0.08)', border: '1px solid rgba(251, 177, 52, 0.2)', borderRadius: 10 }}>
+                  <p style={{ margin: '0 0 6px 0', fontSize: 15, fontWeight: '500' }}><strong>Música:</strong> {newSongName}</p>
+                  <p style={{ margin: 0, fontSize: 15, fontWeight: '500' }}><strong>Autor:</strong> {newSongComposer || 'Desconhecido'}</p>
+                </div>
+              )}
+            </div>
+            <div className="modal-actions">
+              <button className="modal-btn modal-btn-cancel" onClick={() => { setShowAdminAddModal(false); setImportUrl(''); setImportHtml(''); setShowImportHtml(false); }}>Cancelar</button>
+              <button
+                className="modal-btn modal-btn-confirm"
+                onClick={handleAddSong}
+                disabled={!newSongName.trim() || !newSongComposer.trim() || (!newSongFile && !newSongFileGuitar)}
+              >
+                Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {successModalData && (
+        <div className="modal-overlay" onClick={() => setSuccessModalData(null)} style={{ backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
+          <div className="modal success-modal" onClick={e => e.stopPropagation()} style={{
+            textAlign: 'center',
+            padding: '32px 24px',
+            maxWidth: '380px',
+            borderRadius: '24px',
+            border: '1px solid var(--gray-border)',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: '4px',
+              background: 'linear-gradient(90deg, #10b981, #34d399)'
+            }} />
+            
+            <div style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '50%',
+              background: 'rgba(16, 185, 129, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 20px',
+              color: '#10b981'
+            }}>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+            </div>
+            
+            <h2 className="modal-title" style={{
+              color: 'var(--dark)',
+              fontSize: '22px',
+              fontWeight: '700',
+              marginBottom: '10px'
+            }}>Parabéns!</h2>
+            
+            <p style={{
+              fontSize: '15px',
+              margin: '0 0 24px 0',
+              lineHeight: '1.6',
+              color: 'var(--dark)',
+              opacity: 0.85
+            }}>
+              A cifra <strong style={{ color: 'var(--accent-color, #fbb134)' }}>{successModalData.name}</strong> {successModalData.composer ? `de ${successModalData.composer}` : ''} foi adicionada com sucesso!
+            </p>
+            
+            <div className="modal-actions" style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+              <button 
+                className="modal-btn modal-btn-confirm" 
+                onClick={() => {
+                  navigate(`/${successModalData.id}`)
+                  setSuccessModalData(null)
+                }}
+                style={{
+                  width: '100%',
+                  height: '44px',
+                  fontSize: '15px',
+                  fontWeight: '600',
+                  borderRadius: '12px',
+                  background: 'var(--accent-color, #fbb134)',
+                  color: '#fff',
+                  border: 'none',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 6px -1px rgba(251, 177, 52, 0.2)'
+                }}
+              >
+                Ir para cifra
+              </button>
+              <button 
+                className="modal-btn modal-btn-cancel" 
+                onClick={() => setSuccessModalData(null)}
+                style={{
+                  width: '100%',
+                  height: '44px',
+                  fontSize: '15px',
+                  fontWeight: '500',
+                  borderRadius: '12px',
+                  background: 'var(--gray-bg)',
+                  color: 'var(--dark)',
+                  border: '1px solid var(--gray-border)',
+                  cursor: 'pointer'
+                }}
+              >
+                Fechar
               </button>
             </div>
           </div>
