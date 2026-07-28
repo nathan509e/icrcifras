@@ -267,6 +267,11 @@ function stripTomLine(text) {
   return text.replace(/(?:^|\n)(?:<[^>]+>)*[Tt]om\s*:\s*[A-Ga-g][#b]?m?(?:\s*\([^)]*\))?(?:<[^>]+>)*\s*\n?/gi, '\n').trimStart()
 }
 
+function stripCapoLine(text, hide) {
+  if (!text || !hide) return text
+  return text.replace(/(?:^|\n)\r?[^\n]*(?:Capo|Capotraste|forma\s+dos\s+acordes)[^\n]*(?:\r?\n|$)/gi, '\n').trimStart()
+}
+
 function extractTomInfo(text) {
   if (!text) return { tom: null, formaTom: null }
   const rawText = text.replace(/<[^>]+>/g, '')
@@ -553,7 +558,7 @@ function App() {
       if (song) {
         const contentToUse = instrumentMode === 'violao' && song.content_guitar ? song.content_guitar : song.content
         const { formaTom } = extractTomInfo(contentToUse || '')
-        setFormaTom(formaTom)
+        setFormaTom(instrumentMode === 'violao' ? formaTom : null)
 
         const effectiveKey = getEffectiveSongKey(song)
         if (song.key !== effectiveKey && userIsAdmin) {
@@ -765,7 +770,8 @@ function App() {
       : currentSong?.content
     if (!baseContent) return ''
     const sanitized = sanitizeHtml(baseContent)
-    const filtered = filterBaixo(stripTomLine(sanitized), showBaixo)
+    const cleanedCapo = stripCapoLine(sanitized, instrumentMode === 'teclado')
+    const filtered = filterBaixo(stripTomLine(cleanedCapo), showBaixo)
     return convertPlainTextToHtml(filtered)
   }, [currentSong?.content, currentSong?.content_guitar, instrumentMode, showBaixo])
   const processedChordHtml = useMemo(() => processChordHtml(currentRawHtml, transposeOffset, simplifyChords, violinMode, chordQualityFlip, singerMode),

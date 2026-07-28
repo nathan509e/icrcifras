@@ -266,7 +266,94 @@ export default function MusicasPage() {
     (url) => `https://r.jina.ai/${encodeURIComponent(url)}`,
   ]
 
+  const parseCifraMarkdown = (markdown) => {
+    let songName = ''
+    let artistName = ''
+    
+    const titleMatch = markdown.match(/Title:\s*(.*?)(?:\s*-\s*Cifra Club)/i) || markdown.match(/Title:\s*(.*)/i)
+    if (titleMatch) {
+      const parts = titleMatch[1].split(/\s*-\s*/)
+      if (parts.length >= 2) {
+        songName = parts[0].trim()
+        artistName = parts[1].trim()
+      } else {
+        songName = parts[0].trim()
+      }
+    }
+    
+    if (!songName) {
+      const h1Match = markdown.match(/^#\s*(.*)/m)
+      if (h1Match) songName = h1Match[1].trim()
+    }
+    if (!artistName) {
+      const h2Match = markdown.match(/##\s*\[([^\]]+)\]/i) || markdown.match(/##\s*(.*)/i)
+      if (h2Match) artistName = h2Match[1].trim()
+    }
+
+    const tomMatch = markdown.match(/Tom:\s*\[?([A-Ga-g][#b]?m?)\]?/i)
+    const tom = tomMatch ? tomMatch[1] : ''
+
+    const tomIndex = markdown.search(/Tom:\s*\[?/i)
+    let content = ''
+    if (tomIndex !== -1) {
+      content = markdown.substring(tomIndex)
+    } else {
+      const firstBracket = markdown.search(/\[(Intro|Primeira Parte|Refrão|Ponte)/i)
+      if (firstBracket !== -1) {
+        content = markdown.substring(firstBracket)
+      } else {
+        content = markdown
+      }
+    }
+
+    const endMarkers = [
+      /\n\s*Repetir\s+Modo/i,
+      /\n\s*Outros\s+vídeos/i,
+      /\n\s*Composição/i,
+      /\n\s*Colaboração/i
+    ]
+    for (const marker of endMarkers) {
+      const idx = content.search(marker)
+      if (idx !== -1) {
+        content = content.substring(0, idx)
+      }
+    }
+
+    content = content.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    content = content.replace(/\*\*([A-Ga-g][#b]?[m]?[^*]*)\*\*/g, '$1')
+    content = content.replace(/\*\*/g, '')
+    content = content.replace(/(Capo(?:traste)?(?:\s+na)?\s+\d+ª?\s*casa)\s*([^\n])/i, '$1\n$2')
+
+    if (content.startsWith('Tom:')) {
+      const firstLineEnd = content.indexOf('\n')
+      let firstLine = firstLineEnd !== -1 ? content.substring(0, firstLineEnd) : content
+      firstLine = firstLine.replace(/Tom:\s*([A-Ga-g][#b]?m?)(.*)/i, (match, t, rest) => {
+        const cleanRest = rest.trim()
+        return `Tom: ${t}` + (cleanRest ? `\n\n${cleanRest}` : '')
+      })
+      content = firstLineEnd !== -1 ? firstLine + content.substring(firstLineEnd) : firstLine
+    } else if (tom) {
+      content = `Tom: ${tom}\n\n${content}`
+    }
+
+    let youtubeUrl = ''
+    const ytMatch = markdown.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|v\/)|youtu\.be\/|youtube-nocookie\.com\/embed\/|vi\/)([a-zA-Z0-9_-]{11})/i)
+    if (ytMatch) {
+      youtubeUrl = `https://www.youtube.com/watch?v=${ytMatch[1]}`
+    }
+
+    return { songName, artistName, cifraContent: content.trim(), youtubeUrl }
+  }
+
   const parseCifraHtml = (html) => {
+    if (
+      html.includes('Markdown Content:') ||
+      html.includes('URL Source:') ||
+      (!html.includes('<html') && html.includes('Tom:'))
+    ) {
+      return parseCifraMarkdown(html)
+    }
+
     const parser = new DOMParser()
     const doc = parser.parseFromString(html, 'text/html')
 
@@ -287,6 +374,7 @@ export default function MusicasPage() {
 
     // Strip any starting Tom: ... from the content to avoid duplication
     cifraContent = cifraContent.replace(/^[Tt]om\s*:\s*[^\n]+\n*/mi, '').trim()
+    cifraContent = cifraContent.replace(/(Capo(?:traste)?(?:\s+na)?\s+\d+ª?\s*casa)\s*([^\n])/i, '$1\n$2')
 
     if (tom) {
       cifraContent = `Tom: ${tom}\n\n${cifraContent}`
@@ -511,7 +599,7 @@ export default function MusicasPage() {
     if (!importUrl.trim()) return
     setImportLoading(true)
     try {
-      let baseUrl = importUrl.trim().replace(/\?.*$/, '').replace(/\/$/, '')
+      let baseUrl = importUrl.trim().split(/[?#]/)[0].replace(/\/$/, '')
       let guitarUrl = baseUrl
       let tecladoUrl = baseUrl
 
@@ -535,7 +623,14 @@ export default function MusicasPage() {
                   const json = JSON.parse(text)
                   if (json && json.contents) parsedHtml = json.contents
                 } catch {}
-                if (parsedHtml.includes('<pre') || parsedHtml.includes('cifra_tom') || parsedHtml.includes('cifra_club')) {
+                if (
+                  parsedHtml.includes('<pre') ||
+                  parsedHtml.includes('cifra_tom') ||
+                  parsedHtml.includes('cifra_club') ||
+                  parsedHtml.includes('Markdown Content:') ||
+                  parsedHtml.includes('URL Source:') ||
+                  (parsedHtml.includes('Tom:') && (parsedHtml.includes('[Intro]') || parsedHtml.includes('[Primeira Parte]') || parsedHtml.includes('[Refrão]')))
+                ) {
                   return parsedHtml
                 }
               }
@@ -555,7 +650,14 @@ export default function MusicasPage() {
                   const json = JSON.parse(text)
                   if (json && json.contents) parsedHtml = json.contents
                 } catch {}
-                if (parsedHtml.includes('<pre') || parsedHtml.includes('cifra_tom') || parsedHtml.includes('cifra_club')) {
+                if (
+                  parsedHtml.includes('<pre') ||
+                  parsedHtml.includes('cifra_tom') ||
+                  parsedHtml.includes('cifra_club') ||
+                  parsedHtml.includes('Markdown Content:') ||
+                  parsedHtml.includes('URL Source:') ||
+                  (parsedHtml.includes('Tom:') && (parsedHtml.includes('[Intro]') || parsedHtml.includes('[Primeira Parte]') || parsedHtml.includes('[Refrão]')))
+                ) {
                   return parsedHtml
                 }
               }
