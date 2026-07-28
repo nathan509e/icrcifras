@@ -599,14 +599,16 @@ export default function MusicasPage() {
     if (!importUrl.trim()) return
     setImportLoading(true)
     try {
-      let baseUrl = importUrl.trim().split(/[?#]/)[0].replace(/\/$/, '')
-      let guitarUrl = baseUrl
-      let tecladoUrl = baseUrl
+      let cleanUrl = importUrl.trim().split(/[?#]/)[0].replace(/\/$/, '')
+      let guitarUrl = cleanUrl
+      let tecladoUrl = cleanUrl
 
-      if (baseUrl.endsWith('/teclado.html')) {
-        guitarUrl = baseUrl.replace(/\/teclado\.html$/, '')
+      if (cleanUrl.endsWith('.html')) {
+        const basePath = cleanUrl.substring(0, cleanUrl.lastIndexOf('/'))
+        guitarUrl = basePath
+        tecladoUrl = basePath + '/teclado.html'
       } else {
-        tecladoUrl = baseUrl + '/teclado.html'
+        tecladoUrl = cleanUrl + '/teclado.html'
       }
 
       // Fetch both Guitar and Teclado versions in parallel
@@ -698,7 +700,6 @@ export default function MusicasPage() {
         const finalGuitar = cifraGuitar || cifraTeclado
         
         applyImportResult(songName, finalKeyboard, finalGuitar, youtubeUrl, artistName)
-        alert('Cifra importada com sucesso! Verifique os dados e clique em Salvar.')
         setImportLoading(false)
         return
       }
@@ -720,7 +721,6 @@ export default function MusicasPage() {
       return
     }
     applyImportResult(result.songName, result.cifraContent, '', result.youtubeUrl, result.artistName || '')
-    alert('Cifra importada com sucesso! Verifique os dados e clique em Salvar.')
   }
 
   const getYoutubeId = (url) => {
