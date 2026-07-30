@@ -21,5 +21,19 @@ export default defineConfig(({ mode }) => {
       outDir: 'dist',
       emptyOutDir: true,
     },
+    
+    server: {
+      proxy: {
+        '/api-cifraclub': {
+          target: 'https://www.cifraclub.com.br',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api-cifraclub/, ''),
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Referer': 'https://www.cifraclub.com.br/'
+          }
+        }
+      }
+    }
   }
 })

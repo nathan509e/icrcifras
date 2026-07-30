@@ -93,9 +93,12 @@ export default function MusicasPage() {
   const [newSongFileGuitar, setNewSongFileGuitar] = useState(null)
   const [newSongYoutubeUrl, setNewSongYoutubeUrl] = useState('')
   const [importUrl, setImportUrl] = useState('')
+  const [, setImportUrls] = useState([])
+  const [importUrlInput, setImportUrlInput] = useState('')
   const [importLoading, setImportLoading] = useState(false)
   const [importHtml, setImportHtml] = useState('')
   const [showImportHtml, setShowImportHtml] = useState(false)
+  const [importProgress, setImportProgress] = useState({ current: 0, total: 0, results: [] })
   const [activeView, setActiveView] = useState('menu')
   const [showAdminAddModal, setShowAdminAddModal] = useState(false)
   const [successModalData, setSuccessModalData] = useState(null)
@@ -260,7 +263,14 @@ export default function MusicasPage() {
   }
 
   const CORS_PROXIES = [
-    (url) => `https://corsproxy.org/?${encodeURIComponent(url)}`,
+    // 1. Direct fetch (bypasses proxy on native mobile apps where CORS isn't enforced)
+    (url) => url,
+    // 2. Local dev server proxy (works during local web development to bypass Cloudflare/CORS)
+    (url) => {
+      const cleanPath = url.replace(/^https?:\/\/(?:www\.)?cifraclub\.com\.br/, '')
+      return `/api-cifraclub${cleanPath}`
+    },
+    // 3. Fallbacks
     (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
     (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
     (url) => `https://r.jina.ai/${encodeURIComponent(url)}`,
@@ -307,17 +317,57 @@ export default function MusicasPage() {
     }
 
     const endMarkers = [
-      /\n\s*Repetir\s+Modo/i,
-      /\n\s*Outros\s+vídeos/i,
-      /\n\s*Composição/i,
-      /\n\s*Colaboração/i
+      /(?:^|\n)\s*(?:#*|\**)*\s*Repetir\s+Modo/i,
+      /(?:^|\n)\s*(?:#*|\**)*\s*Outros\s+v[ií]deos/i,
+      /(?:^|\n)\s*(?:#*|\**)*\s*Composi[cç][aã]o/i,
+      /(?:^|\n)\s*(?:#*|\**)*\s*Colabora[cç][aã]o/i,
+      /(?:^|\n)\s*(?:#*|\**)*\s*Afinador\s+online/i,
+      /(?:^|\n)\s*(?:#*|\**)*\s*Entre\s+para\s+o\s+Cifra\s+Club/i,
+      /(?:^|\n)\s*(?:#*|\**)*\s*Playlists/i,
+      /(?:^|\n)\s*(?:#*|\**)*\s*Novidades/i
     ]
     for (const marker of endMarkers) {
-      const idx = content.search(marker)
-      if (idx !== -1) {
-        content = content.substring(0, idx)
+      const match = content.match(marker)
+      if (match) {
+        content = content.substring(0, match.index)
       }
     }
+
+    // Split inline chords in markdown (e.g. "**F#m7** **A** **A2** Tão lindo..." -> "**F#m7** **A** **A2**\nTão lindo...")
+    const lines = content.split('\n')
+    const chordRegex = /^\*\*([A-Ga-g][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*(?:\([^)]*\)|\[[^\]]*\])*(?:\/[A-Ga-g][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*)*)\*\*$/i
+    
+    const processedLines = lines.map(line => {
+      const trimmed = line.trim()
+      if (!trimmed) return line
+      
+      const tokens = trimmed.split(/(\s+)/)
+      let chordPart = ''
+      let lyricsPart = ''
+      let parsingChords = true
+      
+      for (let i = 0; i < tokens.length; i++) {
+        const token = tokens[i]
+        if (token.trim() === '') {
+          if (parsingChords) chordPart += token
+          else lyricsPart += token
+          continue
+        }
+        
+        if (parsingChords && chordRegex.test(token)) {
+          chordPart += token
+        } else {
+          parsingChords = false
+          lyricsPart += token
+        }
+      }
+      
+      if (chordPart && lyricsPart.trim()) {
+        return chordPart.trimEnd() + '\n' + lyricsPart.trimStart()
+      }
+      return line
+    })
+    content = processedLines.join('\n')
 
     content = content.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     content = content.replace(/\*\*([A-Ga-g][#b]?[m]?[^*]*)\*\*/g, '$1')
@@ -357,27 +407,62 @@ export default function MusicasPage() {
     const parser = new DOMParser()
     const doc = parser.parseFromString(html, 'text/html')
 
-    const tomSpan = doc.querySelector('#cifra_tom')
-    let tom = tomSpan ? tomSpan.textContent.trim() : ''
-    tom = tom.replace(/^[Tt]om\s*:\s*/i, '').trim()
+    let tom = ""
+    const newTomMatch = html.match(/class="eVroG"\s+data-anchor="--chord-tone"[^>]*>([\s\S]*?)<\/button>/i) ||
+                        html.match(/>Tom<!-- -->:<!-- -->\s*<button[^>]*>([\s\S]*?)<\/button>/i)
+    if (newTomMatch) {
+      tom = newTomMatch[1].replace(/<!--[\s\S]*?-->/g, '').replace(/<[^>]+>/g, '').trim()
+    } else {
+      const tomSpan = doc.querySelector('#cifra_tom') || doc.querySelector('.cifra_tom')
+      if (tomSpan) {
+        tom = tomSpan.textContent.replace(/^[Tt]om\s*:\s*/i, '').trim()
+      } else {
+        const tomMatch = html.match(/tom:\s*<b>([^<]+)<\/b>/i)
+        if (tomMatch) tom = tomMatch[1].replace(/<[^>]+>/g, '').replace(/^[Tt]om\s*:\s*/i, '').trim()
+      }
+    }
 
-    const pre = doc.querySelector('pre')
-    if (!pre) return null
+    let capo = ""
+    const newCapoMatch = html.match(/data-anchor="--chord-capo"[^>]*>[\s\S]*?<button[^>]*>([\s\S]*?)<\/button>/i) ||
+                        html.match(/<span>Capotraste<!-- -->:<\/span>\s*<button[^>]*>([\s\S]*?)<\/button>/i)
+    if (newCapoMatch) {
+      capo = newCapoMatch[1].replace(/<!--[\s\S]*?-->/g, '').replace(/<[^>]+>/g, '').trim()
+    } else {
+      const capoSpan = doc.querySelector('#cifra_capo') || doc.querySelector('.cifra_capo')
+      if (capoSpan) {
+        capo = capoSpan.textContent.replace(/^[Cc]apotraste\s*:\s*/i, '').trim()
+      } else {
+        const capoMatch = html.match(/capotraste:\s*<b>([^<]+)<\/b>/i)
+        if (capoMatch) capo = capoMatch[1].replace(/<[^>]+>/g, '').replace(/^[Cc]apotraste\s*:\s*/i, '').trim()
+      }
+    }
 
-    let cifraContent = pre.textContent || pre.innerHTML
-    cifraContent = cifraContent.replace(/<br\s*\/?>/gi, '\n').replace(/<\/?[^>]+(>|$)/g, '')
+    // Extract pre content using Regex directly to preserve raw spaces and avoid DOMParser whitespace collapsing
+    const preMatch = html.match(/<pre[^>]*>([\s\S]*?)<\/pre>/i)
+    if (!preMatch) return null
+
+    let cifraContent = preMatch[1]
+    cifraContent = cifraContent.replace(/<\/div>/gi, '\n')
+    cifraContent = cifraContent.replace(/<br\s*\/?>/gi, '\n')
+    cifraContent = cifraContent.replace(/&nbsp;/gi, ' ')
+    cifraContent = cifraContent.replace(/&lt;/gi, '<').replace(/&gt;/gi, '>').replace(/&amp;/gi, '&')
+    cifraContent = cifraContent.replace(/<\/?[^>]+(>|$)/g, '')
     cifraContent = cifraContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim()
 
     // Strip any tuning line completely so it is not shown
     cifraContent = cifraContent.replace(/^[Aa]fina[cç][aã]o\s*:\s*[^\n]+\n*/mi, '')
     cifraContent = cifraContent.replace(/^[Tt]uning\s*:\s*[^\n]+\n*/mi, '')
 
-    // Strip any starting Tom: ... from the content to avoid duplication
+    // Strip any starting Tom: / Capotraste: ... from the content to avoid duplication
     cifraContent = cifraContent.replace(/^[Tt]om\s*:\s*[^\n]+\n*/mi, '').trim()
-    cifraContent = cifraContent.replace(/(Capo(?:traste)?(?:\s+na)?\s+\d+ª?\s*casa)\s*([^\n])/i, '$1\n$2')
+    cifraContent = cifraContent.replace(/^[Cc]apotraste\s*:\s*[^\n]+\n*/mi, '').trim()
 
-    if (tom) {
-      cifraContent = `Tom: ${tom}\n\n${cifraContent}`
+    let header = ""
+    if (tom) header += `Tom: ${tom}\n`
+    if (capo) header += `Capotraste: ${capo}\n`
+
+    if (header) {
+      cifraContent = `${header}\n${cifraContent}`
     }
 
     const title = doc.title || ''
@@ -393,6 +478,18 @@ export default function MusicasPage() {
     const songEl = doc.querySelector('h1.t1') || doc.querySelector('.cifra-char_title')
     if (songEl) {
       songName = songEl.textContent.trim()
+    }
+
+    const ogTitleMatch = html.match(/<meta\s+property="og:title"\s+content="([^"]+)"/i)
+    if (ogTitleMatch) {
+      const cleanTitle = ogTitleMatch[1].replace(/ - Cifra Club$/i, '').replace(/^Cifra Club - /i, '').trim()
+      const parts = cleanTitle.split(' - ')
+      if (parts.length >= 2) {
+        if (!songName) songName = parts[0].trim()
+        if (!artistName) artistName = parts[1].trim()
+      } else if (!songName) {
+        songName = cleanTitle
+      }
     }
 
     if (!songName && title) {
@@ -471,7 +568,8 @@ export default function MusicasPage() {
       }
     }
     if (!youtubeId) {
-      const match = html.match(/"youtubeId"\s*:\s*"([a-zA-Z0-9_-]{11})"/i)
+      const match = html.match(/youtubeID\\*"\s*:\s*\\*"([a-zA-Z0-9_-]{11})/i) ||
+                    html.match(/"youtubeId"\s*:\s*"([a-zA-Z0-9_-]{11})"/i)
       if (match) youtubeId = match[1]
     }
     if (!youtubeId) {
@@ -526,7 +624,8 @@ export default function MusicasPage() {
 
   const extractTomInfo = (text) => {
     if (!text) return { tom: null, formaTom: null }
-    const match = text.match(/^[Tt]om\s*:\s*([A-Ga-g][#b]?m?)(?:\s*\(forma dos acordes no tom de\s+([A-Ga-g][#b]?m?)\))?/m)
+    const rawText = text.replace(/<[^>]+>/g, '')
+    const match = rawText.match(/(?:^|\n|\b)[Tt]om\s*:\s*([A-Ga-g][#b]?m?)(?:\s*\((?:[^\)]*?forma[^\)]*?de\s+)?([A-Ga-g][#b]?m?)\))?/i)
     if (match) {
       const tom = match[1].charAt(0).toUpperCase() + match[1].slice(1)
       const formaTom = match[2] ? match[2].charAt(0).toUpperCase() + match[2].slice(1) : null
@@ -559,18 +658,19 @@ export default function MusicasPage() {
   }
 
   const applyImportResult = (songName, cifraContentKeyboard, cifraContentGuitar = '', youtubeUrl = '', artistName = '') => {
-    const finalGuitar = cifraContentGuitar && cifraContentGuitar !== cifraContentKeyboard 
-      ? cifraContentGuitar 
-      : cifraContentKeyboard
+    const mainContent = cifraContentGuitar || cifraContentKeyboard
+    const finalGuitar = mainContent
 
     // Automatically transpose Keyboard version if it has a shape (formaTom)
-    const infoTeclado = extractTomInfo(cifraContentKeyboard)
-    let finalKeyboard = cifraContentKeyboard
+    const infoTeclado = extractTomInfo(mainContent)
+    let finalKeyboard = mainContent
     if (infoTeclado.formaTom && infoTeclado.tom && infoTeclado.formaTom !== infoTeclado.tom) {
       const offset = getTransposeOffsetFromNotes(infoTeclado.formaTom, infoTeclado.tom)
       if (offset !== 0) {
-        const transposedText = transposeRawTextChords(cifraContentKeyboard, offset)
-        finalKeyboard = transposedText.replace(/^[Tt]om\s*:\s*[^\n]+/m, `Tom: ${infoTeclado.tom}`)
+        const transposedText = transposeRawTextChords(mainContent, offset)
+        finalKeyboard = transposedText
+          .replace(/^[Cc]apotraste\s*:\s*[^\n]+\n*/mi, '')
+          .replace(/^[Tt]om\s*:\s*[^\n]+/m, `Tom: ${infoTeclado.tom}`)
       }
     }
 
@@ -595,6 +695,116 @@ export default function MusicasPage() {
     setShowImportHtml(false)
   }
 
+  const importSingleUrl = async (url) => {
+    let cleanUrl = url.trim().split(/[?#]/)[0].replace(/\/$/, '')
+    let guitarUrl = cleanUrl
+    let tecladoUrl = cleanUrl
+
+    if (cleanUrl.endsWith('.html')) {
+      const basePath = cleanUrl.substring(0, cleanUrl.lastIndexOf('/'))
+      guitarUrl = basePath + '/'
+      tecladoUrl = basePath + '/teclado.html'
+    } else {
+      guitarUrl = cleanUrl + '/'
+      tecladoUrl = cleanUrl + '/teclado.html'
+    }
+
+    const [htmlGuitar, htmlTeclado] = await Promise.all([
+      (async () => {
+        for (const proxy of CORS_PROXIES) {
+          try {
+            const proxyUrl = proxy(guitarUrl)
+            const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(10000) })
+            if (res.ok) {
+              const text = await res.text()
+              let parsedHtml = text
+              try {
+                const json = JSON.parse(text)
+                if (json && json.contents) parsedHtml = json.contents
+              } catch {}
+              if (
+                parsedHtml.includes('<pre') ||
+                parsedHtml.includes('cifra_tom') ||
+                parsedHtml.includes('cifra_club') ||
+                parsedHtml.includes('Markdown Content:') ||
+                parsedHtml.includes('URL Source:') ||
+                (parsedHtml.includes('Tom:') && (parsedHtml.includes('[Intro]') || parsedHtml.includes('[Primeira Parte]') || parsedHtml.includes('[Refrão]')))
+              ) {
+                return parsedHtml
+              }
+            }
+          } catch (e) { continue }
+        }
+        return ''
+      })(),
+      (async () => {
+        for (const proxy of CORS_PROXIES) {
+          try {
+            const proxyUrl = proxy(tecladoUrl)
+            const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(10000) })
+            if (res.ok) {
+              const text = await res.text()
+              let parsedHtml = text
+              try {
+                const json = JSON.parse(text)
+                if (json && json.contents) parsedHtml = json.contents
+              } catch {}
+              if (
+                parsedHtml.includes('<pre') ||
+                parsedHtml.includes('cifra_tom') ||
+                parsedHtml.includes('cifra_club') ||
+                parsedHtml.includes('Markdown Content:') ||
+                parsedHtml.includes('URL Source:') ||
+                (parsedHtml.includes('Tom:') && (parsedHtml.includes('[Intro]') || parsedHtml.includes('[Primeira Parte]') || parsedHtml.includes('[Refrão]')))
+              ) {
+                return parsedHtml
+              }
+            }
+          } catch (e) { continue }
+        }
+        return ''
+      })()
+    ])
+
+    let songName = ''
+    let artistName = ''
+    let cifraGuitar = ''
+    let cifraTeclado = ''
+    let youtubeUrl = ''
+
+    if (htmlGuitar) {
+      const resGuitar = parseCifraHtml(htmlGuitar)
+      if (resGuitar) {
+        songName = resGuitar.songName
+        artistName = resGuitar.artistName || ''
+        cifraGuitar = resGuitar.cifraContent
+        youtubeUrl = resGuitar.youtubeUrl || ''
+      }
+    }
+
+    if (htmlTeclado) {
+      const resTeclado = parseCifraHtml(htmlTeclado)
+      if (resTeclado) {
+        if (!songName) songName = resTeclado.songName
+        if (!artistName) artistName = resTeclado.artistName || ''
+        cifraTeclado = resTeclado.cifraContent
+        if (!youtubeUrl) youtubeUrl = resTeclado.youtubeUrl || ''
+      }
+    }
+
+    if (!cifraGuitar && !cifraTeclado) {
+      throw new Error('Nao foi possivel importar a cifra')
+    }
+
+    return {
+      songName,
+      keyboard: cifraTeclado || cifraGuitar,
+      guitar: cifraGuitar || cifraTeclado,
+      youtubeUrl,
+      artistName
+    }
+  }
+
   const handleImportFromUrl = async () => {
     if (!importUrl.trim()) return
     setImportLoading(true)
@@ -605,9 +815,10 @@ export default function MusicasPage() {
 
       if (cleanUrl.endsWith('.html')) {
         const basePath = cleanUrl.substring(0, cleanUrl.lastIndexOf('/'))
-        guitarUrl = basePath
+        guitarUrl = basePath + '/'
         tecladoUrl = basePath + '/teclado.html'
       } else {
+        guitarUrl = cleanUrl + '/'
         tecladoUrl = cleanUrl + '/teclado.html'
       }
 
@@ -696,10 +907,8 @@ export default function MusicasPage() {
       }
 
       if (cifraGuitar || cifraTeclado) {
-        const finalKeyboard = cifraTeclado || cifraGuitar
-        const finalGuitar = cifraGuitar || cifraTeclado
-        
-        applyImportResult(songName, finalKeyboard, finalGuitar, youtubeUrl, artistName)
+        const baseContent = cifraGuitar || cifraTeclado
+        applyImportResult(songName, baseContent, baseContent, youtubeUrl, artistName)
         setImportLoading(false)
         return
       }
@@ -2407,7 +2616,7 @@ export default function MusicasPage() {
       )}
 
       {showAddModal && (
-        <div className="modal-overlay" onClick={() => { setShowAddModal(false); setImportUrl(''); setImportHtml(''); setShowImportHtml(false) }}>
+        <div className="modal-overlay" onClick={() => { setShowAddModal(false); setImportUrl(''); setImportHtml(''); setShowImportHtml(false); setImportUrls([]); setImportUrlInput(''); setImportProgress({ current: 0, total: 0, results: [] }) }}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <h2 className="modal-title">Adicionar nova musica</h2>
             <div className="modal-body">
@@ -2469,32 +2678,121 @@ export default function MusicasPage() {
                 <button
                   className="modal-btn"
                   style={{ height: 32, fontSize: 12, padding: '0 12px', background: '#f5f5f5', border: '1px solid #e0e0e0', borderRadius: 6, cursor: 'pointer' }}
-                  onClick={() => setImportUrl(importUrl ? '' : ' ')}
+                  onClick={() => { setImportUrl(importUrl ? '' : ' '); setImportUrls([]); setImportUrlInput(''); setImportProgress({ current: 0, total: 0, results: [] }) }}
                 >
                   Importar do CifraClub
                 </button>
               </div>
               {importUrl !== '' && (
                 <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <label className="modal-label" style={{ marginTop: 0 }}>Link da cifra</label>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <input
-                      className="modal-input"
-                      type="url"
-                      placeholder="https://www.cifraclub.com.br/artista/musica/"
-                      value={importUrl}
-                      onChange={e => setImportUrl(e.target.value)}
-                      style={{ marginBottom: 0, flex: 1 }}
-                    />
+                  <label className="modal-label" style={{ marginTop: 0 }}>Link(s) da(s) cifra(s) - ate 10 por vez</label>
+                  <textarea
+                    className="modal-input"
+                    placeholder={`https://www.cifraclub.com.br/artista/musica/\nhttps://www.cifraclub.com.br/outro/artista/\n(um link por linha, ate 10 links)`}
+                    value={importUrlInput}
+                    onChange={e => setImportUrlInput(e.target.value)}
+                    style={{ marginBottom: 0, minHeight: 80, resize: 'vertical', padding: 8 }}
+                  />
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                     <button
                       className="modal-btn modal-btn-confirm"
-                      onClick={handleImportFromUrl}
-                      disabled={importLoading || !importUrl.trim()}
+                      onClick={async () => {
+                        if (!importUrlInput.trim()) return
+                        const urls = importUrlInput.trim().split('\n').map(u => u.trim()).filter(u => u.startsWith('http'))
+                        if (urls.length === 0) return
+                        if (urls.length > 10) {
+                          alert('Maximo de 10 links por vez')
+                          return
+                        }
+                        setImportUrls(urls)
+                        setImportProgress({ current: 0, total: urls.length, results: [] })
+                        setImportLoading(true)
+                        const results = []
+                        const savedSongs = []
+                        for (let i = 0; i < urls.length; i++) {
+                          const url = urls[i]
+                          setImportProgress(prev => ({ ...prev, current: i + 1 }))
+                          try {
+                            const result = await importSingleUrl(url)
+                            if (result && (result.keyboard || result.guitar)) {
+                              const finalGuitar = result.guitar && result.guitar !== result.keyboard 
+                                ? result.guitar 
+                                : result.keyboard
+
+                              const infoTeclado = extractTomInfo(result.keyboard)
+                              let finalKeyboard = result.keyboard
+                              if (infoTeclado.formaTom && infoTeclado.tom && infoTeclado.formaTom !== infoTeclado.tom) {
+                                const offset = getTransposeOffsetFromNotes(infoTeclado.formaTom, infoTeclado.tom)
+                                if (offset !== 0) {
+                                  const transposedText = transposeRawTextChords(result.keyboard, offset)
+                                  finalKeyboard = transposedText.replace(/^[Tt]om\s*:\s*[^\n]+/m, `Tom: ${infoTeclado.tom}`)
+                                }
+                              }
+
+                              const detectedKey = detectKey(finalKeyboard || finalGuitar)
+                              const saved = await saveSong(
+                                result.songName.trim(),
+                                finalKeyboard,
+                                (result.youtubeUrl || '').trim(),
+                                (result.artistName || '').trim(),
+                                detectedKey,
+                                finalGuitar
+                              )
+                              if (saved) {
+                                savedSongs.push(saved)
+                                results.push({ url, success: true, data: result })
+                              } else {
+                                results.push({ url, success: false, error: 'Erro ao salvar cifra no banco' })
+                              }
+                            } else {
+                              results.push({ url, success: false, error: 'Cifra vazia ou invalida' })
+                            }
+                          } catch (err) {
+                            results.push({ url, success: false, error: err.message })
+                          }
+                        }
+                        
+                        if (savedSongs.length > 0) {
+                          setSongs(prev => {
+                            const combined = [...savedSongs, ...prev]
+                            return combined.sort((a, b) => a.name.localeCompare(b.name, 'pt', { sensitivity: 'base' }))
+                          })
+                          alert(`${savedSongs.length} música(s) importada(s) e salva(s) com sucesso!`)
+                        }
+                        setImportProgress(prev => ({ ...prev, results }))
+                        setImportLoading(false)
+                      }}
+                      disabled={importLoading || !importUrlInput.trim()}
                       style={{ height: 40, whiteSpace: 'nowrap', fontSize: 13 }}
                     >
-                      {importLoading ? 'Importando...' : 'Importar'}
+                      {importLoading ? `Importando ${importProgress.current}/${importProgress.total}...` : `Importar ${importUrlInput.trim().split('\n').filter(u => u.trim()).length} link(s)`}
                     </button>
+                    {importProgress.results.length > 0 && (
+                      <button
+                        className="modal-btn"
+                        style={{ height: 40, fontSize: 12, background: '#f5f5f5', border: '1px solid #e0e0e0' }}
+                        onClick={() => {
+                          setImportUrls([])
+                          setImportProgress({ current: 0, total: 0, results: [] })
+                          setImportUrlInput('')
+                          setImportUrl('')
+                          setShowAddModal(false)
+                        }}
+                      >
+                        Concluir
+                      </button>
+                    )}
                   </div>
+                  {importProgress.results.length > 0 && (
+                    <div style={{ marginTop: 8, maxHeight: 150, overflowY: 'auto', fontSize: 12, background: '#f9f9f9', borderRadius: 6, padding: 8 }}>
+                      <div style={{ fontWeight: 600, marginBottom: 4 }}>Resultados:</div>
+                      {importProgress.results.map((r, idx) => (
+                        <div key={idx} style={{ color: r.success ? '#16a34a' : '#dc2626', marginBottom: 2, fontSize: 11 }}>
+                          {r.success ? '✓' : '✗'} {r.url.split('/').filter(Boolean).pop() || r.url.slice(0, 50)} - {r.success ? (r.data?.songName || 'OK') : r.error}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
               {showImportHtml && (
@@ -2527,7 +2825,7 @@ export default function MusicasPage() {
               />
             </div>
             <div className="modal-actions">
-              <button className="modal-btn modal-btn-cancel" onClick={() => { setShowAddModal(false); setImportUrl(''); setImportHtml(''); setShowImportHtml(false) }}>Cancelar</button>
+              <button className="modal-btn modal-btn-cancel" onClick={() => { setShowAddModal(false); setImportUrl(''); setImportHtml(''); setShowImportHtml(false); setImportUrls([]); setImportUrlInput(''); setImportProgress({ current: 0, total: 0, results: [] }) }}>Cancelar</button>
               <button
                 className="modal-btn modal-btn-confirm"
                 onClick={handleAddSong}

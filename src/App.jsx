@@ -329,6 +329,8 @@ function App() {
   const [autoScrollSpeed, setAutoScrollSpeed] = useState(1)
   const [isScrolling, setIsScrolling] = useState(false)
   const [fontSize, setFontSize] = useState(15)
+  const [hasManuallyAdjusted, setHasManuallyAdjusted] = useState(false)
+
   const [transposeOffset, setTransposeOffset] = useState(0)
   const [formaTom, setFormaTom] = useState(null)
   const [simplifyChords, setSimplifyChords] = useState(false)
@@ -373,6 +375,10 @@ function App() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const { user, setUser, userIsAdmin, setUserIsAdmin, userLists, setUserLists } = useAuth()
 
+  const currentSong = selectedSongId
+    ? songs.find(s => s.id === selectedSongId)
+    : null
+
   useEffect(() => {
     if (user) {
       setShowLoginModal(false)
@@ -380,6 +386,67 @@ function App() {
       setShowSignupForm(false)
     }
   }, [user])
+
+
+
+  useEffect(() => {
+    setHasManuallyAdjusted(false)
+  }, [currentSong?.id])
+
+  useEffect(() => {
+    if (!currentSong || hasManuallyAdjusted) return
+
+    const adjustFontSize = () => {
+      const content = document.querySelector('.cifra-content')
+      if (!content) return
+
+      const container = content.parentElement
+      if (!container) return
+
+      const minSize = 12
+      const maxSize = 15
+      let currentSize = maxSize
+
+      const checkOverflow = (size) => {
+        content.style.fontSize = `${size}px`
+        const pre = content.querySelector('pre')
+        if (!pre) return false
+        
+        const originalDisplay = pre.style.display
+        pre.style.display = 'inline-block'
+        const actualWidth = pre.offsetWidth
+        pre.style.display = originalDisplay
+
+        const containerWidth = container.clientWidth || window.innerWidth
+        if (!containerWidth) return false
+        const limit = containerWidth - 24
+        
+        return actualWidth > limit
+      }
+
+      while (currentSize > minSize && checkOverflow(currentSize)) {
+        currentSize--
+      }
+
+      setFontSize(prev => prev !== currentSize ? currentSize : prev)
+    }
+
+    adjustFontSize()
+
+    const resizeObserver = new ResizeObserver(() => {
+      adjustFontSize()
+    })
+
+    const content = document.querySelector('.cifra-content')
+    const container = content?.parentElement
+    if (container) {
+      resizeObserver.observe(container)
+    }
+
+    return () => {
+      resizeObserver.disconnect()
+    }
+  }, [currentSong, instrumentMode, simplifyChords, violinMode, singerMode, showBaixo, transposeOffset, chordQualityFlip, hasManuallyAdjusted])
 
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [showEmailForm, setShowEmailForm] = useState(false)
@@ -759,10 +826,6 @@ function App() {
       alert('Erro ao salvar. Verifique o console para mais detalhes.')
     }
   }
-
-  const currentSong = selectedSongId
-    ? songs.find(s => s.id === selectedSongId)
-    : null
 
   const currentRawHtml = useMemo(() => {
     const baseContent = instrumentMode === 'violao' && currentSong?.content_guitar
@@ -1166,7 +1229,10 @@ function App() {
                         min="12"
                         max="24"
                         value={fontSize}
-                        onChange={(e) => setFontSize(Number(e.target.value))}
+                        onChange={(e) => {
+                          setFontSize(Number(e.target.value))
+                          setHasManuallyAdjusted(true)
+                        }}
                         className="tool-slider"
                       />
                     </div>
@@ -2456,13 +2522,16 @@ function App() {
                   </div>
 
                   <div className="mobile-panel-item">
-                    <span>Tamanho da Fonte ({fontSize}px)</span>
+                    <span>Tamanho ({fontSize}px)</span>
                     <input
                       type="range"
                       min="12"
                       max="24"
                       value={fontSize}
-                      onChange={(e) => setFontSize(Number(e.target.value))}
+                      onChange={(e) => {
+                        setFontSize(Number(e.target.value))
+                        setHasManuallyAdjusted(true)
+                      }}
                       className="mobile-slider-small"
                     />
                   </div>
