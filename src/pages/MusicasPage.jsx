@@ -377,9 +377,10 @@ export default function MusicasPage() {
     if (content.startsWith('Tom:')) {
       const firstLineEnd = content.indexOf('\n')
       let firstLine = firstLineEnd !== -1 ? content.substring(0, firstLineEnd) : content
-      firstLine = firstLine.replace(/Tom:\s*([A-Ga-g][#b]?m?)(.*)/i, (match, t, rest) => {
-        const cleanRest = rest.trim()
-        return `Tom: ${t}` + (cleanRest ? `\n\n${cleanRest}` : '')
+      firstLine = firstLine.replace(/Tom:\s*([A-Ga-g][#b]?m?)(\s*\([^)]*\))?(.*)/i, (match, t, shape, rest) => {
+        const cleanRest = rest ? rest.trim() : ''
+        const shapeStr = shape ? shape.trim() : ''
+        return `Tom: ${t}` + (shapeStr ? ` ${shapeStr}` : '') + (cleanRest ? `\n\n${cleanRest}` : '')
       })
       content = firstLineEnd !== -1 ? firstLine + content.substring(firstLineEnd) : firstLine
     } else if (tom) {
@@ -625,7 +626,7 @@ export default function MusicasPage() {
   const extractTomInfo = (text) => {
     if (!text) return { tom: null, formaTom: null }
     const rawText = text.replace(/<[^>]+>/g, '')
-    const match = rawText.match(/(?:^|\n|\b)[Tt]om\s*:\s*([A-Ga-g][#b]?m?)(?:\s*\((?:[^\)]*?forma[^\)]*?de\s+)?([A-Ga-g][#b]?m?)\))?/i)
+    const match = rawText.match(/(?:^|\n|\b)[Tt]om\s*:\s*([A-Ga-g][#b]?m?)(?:\s*\((?:[^)]*?\b(?:forma|tom|de|com|acordes)\b[^)]*\s+)?([A-Ga-g][#b]?m?)\))?/i)
     if (match) {
       const tom = match[1].charAt(0).toUpperCase() + match[1].slice(1)
       const formaTom = match[2] ? match[2].charAt(0).toUpperCase() + match[2].slice(1) : null

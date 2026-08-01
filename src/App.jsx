@@ -275,7 +275,7 @@ function stripCapoLine(text, hide) {
 function extractTomInfo(text) {
   if (!text) return { tom: null, formaTom: null }
   const rawText = text.replace(/<[^>]+>/g, '')
-  const match = rawText.match(/(?:^|\n|\b)[Tt]om\s*:\s*([A-Ga-g][#b]?m?)(?:\s*\(forma dos acordes no tom de\s+([A-Ga-g][#b]?m?)\))?/i)
+  const match = rawText.match(/(?:^|\n|\b)[Tt]om\s*:\s*([A-Ga-g][#b]?m?)(?:\s*\((?:[^)]*?\b(?:forma|tom|de|com|acordes)\b[^)]*\s+)?([A-Ga-g][#b]?m?)\))?/i)
   if (match) {
     const tom = match[1].charAt(0).toUpperCase() + match[1].slice(1)
     const formaTom = match[2] ? match[2].charAt(0).toUpperCase() + match[2].slice(1) : null
