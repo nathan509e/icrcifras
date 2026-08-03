@@ -363,14 +363,30 @@ export default function MusicasPage() {
       }
       
       if (chordPart && lyricsPart.trim()) {
-        return chordPart.trimEnd() + '\n' + lyricsPart.trimStart()
+        return chordPart.trimEnd() + '\n' + lyricsPart
       }
       return line
     })
     content = processedLines.join('\n')
 
     content = content.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    content = content.replace(/\*\*([A-Ga-g][#b]?[m]?[^*]*)\*\*/g, '$1')
+    content = content.split('\n').map(line => {
+      if (!/\*\*[A-Ga-g]/.test(line)) return line
+      const chunks = line.split(/(\s+)/)
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i]
+        if (!chunk || /^\s+$/.test(chunk)) continue
+        if (/^\*\*([A-Ga-g][#b]?[^*]*)\*\*$/i.test(chunk)) {
+          const stripped = chunk.replace(/^\*\*|\*\*$/g, '')
+          const delta = chunk.length - stripped.length
+          chunks[i] = stripped
+          if (delta > 0 && i + 1 < chunks.length && /^\s+$/.test(chunks[i + 1])) {
+            chunks[i + 1] = ' '.repeat(chunks[i + 1].length + delta)
+          }
+        }
+      }
+      return chunks.join('')
+    }).join('\n')
     content = content.replace(/\*\*/g, '')
     content = content.replace(/(Capo(?:traste)?(?:\s+na)?\s+\d+ª?\s*casa)\s*([^\n])/i, '$1\n$2')
 
@@ -643,18 +659,34 @@ export default function MusicasPage() {
     return text.split('\n').map(line => {
       const trimmed = line.trim()
       if (!trimmed) return line
-      const tokens = trimmed.split(/\s+/)
-      const isChordLine = tokens.every(t => {
+      const rawTokens = trimmed.split(/\s+/)
+      const isChordLine = rawTokens.every(t => {
         const cleaned = t.replace(/^[,;:\-\.]+|[,;:\-\.]+$|\(?\d+x\)?/gi, '')
         if (!cleaned) return true
         return chordPattern.test(cleaned) || sectionPattern.test(cleaned) || /^\d+x?$|^[\|:\(\)]+$|[\[\]\(\)]/i.test(cleaned)
       })
       if (!isChordLine) return line
       
-      return line.replace(/\b(\(?)([A-Ga-g][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*(?:\([^)]*\)|\[[^\]]*\])*(?:\/[A-Ga-g][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*)?)(\)?)(?=\s|$|[,;\-\.:\)])/gi, (match, p1, p2, p3) => {
-        const transposed = transposeChordString(p2.replace(/^([a-g])/, m => m.toUpperCase()), offset)
-        return `${p1}${transposed}${p3}`
-      })
+      const chunks = line.split(/(\s+)/)
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i]
+        if (!chunk || /^\s+$/.test(chunk)) continue
+
+        const transposedChunk = chunk.replace(/\b(\(?)([A-Ga-g][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*(?:\([^)]*\)|\[[^\]]*\])*(?:\/[A-Ga-g][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*)?)(\)?)(?=\s|$|[,;\-\.:\)])/gi, (match, p1, p2, p3) => {
+          const transposed = transposeChordString(p2.replace(/^([a-g])/, m => m.toUpperCase()), offset)
+          return `${p1}${transposed}${p3}`
+        })
+
+        const delta = chunk.length - transposedChunk.length
+        chunks[i] = transposedChunk
+
+        if (delta !== 0 && i + 1 < chunks.length && /^\s+$/.test(chunks[i + 1])) {
+          const currentSpaces = chunks[i + 1].length
+          const newSpaces = Math.max(1, currentSpaces + delta)
+          chunks[i + 1] = ' '.repeat(newSpaces)
+        }
+      }
+      return chunks.join('')
     }).join('\n')
   }
 
@@ -797,10 +829,11 @@ export default function MusicasPage() {
       throw new Error('Nao foi possivel importar a cifra')
     }
 
+    const baseContent = cifraGuitar || cifraTeclado
     return {
       songName,
-      keyboard: cifraTeclado || cifraGuitar,
-      guitar: cifraGuitar || cifraTeclado,
+      keyboard: baseContent,
+      guitar: baseContent,
       youtubeUrl,
       artistName
     }
@@ -2716,17 +2749,18 @@ export default function MusicasPage() {
                           try {
                             const result = await importSingleUrl(url)
                             if (result && (result.keyboard || result.guitar)) {
-                              const finalGuitar = result.guitar && result.guitar !== result.keyboard 
-                                ? result.guitar 
-                                : result.keyboard
+                              const mainContent = result.guitar || result.keyboard
+                              const finalGuitar = mainContent
 
-                              const infoTeclado = extractTomInfo(result.keyboard)
-                              let finalKeyboard = result.keyboard
+                              const infoTeclado = extractTomInfo(mainContent)
+                              let finalKeyboard = mainContent
                               if (infoTeclado.formaTom && infoTeclado.tom && infoTeclado.formaTom !== infoTeclado.tom) {
                                 const offset = getTransposeOffsetFromNotes(infoTeclado.formaTom, infoTeclado.tom)
                                 if (offset !== 0) {
-                                  const transposedText = transposeRawTextChords(result.keyboard, offset)
-                                  finalKeyboard = transposedText.replace(/^[Tt]om\s*:\s*[^\n]+/m, `Tom: ${infoTeclado.tom}`)
+                                  const transposedText = transposeRawTextChords(mainContent, offset)
+                                  finalKeyboard = transposedText
+                                    .replace(/^[Cc]apotraste\s*:\s*[^\n]+\n*/mi, '')
+                                    .replace(/^[Tt]om\s*:\s*[^\n]+/m, `Tom: ${infoTeclado.tom}`)
                                 }
                               }
 
