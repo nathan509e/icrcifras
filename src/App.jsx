@@ -228,6 +228,178 @@ function filterBaixo(text, showBaixo) {
   return finalLines.join('\n').trim();
 }
 
+function isChordLineText(line) {
+  const trimmed = line.trim()
+  if (!trimmed) return false
+
+  if (/^(?:[a-zA-Z\s\u00C0-\u00FF]+:\s*)?[a-gA-G\#b]?\s*\|/i.test(trimmed)) {
+    const hyphenCount = (trimmed.match(/-/g) || []).length
+    if (hyphenCount >= 3) return false
+  }
+
+  const chordPattern = /^\(?[A-Ga-g][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*(?:\([^)]*\)|\[[^\]]*\])*(?:\/[A-Ga-g][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*)*\)?$/i
+  const sectionPattern = /^\[.*\]$/
+
+  const tokens = trimmed.split(/\s+/)
+  return tokens.every(t => {
+    const cleaned = t.replace(/^[,;:\-\.]+|[,;:\-\.]+$|\(?\d+x\)?/gi, '')
+    if (!cleaned) return true
+    return chordPattern.test(cleaned) || sectionPattern.test(cleaned) || /^\d+x?$|^[\|:]+$|^(?:Riff|Solo|Intro|Refrão|Ponte|Verso|Outro|Fine|Coda|D\.?[CS]\.?)$|[\[\]\(\)]/i.test(cleaned)
+  })
+}
+
+function isTabLineText(line) {
+  const trimmed = line.trim()
+  if (!/^(?:[a-zA-Z\s\u00C0-\u00FF]+:\s*)?[a-gA-G\#b]?\s*\|/i.test(trimmed)) return false
+  const hyphenCount = (trimmed.match(/-/g) || []).length
+  return hyphenCount >= 3
+}
+
+function wrapChordLyricPair(chordLine, lyricLine, maxChars) {
+  const tokens = []
+  const tokenRegex = /\S+/g
+  let match
+  while ((match = tokenRegex.exec(chordLine)) !== null) {
+    tokens.push({ text: match[0], col: match.index })
+  }
+
+  const lyricLen = lyricLine.length
+
+  if (chordLine.length <= maxChars && lyricLen <= maxChars) {
+    return [chordLine, lyricLine]
+  }
+
+  const resultLines = []
+  let startCol = 0
+
+  while (startCol < lyricLen || (startCol === 0 && tokens.length > 0)) {
+    const remainingTokens = tokens.filter(t => t.col >= startCol)
+    if (startCol >= lyricLen && remainingTokens.length === 0) {
+      break
+    }
+
+    let endCol = startCol + maxChars
+
+    if (endCol < lyricLen) {
+      const spaceIdx = lyricLine.lastIndexOf(' ', endCol)
+      if (spaceIdx > startCol) {
+        endCol = spaceIdx + 1
+      }
+    } else {
+      endCol = Math.max(lyricLen, endCol)
+    }
+
+    const subLyric = lyricLine.slice(startCol, endCol).trimEnd()
+    const subTokens = tokens.filter(t => t.col >= startCol && (endCol >= lyricLen || t.col < endCol))
+
+    let subChord = ''
+    let curPos = 0
+
+    for (const t of subTokens) {
+      let relCol = Math.max(0, t.col - startCol)
+      if (curPos > 0 && relCol < curPos + 1) {
+        relCol = curPos + 1
+      }
+
+      if (relCol > curPos) {
+        subChord += ' '.repeat(relCol - curPos)
+      }
+
+      subChord += t.text
+      curPos = relCol + t.text.length
+    }
+
+    resultLines.push(subChord)
+    resultLines.push(subLyric)
+
+    startCol = endCol
+  }
+
+  return resultLines
+}
+
+function wrapSingleLine(line, maxChars) {
+  if (line.length <= maxChars) return [line]
+
+  const tokens = []
+  const tokenRegex = /\S+/g
+  let match
+  while ((match = tokenRegex.exec(line)) !== null) {
+    tokens.push({ text: match[0], col: match.index })
+  }
+
+  if (tokens.length === 0) return [line]
+
+  const lines = []
+  let startCol = 0
+  const lineLen = line.length
+
+  while (startCol < lineLen) {
+    let endCol = startCol + maxChars
+    if (endCol < lineLen) {
+      const spaceIdx = line.lastIndexOf(' ', endCol)
+      if (spaceIdx > startCol) {
+        endCol = spaceIdx + 1
+      }
+    } else {
+      endCol = lineLen
+    }
+
+    const subText = line.slice(startCol, endCol).trimEnd()
+    if (subText) {
+      lines.push(subText)
+    }
+    startCol = endCol
+  }
+
+  return lines.length > 0 ? lines : [line]
+}
+
+function wrapCifraText(text, maxChars) {
+  if (!text || !maxChars || maxChars <= 0) return text
+
+  const lines = text.split('\n')
+  const outLines = []
+
+  let i = 0
+  while (i < lines.length) {
+    const line = lines[i]
+    const trimmed = line.trim()
+
+    if (!trimmed || isTabLineText(line)) {
+      outLines.push(line)
+      i++
+      continue
+    }
+
+    const isChord = isChordLineText(line)
+
+    const nextLine = i + 1 < lines.length ? lines[i + 1] : null
+    const nextTrimmed = nextLine ? nextLine.trim() : ''
+    const nextIsLyric = nextLine !== null &&
+      nextTrimmed !== '' &&
+      !isChordLineText(nextLine) &&
+      !isTabLineText(nextLine) &&
+      !/^\[.*\]$/.test(nextTrimmed)
+
+    if (isChord && nextIsLyric) {
+      const wrappedPair = wrapChordLyricPair(line, nextLine, maxChars)
+      outLines.push(...wrappedPair)
+      i += 2
+    } else if (isChord) {
+      const wrappedChord = wrapSingleLine(line, maxChars)
+      outLines.push(...wrappedChord)
+      i++
+    } else {
+      const wrappedLyric = wrapSingleLine(line, maxChars)
+      outLines.push(...wrappedLyric)
+      i++
+    }
+  }
+
+  return outLines.join('\n')
+}
+
 function convertPlainTextToHtml(text) {
   if (!text) return ''
   const chordPattern = /^\(?[A-Ga-g][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*(?:\([^)]*\)|\[[^\]]*\])*(?:\/[A-Ga-g][#b]?(?:m|M|maj|Maj|dim|aug|sus|add|°|º|\+|ø|7M)?[0-9]*(?:sus[0-9]*|add[0-9]*|[b#][0-9]+|\+[0-9]*|aug|dim|°|º|-[0-9]*)*)*\)?$/i
@@ -389,64 +561,45 @@ function App() {
 
 
 
-  useEffect(() => {
-    setHasManuallyAdjusted(false)
-  }, [currentSong?.id])
+  const [containerWidth, setContainerWidth] = useState(0)
 
   useEffect(() => {
-    if (!currentSong || hasManuallyAdjusted) return
-
-    const adjustFontSize = () => {
+    const updateWidth = () => {
       const content = document.querySelector('.cifra-content')
-      if (!content) return
-
-      const container = content.parentElement
-      if (!container) return
-
-      const minSize = 12
-      const maxSize = 15
-      let currentSize = maxSize
-
-      const checkOverflow = (size) => {
-        content.style.fontSize = `${size}px`
-        const pre = content.querySelector('pre')
-        if (!pre) return false
-        
-        const originalDisplay = pre.style.display
-        pre.style.display = 'inline-block'
-        const actualWidth = pre.offsetWidth
-        pre.style.display = originalDisplay
-
-        const containerWidth = container.clientWidth || window.innerWidth
-        if (!containerWidth) return false
-        const limit = containerWidth - 24
-        
-        return actualWidth > limit
+      if (content) {
+        const container = content.parentElement || content
+        const w = container.clientWidth || window.innerWidth
+        if (w > 0) {
+          setContainerWidth(w)
+        }
       }
-
-      while (currentSize > minSize && checkOverflow(currentSize)) {
-        currentSize--
-      }
-
-      setFontSize(prev => prev !== currentSize ? currentSize : prev)
     }
 
-    adjustFontSize()
-
-    const resizeObserver = new ResizeObserver(() => {
-      adjustFontSize()
-    })
+    updateWidth()
 
     const content = document.querySelector('.cifra-content')
-    const container = content?.parentElement
+    const container = content?.parentElement || content
+    let resizeObserver = null
     if (container) {
+      resizeObserver = new ResizeObserver(updateWidth)
       resizeObserver.observe(container)
     }
 
+    window.addEventListener('resize', updateWidth)
+
     return () => {
-      resizeObserver.disconnect()
+      if (resizeObserver) resizeObserver.disconnect()
+      window.removeEventListener('resize', updateWidth)
     }
-  }, [currentSong, instrumentMode, simplifyChords, violinMode, singerMode, showBaixo, transposeOffset, chordQualityFlip, hasManuallyAdjusted])
+  }, [currentSong?.id])
+
+  const maxChars = useMemo(() => {
+    if (!containerWidth || containerWidth <= 0) return 38
+    const availableWidth = Math.max(180, containerWidth - 24)
+    const charWidth = fontSize * 0.605
+    const computed = Math.floor(availableWidth / charWidth)
+    return Math.max(22, computed)
+  }, [containerWidth, fontSize])
 
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [showEmailForm, setShowEmailForm] = useState(false)
@@ -835,8 +988,9 @@ function App() {
     const sanitized = sanitizeHtml(baseContent)
     const cleanedCapo = stripCapoLine(sanitized, instrumentMode === 'teclado')
     const filtered = filterBaixo(stripTomLine(cleanedCapo), showBaixo)
-    return convertPlainTextToHtml(filtered)
-  }, [currentSong?.content, currentSong?.content_guitar, instrumentMode, showBaixo])
+    const wrapped = wrapCifraText(filtered, maxChars)
+    return convertPlainTextToHtml(wrapped)
+  }, [currentSong?.content, currentSong?.content_guitar, instrumentMode, showBaixo, maxChars])
   const processedChordHtml = useMemo(() => processChordHtml(currentRawHtml, transposeOffset, simplifyChords, violinMode, chordQualityFlip, singerMode),
     [currentRawHtml, transposeOffset, simplifyChords, violinMode, chordQualityFlip, singerMode])
   const effectiveOriginalKey = useMemo(() => {

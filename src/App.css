@@ -2820,7 +2820,8 @@ body {
 
   .cifra-content pre {
     white-space: pre-wrap;
-    word-break: break-word;
+    word-break: normal;
+    overflow-wrap: break-word;
   }
 
   /* Prevent horizontal overflow from any element */
